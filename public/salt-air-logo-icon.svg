@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" fill="none">
+  <!-- Water drop -->
+  <path d="M32 8 C26 18 16 30 16 42 C16 53.5 23.2 62 32 62 C40.8 62 48 53.5 48 42 C48 30 38 18 32 8Z" fill="white"/>
+
+  <!-- 4-point star — left -->
+  <path d="M13 26 L11.5 22 L10 26 L6 27.5 L10 29 L11.5 33 L13 29 L17 27.5Z" fill="white"/>
+
+  <!-- 4-point star — right -->
+  <path d="M53 23 L51.5 19 L50 23 L46 24.5 L50 26 L51.5 30 L53 26 L57 24.5Z" fill="white"/>
+
+  <!-- Small sparkle upper left -->
+  <path d="M20 10 L19 7 L18 10 L15 11 L18 12 L19 15 L20 12 L23 11Z" fill="white" opacity="0.7"/>
+
+  <!-- Orbit top arc -->
+  <path d="M10 66 Q32 57 54 66" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.45"/>
+  <!-- Orbit bottom arc -->
+  <path d="M8 69 Q32 80 56 69" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="9" cy="67" r="2.5" fill="white"/>
+  <circle cx="55" cy="67" r="2.5" fill="white"/>
+</svg>

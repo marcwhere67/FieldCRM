@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 230" fill="none">
+  <!-- SALT AIR — large thin serif -->
+  <text x="200" y="90" font-family="Georgia, 'Times New Roman', serif" font-size="74" font-weight="300" fill="#2C3E50" text-anchor="middle" letter-spacing="10">SALT AIR</text>
+  <!-- CLEANING — spaced sage green -->
+  <text x="200" y="116" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#76A58F" text-anchor="middle" letter-spacing="13">CLEANING</text>
+
+  <!-- Water drop -->
+  <path d="M200 128 C195 137 185 148 185 158 C185 168 191.7 176 200 176 C208.3 176 215 168 215 158 C215 148 205 137 200 128Z" fill="#76A58F"/>
+
+  <!-- 4-point star sparkle — left of drop -->
+  <path d="M181 140 L179.5 136 L178 140 L174 141.5 L178 143 L179.5 147 L181 143 L185 141.5Z" fill="#76A58F"/>
+
+  <!-- 4-point star sparkle — right of drop -->
+  <path d="M222 137 L220.5 133 L219 137 L215 138.5 L219 140 L220.5 144 L222 140 L226 138.5Z" fill="#76A58F"/>
+
+  <!-- Small sparkle — upper left -->
+  <path d="M188.5 127 L187.5 124 L186.5 127 L183.5 128 L186.5 129 L187.5 132 L188.5 129 L191.5 128Z" fill="#76A58F" opacity="0.7"/>
+
+  <!-- Orbit ring — partial ellipse (top arc dashed/open, bottom arc solid) -->
+  <!-- Top arc (lighter, like back of orbit) -->
+  <path d="M170 180 Q200 172 230 180" stroke="#76A58F" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.45"/>
+  <!-- Bottom arc (solid, front of orbit) -->
+  <path d="M167 183 Q200 197 233 183" stroke="#76A58F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Left dot on orbit -->
+  <circle cx="168" cy="181" r="2.5" fill="#76A58F"/>
+  <!-- Right dot on orbit -->
+  <circle cx="232" cy="181" r="2.5" fill="#76A58F"/>
+</svg>

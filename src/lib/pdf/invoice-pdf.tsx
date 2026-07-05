@@ -1,0 +1,369 @@
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import path from 'path'
+
+const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo.png')
+
+const styles = StyleSheet.create({
+  page: {
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+    color: '#1e293b',
+    padding: 48,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 40,
+  },
+  logo: {
+    width: 120,
+    height: 'auto',
+    marginBottom: 6,
+  },
+  orgContact: {
+    fontSize: 9,
+    color: '#64748b',
+    lineHeight: 1.6,
+  },
+  docTitle: {
+    fontSize: 24,
+    fontFamily: 'Helvetica-Bold',
+    color: '#0f172a',
+    textAlign: 'right',
+  },
+  docMeta: {
+    fontSize: 9,
+    color: '#64748b',
+    textAlign: 'right',
+    marginTop: 4,
+    lineHeight: 1.6,
+  },
+  divider: {
+    borderBottom: '1pt solid #e2e8f0',
+    marginBottom: 24,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  billTo: {
+    fontSize: 10,
+    color: '#1e293b',
+    lineHeight: 1.6,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    borderRadius: 4,
+    padding: '8 10',
+    marginBottom: 2,
+  },
+  tableHeaderText: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    padding: '8 10',
+    borderBottom: '1pt solid #f1f5f9',
+  },
+  tableCell: {
+    fontSize: 10,
+    color: '#334155',
+  },
+  colDesc: { flex: 4 },
+  colQty: { flex: 1, textAlign: 'right' },
+  colPrice: { flex: 1.5, textAlign: 'right' },
+  colTotal: { flex: 1.5, textAlign: 'right' },
+  totalsSection: {
+    alignItems: 'flex-end',
+    marginTop: 16,
+  },
+  totalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 220,
+    marginBottom: 4,
+  },
+  totalsLabel: {
+    fontSize: 9,
+    color: '#64748b',
+  },
+  totalsValue: {
+    fontSize: 9,
+    color: '#334155',
+  },
+  totalDivider: {
+    borderBottom: '1pt solid #e2e8f0',
+    width: 220,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  grandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 220,
+  },
+  grandTotalLabel: {
+    fontSize: 12,
+    fontFamily: 'Helvetica-Bold',
+    color: '#0f172a',
+  },
+  grandTotalValue: {
+    fontSize: 12,
+    fontFamily: 'Helvetica-Bold',
+    color: '#76A58F',
+  },
+  paidBanner: {
+    marginTop: 32,
+    padding: '10 14',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 4,
+    borderLeft: '3pt solid #22c55e',
+  },
+  paidText: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: '#15803d',
+  },
+  notes: {
+    marginTop: 24,
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 4,
+  },
+  notesLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  notesText: {
+    fontSize: 9,
+    color: '#475569',
+    lineHeight: 1.6,
+  },
+  paymentSection: {
+    marginTop: 24,
+    padding: 12,
+    backgroundColor: '#fffbeb',
+    borderRadius: 4,
+    borderLeft: '3pt solid #f59e0b',
+  },
+  paymentLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#92400e',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  paymentText: {
+    fontSize: 9,
+    color: '#78350f',
+    lineHeight: 1.6,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 32,
+    left: 48,
+    right: 48,
+    borderTop: '1pt solid #e2e8f0',
+    paddingTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  footerText: {
+    fontSize: 8,
+    color: '#94a3b8',
+  },
+})
+
+function formatCurrency(n: number) {
+  return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function formatDate(s: string | null | undefined) {
+  if (!s) return '—'
+  const d = new Date(s)
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  sent: 'Unpaid',
+  paid: 'Paid',
+  overdue: 'Overdue',
+  void: 'Void',
+}
+
+interface LineItem {
+  description: string
+  quantity: number
+  unit_price: number
+  subtotal: number
+}
+
+interface Props {
+  invoice: {
+    invoice_number: string
+    status: string
+    line_items: LineItem[]
+    subtotal: number
+    tax: number
+    total: number
+    notes_client?: string | null
+    due_date: string | null
+    created_at: string
+    stripe_payment_link?: string | null
+  }
+  org: {
+    name: string
+    phone: string | null
+    email: string | null
+    address: string | null
+    abn: string | null
+  }
+  contact: {
+    first_name: string
+    last_name: string
+    email: string
+    address_line1: string | null
+    suburb: string | null
+    state: string | null
+    postcode: string | null
+  }
+}
+
+export function InvoicePDF({ invoice, org, contact }: Props) {
+  const isPaid = invoice.status === 'paid'
+  const isOverdue = invoice.status === 'overdue'
+  const canPay = ['sent', 'overdue'].includes(invoice.status) && !!invoice.stripe_payment_link
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Image src={LOGO_PATH} style={styles.logo} />
+            <Text style={styles.orgContact}>
+              {[org.phone, org.email].filter(Boolean).join('  ·  ')}
+              {org.address ? `\n${org.address}` : ''}
+              {org.abn ? `\nABN: ${org.abn}` : ''}
+            </Text>
+          </View>
+          <View>
+            <Text style={styles.docTitle}>INVOICE</Text>
+            <Text style={styles.docMeta}>
+              {invoice.invoice_number}{'\n'}
+              Issued: {formatDate(invoice.created_at)}{'\n'}
+              {invoice.due_date ? `Due: ${formatDate(invoice.due_date)}` : ''}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Bill to */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Bill to</Text>
+          <Text style={styles.billTo}>
+            {contact.first_name} {contact.last_name}{'\n'}
+            {contact.email}
+            {contact.address_line1 ? `\n${contact.address_line1}` : ''}
+            {contact.suburb ? `\n${contact.suburb}${contact.state ? ` ${contact.state}` : ''}${contact.postcode ? ` ${contact.postcode}` : ''}` : ''}
+          </Text>
+        </View>
+
+        {/* Line items */}
+        <View style={styles.section}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderText, styles.colDesc]}>Description</Text>
+            <Text style={[styles.tableHeaderText, styles.colQty]}>Qty</Text>
+            <Text style={[styles.tableHeaderText, styles.colPrice]}>Unit Price</Text>
+            <Text style={[styles.tableHeaderText, styles.colTotal]}>Total</Text>
+          </View>
+          {invoice.line_items.map((item, i) => (
+            <View key={i} style={styles.tableRow}>
+              <Text style={[styles.tableCell, styles.colDesc]}>{item.description}</Text>
+              <Text style={[styles.tableCell, styles.colQty]}>{item.quantity}</Text>
+              <Text style={[styles.tableCell, styles.colPrice]}>{formatCurrency(item.unit_price)}</Text>
+              <Text style={[styles.tableCell, styles.colTotal]}>{formatCurrency(item.subtotal)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Totals */}
+        <View style={styles.totalsSection}>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Subtotal</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(invoice.subtotal)}</Text>
+          </View>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>GST (10%)</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(invoice.tax)}</Text>
+          </View>
+          <View style={styles.totalDivider} />
+          <View style={styles.grandTotalRow}>
+            <Text style={styles.grandTotalLabel}>Total</Text>
+            <Text style={styles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
+          </View>
+        </View>
+
+        {/* Status banners */}
+        {isPaid && (
+          <View style={styles.paidBanner}>
+            <Text style={styles.paidText}>✓ Paid — Thank you for your payment.</Text>
+          </View>
+        )}
+
+        {canPay && (
+          <View style={styles.paymentSection}>
+            <Text style={styles.paymentLabel}>Pay online</Text>
+            <Text style={styles.paymentText}>
+              Pay securely at:{'\n'}{invoice.stripe_payment_link}
+            </Text>
+          </View>
+        )}
+
+        {isOverdue && !canPay && (
+          <View style={styles.paymentSection}>
+            <Text style={styles.paymentLabel}>Payment overdue</Text>
+            <Text style={styles.paymentText}>
+              Please contact us to arrange payment.{'\n'}
+              {[org.phone, org.email].filter(Boolean).join('  ·  ')}
+            </Text>
+          </View>
+        )}
+
+        {/* Notes */}
+        {invoice.notes_client && (
+          <View style={styles.notes}>
+            <Text style={styles.notesLabel}>Notes</Text>
+            <Text style={styles.notesText}>{invoice.notes_client}</Text>
+          </View>
+        )}
+
+        {/* Footer */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>{org.name} — {invoice.invoice_number}</Text>
+          <Text style={styles.footerText}>Status: {STATUS_LABELS[invoice.status] ?? invoice.status}</Text>
+        </View>
+      </Page>
+    </Document>
+  )
+}

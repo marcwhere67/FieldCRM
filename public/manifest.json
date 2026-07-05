@@ -1,0 +1,41 @@
+{
+  "name": "Salt Air Cleaning FieldCRM",
+  "short_name": "Salt Air CRM",
+  "description": "Field service management and marketing automation for Salt Air Cleaning",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a1118",
+  "theme_color": "#76A58F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Clock In/Out",
+      "url": "/clock",
+      "description": "Clock in or out of a job"
+    },
+    {
+      "name": "My Jobs",
+      "url": "/jobs",
+      "description": "View today's jobs"
+    },
+    {
+      "name": "Field Map",
+      "url": "/field-map",
+      "description": "View crew on map"
+    }
+  ]
+}
