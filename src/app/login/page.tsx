@@ -61,7 +61,7 @@ export default function LoginPage() {
           <p style={{ color: 'rgba(255,255,255,0.3)' }} className="text-xs mt-4">Field service & marketing platform</p>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="pt-6">
-          <p style={{ color: 'rgba(255,255,255,0.2)' }} className="text-[10px]">Salt Air Cleaning · Gold Coast, QLD</p>
+          <p style={{ color: 'rgba(255,255,255,0.2)' }} className="text-[10px]">Salt Air Cleaning · Bass Coast, VIC</p>
         </div>
       </div>
 
@@ -70,9 +70,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden text-center">
-            <div className="bg-white px-6 py-4 inline-block">
-              <img src="/salt-air-logo.png" alt="Salt Air Cleaning" className="h-14 w-auto" />
-            </div>
+            <img src="/salt-air-logo.svg" alt="Salt Air Cleaning" className="h-20 w-auto mx-auto" />
           </div>
 
           <div>
@@ -183,10 +181,6 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <p style={{ color: 'rgba(44,62,80,0.3)' }} className="text-center text-[10px] leading-relaxed">
-            marc@saltaircleaning.com.au · tegan@saltaircleaning.com.au<br />
-            admin@saltaircleaning.com.au · technician@saltaircleaning.com.au
-          </p>
         </div>
       </div>
     </div>
