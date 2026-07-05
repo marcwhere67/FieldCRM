@@ -1,12 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { QuoteApproval } from '@/components/quotes/quote-approval'
 
 export default async function QuoteApprovalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  // Use anon client — this page is public
-  const supabase = await createClient()
+  // Public page for anonymous customers — RLS blocks the anon client,
+  // so read with the service client; the quote UUID is the access token.
+  const supabase = createServiceClient()
 
   const { data: quote } = await supabase
     .from('quotes')

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
 
@@ -25,7 +24,6 @@ const C = {
 export function QuoteApproval({ quote, org }: Props) {
   const [status, setStatus] = useState(quote.status)
   const [loading, setLoading] = useState<'approve' | 'decline' | null>(null)
-  const supabase = createClient()
 
   const contact  = Array.isArray(quote.contacts) ? quote.contacts[0] : quote.contacts
   const property = Array.isArray(quote.properties)
@@ -36,10 +34,12 @@ export function QuoteApproval({ quote, org }: Props) {
 
   async function respond(action: 'approve' | 'decline') {
     setLoading(action)
-    const now = new Date().toISOString()
-    const update = action === 'approve' ? { status: 'approved', approved_at: now } : { status: 'declined', declined_at: now }
-    const { error } = await supabase.from('quotes').update(update).eq('id', quote.id)
-    if (!error) setStatus(action === 'approve' ? 'approved' : 'declined')
+    const res = await fetch(`/api/quote-approval/${quote.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
+    if (res.ok) setStatus(action === 'approve' ? 'approved' : 'declined')
     setLoading(null)
   }
 
