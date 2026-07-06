@@ -61,7 +61,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export function ContactTabs({ contact, jobs, quotes, invoices, conversations, properties }: Props) {
+export function ContactTabs({ contact, jobs, quotes, invoices, conversations, documents, properties }: Props) {
   const [activeTab, setActiveTab] = useState('overview')
 
   return (
