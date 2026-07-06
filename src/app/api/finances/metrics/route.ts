@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCacheHeaders } from '@/lib/cache'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -66,16 +67,19 @@ export async function GET(req: Request) {
   // Group by period for chart data
   const chartData = groupByPeriod(invoices || [], groupBy)
 
-  return NextResponse.json({
-    metrics: {
-      totalRevenue,
-      outstandingRevenue,
-      conversionRate: parseFloat(conversionRate as string),
-      pendingQuoteValue,
+  return NextResponse.json(
+    {
+      metrics: {
+        totalRevenue,
+        outstandingRevenue,
+        conversionRate: parseFloat(conversionRate as string),
+        pendingQuoteValue,
+      },
+      chartData,
+      period,
     },
-    chartData,
-    period,
-  })
+    { headers: getCacheHeaders('revalidate') }
+  )
 }
 
 function groupByPeriod(invoices: any[], groupBy: string) {

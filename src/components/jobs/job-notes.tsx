@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { toast } from 'sonner'
 import { formatDateTime } from '@/lib/format'
-import { Plus, Image, FileText, Trash2, Download } from 'lucide-react'
+import { Plus, Image as ImageIcon, FileText, Trash2, Download } from 'lucide-react'
 
 const C = {
   card: { backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.09)' } as React.CSSProperties,
@@ -168,7 +169,7 @@ export function JobNotes({ jobId, notes, onNoteAdded, canEdit }: Props) {
               style={{ color: '#76A58F', fontSize: 10, letterSpacing: '0.1em', border: '1px solid rgba(118,165,143,0.3)', padding: '4px 10px' }}
               className="uppercase hover:opacity-70 transition-opacity flex items-center gap-1.5 disabled:opacity-50"
             >
-              <Image className="w-3 h-3" />
+              <ImageIcon className="w-3 h-3" />
               Upload Photo
             </button>
             <input
@@ -191,7 +192,7 @@ export function JobNotes({ jobId, notes, onNoteAdded, canEdit }: Props) {
             <div key={note.id} style={{ borderBottom: '1px solid rgba(44,62,80,0.06)', paddingBottom: 12 }} className="last:border-b-0">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">
-                  {note.note_type === 'photo' && <Image className="w-3.5 h-3.5" style={{ color: '#76A58F' }} />}
+                  {note.note_type === 'photo' && <ImageIcon className="w-3.5 h-3.5" style={{ color: '#76A58F' }} />}
                   {note.note_type === 'text' && <FileText className="w-3.5 h-3.5" style={{ color: '#76A58F' }} />}
                   <span style={C.text} className="font-medium text-sm">
                     {note.note_type === 'photo' ? 'Photo' : 'Note'}
@@ -214,7 +215,16 @@ export function JobNotes({ jobId, notes, onNoteAdded, canEdit }: Props) {
                 <p style={{ ...C.text, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{note.content}</p>
               )}
               {note.note_type === 'photo' && (
-                <img src={note.content} alt="Job note" className="max-w-full h-auto rounded border border-[rgba(44,62,80,0.1)]" style={{ maxHeight: 200 }} />
+                <div className="relative w-full rounded overflow-hidden border border-[rgba(44,62,80,0.1)]" style={{ maxHeight: 200, height: 200 }}>
+                  <Image
+                    src={note.content}
+                    alt="Job note"
+                    fill
+                    className="object-contain"
+                    sizes="100vw"
+                    quality={75}
+                  />
+                </div>
               )}
             </div>
           ))}

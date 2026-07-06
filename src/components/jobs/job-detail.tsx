@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate, formatDateTime, formatMinutes } from '@/lib/format'
 import { ClockWidget } from '@/components/timeclock/clock-widget'
-import { JobSummaryButton } from '@/components/ai/job-summary-button'
-import { JobNotes } from '@/components/jobs/job-notes'
 import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight } from 'lucide-react'
+
+const JobSummaryButton = dynamic(() => import('@/components/ai/job-summary-button').then(m => ({ default: m.JobSummaryButton })), { ssr: false })
+const JobNotes = dynamic(() => import('@/components/jobs/job-notes').then(m => ({ default: m.JobNotes })), { ssr: false })
 
 const STATUS_STEPS = ['draft', 'scheduled', 'in_progress', 'completed', 'invoiced', 'paid']
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
@@ -229,10 +232,18 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
                   <Camera className="w-6 h-6 mx-auto mb-2" style={{ color: 'rgba(44,62,80,0.15)' }} />
                   <p style={C.muted}>No photos yet</p>
                 </div>
-              : <div className="grid grid-cols-3 gap-2">
+              : <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {job.photos.map((photo, i) => (
-                    <div key={i} className="aspect-square overflow-hidden" style={{ backgroundColor: '#EDE8E2' }}>
-                      <img src={photo.url} alt={photo.caption ?? `Photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <div key={i} className="aspect-square overflow-hidden relative" style={{ backgroundColor: '#EDE8E2' }}>
+                      <Image
+                        src={photo.url}
+                        alt={photo.caption ?? `Photo ${i + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                        priority={i === 0}
+                        quality={75}
+                      />
                     </div>
                   ))}
                 </div>
@@ -261,15 +272,16 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
           <ClockWidget jobId={job.id} jobTitle={job.title} activeTimesheet={myActiveTimesheet} />
 
           {/* Job Notes */}
-          <JobNotes
-            jobId={job.id}
-            notes={jobNotes}
-            onNoteAdded={(note) => {
-              // Refresh the page to show new note
-              window.location.reload()
-            }}
-            canEdit={userRole !== 'client'}
-          />
+          <Suspense fallback={<div style={C.card} className="p-5"><p style={C.muted}>Loading notes...</p></div>}>
+            <JobNotes
+              jobId={job.id}
+              notes={jobNotes}
+              onNoteAdded={(note) => {
+                window.location.reload()
+              }}
+              canEdit={userRole !== 'client'}
+            />
+          </Suspense>
 
           {/* Time logs */}
           <div style={C.card} className="p-5">
