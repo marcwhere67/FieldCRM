@@ -49,11 +49,20 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
     .limit(1)
     .single()
 
+  // Fetch job notes
+  const { data: jobNotes } = await supabase
+    .from('job_notes')
+    .select('*')
+    .eq('job_id', id)
+    .eq('org_id', profile!.org_id)
+    .order('created_at', { ascending: false })
+
   return (
     <JobDetail
       job={job}
       teamMembers={teamMembers ?? []}
       timesheets={timesheets ?? []}
+      jobNotes={jobNotes ?? []}
       currentUserId={profile!.id}
       userRole={profile!.role}
       myActiveTimesheet={myActive ?? null}

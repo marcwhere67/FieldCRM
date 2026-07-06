@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate, formatDateTime, formatMinutes } from '@/lib/format'
 import { ClockWidget } from '@/components/timeclock/clock-widget'
 import { JobSummaryButton } from '@/components/ai/job-summary-button'
+import { JobNotes } from '@/components/jobs/job-notes'
 import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight } from 'lucide-react'
 
 const STATUS_STEPS = ['draft', 'scheduled', 'in_progress', 'completed', 'invoiced', 'paid']
@@ -46,6 +47,7 @@ interface Props {
   }
   teamMembers: { id: string; full_name: string; role: string; phone: string | null }[]
   timesheets: { id: string; user_id: string; clocked_in_at: string; clocked_out_at: string | null; total_minutes: number | null; clock_in_address: string | null; clock_out_address: string | null }[]
+  jobNotes: { id: string; content: string; note_type: 'text' | 'photo' | 'signature'; created_by_name: string | null; created_at: string }[]
   currentUserId: string
   userRole: string
   myActiveTimesheet?: { id: string; clocked_in_at: string } | null
@@ -59,7 +61,7 @@ const C = {
   divider: { borderTop: '1px solid rgba(44,62,80,0.08)' },
 }
 
-export function JobDetail({ job, teamMembers, timesheets, currentUserId, userRole, myActiveTimesheet }: Props) {
+export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserId, userRole, myActiveTimesheet }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [checklist, setChecklist] = useState<ChecklistItem[]>(job.checklist ?? [])
@@ -257,6 +259,17 @@ export function JobDetail({ job, teamMembers, timesheets, currentUserId, userRol
 
           {/* Clock widget */}
           <ClockWidget jobId={job.id} jobTitle={job.title} activeTimesheet={myActiveTimesheet} />
+
+          {/* Job Notes */}
+          <JobNotes
+            jobId={job.id}
+            notes={jobNotes}
+            onNoteAdded={(note) => {
+              // Refresh the page to show new note
+              window.location.reload()
+            }}
+            canEdit={userRole !== 'client'}
+          />
 
           {/* Time logs */}
           <div style={C.card} className="p-5">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { formatCurrency } from '@/lib/format'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const C = { navy: '#2C3E50', sage: '#76A58F', muted: '#8A9BA6', border: 'rgba(44,62,80,0.09)' }
 
@@ -21,6 +22,7 @@ export function FinancialOverview() {
   if (loading) return <p style={{ color: C.muted }}>Loading...</p>
 
   const m = data?.metrics || {}
+  const chartData = data?.chartData || []
 
   return (
     <div className="space-y-6">
@@ -75,10 +77,30 @@ export function FinancialOverview() {
         </div>
       </div>
 
-      {/* Chart placeholder */}
-      <div style={{ border: `1px solid ${C.border}`, padding: 40, backgroundColor: '#fff', textAlign: 'center' }}>
-        <p style={{ color: C.muted }}>Revenue trend chart — Chart.js integration coming next</p>
-      </div>
+      {/* Revenue trend chart */}
+      {chartData.length > 0 ? (
+        <div style={{ border: `1px solid ${C.border}`, padding: 20, backgroundColor: '#fff' }}>
+          <p style={{ color: C.navy, fontSize: 12, fontWeight: 500, marginBottom: 16 }}>Revenue Trend</p>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="label" stroke={C.muted} style={{ fontSize: 12 }} />
+              <YAxis stroke={C.muted} style={{ fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 4 }}
+                formatter={(value) => formatCurrency(value as number)}
+                labelStyle={{ color: C.navy }}
+              />
+              <Legend wrapperStyle={{ color: C.muted, fontSize: 12 }} />
+              <Line type="monotone" dataKey="value" stroke={C.sage} dot={{ fill: C.sage, r: 4 }} name="Revenue" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div style={{ border: `1px solid ${C.border}`, padding: 40, backgroundColor: '#fff', textAlign: 'center' }}>
+          <p style={{ color: C.muted }}>No revenue data available for this period</p>
+        </div>
+      )}
     </div>
   )
 }
