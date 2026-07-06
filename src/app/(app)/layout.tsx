@@ -50,22 +50,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const title = titleMap[segment] ?? 'FieldCRM'
 
   return (
-    <div className="flex h-screen bg-[#F5F0EB] overflow-hidden">
-      {/* Sidebar — desktop only */}
-      <div className="hidden md:flex">
-        <Sidebar />
-      </div>
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Topbar
-          userName={profile?.full_name ?? user.email ?? 'User'}
-          userRole={profile?.role ?? 'admin'}
-        />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          {children}
-        </main>
+    <>
+      <div className="flex h-screen bg-[#F5F0EB]">
+        {/* Sidebar — desktop only */}
+        <div className="hidden md:flex">
+          <Sidebar />
+        </div>
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Topbar
+            userName={profile?.full_name ?? user.email ?? 'User'}
+            userRole={profile?.role ?? 'admin'}
+          />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+            {children}
+          </main>
+        </div>
       </div>
       <MobileNav />
       <Toaster theme="light" />
-    </div>
+    </>
   )
 }
