@@ -37,6 +37,7 @@ const CHANNEL_ICONS: Record<string, string> = {
 }
 
 interface Contact {
+  id: string
   first_name: string; last_name: string; email: string | null; phone: string | null
   company_name: string | null; address_line1: string | null; suburb: string | null
   state: string | null; postcode: string | null; source: string | null; notes: string | null
