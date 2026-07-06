@@ -35,15 +35,7 @@ export function variablesForCategory(category: string) {
 
 // Minimal shape of the supabase client method we use — keeps this file server/client agnostic.
 interface TemplateQueryable {
-  from: (table: string) => {
-    select: (cols: string) => {
-      eq: (col: string, val: string) => {
-        eq: (col: string, val: string) => {
-          maybeSingle: () => Promise<{ data: { subject: string | null; body: string } | null }>
-        }
-      }
-    }
-  }
+  from: (table: string) => any
 }
 
 // Fetch a system template's rendered body by key, falling back to hardcoded copy when the
