@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Save, KeyRound } from 'lucide-react'
+import { Save, KeyRound, Lock } from 'lucide-react'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -20,9 +21,15 @@ const AVATAR_COLORS = [
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
 
 export function ProfileSettings({ profile }: { profile: Profile }) {
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [form, setForm] = useState({ full_name: profile.full_name, phone: profile.phone ?? '' })
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+
+  function setPw(field: string, value: string) { setPwForm(f => ({ ...f, [field]: value })) }
 
   function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
 
@@ -50,6 +57,27 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
       toast.success('Password reset email sent — check your inbox')
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to send reset email') }
     finally { setResetting(false) }
+  }
+
+  async function handleChangePassword() {
+    if (!pwForm.current) { toast.error('Enter your current password'); return }
+    if (pwForm.next.length < 8) { toast.error('New password must be at least 8 characters'); return }
+    if (pwForm.next !== pwForm.confirm) { toast.error('New passwords do not match'); return }
+
+    setChangingPassword(true)
+    try {
+      const supabase = createClient()
+      const { error: verifyError } = await supabase.auth.signInWithPassword({ email: profile.email, password: pwForm.current })
+      if (verifyError) throw new Error('Current password is incorrect')
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: pwForm.next })
+      if (updateError) throw updateError
+
+      toast.success('Password changed — please sign in again')
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to change password') }
+    finally { setChangingPassword(false) }
   }
 
   const inputStyle = { backgroundColor: '#fff', border: `1px solid ${C.inputBorder}`, borderRadius: 0, color: C.fg, fontSize: 13, height: 36, width: '100%', padding: '0 10px', outline: 'none' }
@@ -99,9 +127,50 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
       {/* Security */}
       <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: 20 }}>
         <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500, marginBottom: 14 }}>Security</h3>
-        <div style={{ border: `1px solid ${C.border}`, padding: '14px 16px' }} className="flex items-center justify-between">
+
+        <div style={{ border: `1px solid ${C.border}` }}>
+          <div style={{ padding: '14px 16px' }} className="flex items-center justify-between">
+            <div>
+              <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Change Password</p>
+              <p style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>Update your password directly</p>
+            </div>
+            <button onClick={() => setShowPasswordForm(s => !s)}
+              style={{ border: `1px solid rgba(44,62,80,0.15)`, backgroundColor: showPasswordForm ? '#fff' : C.cream, color: '#4A5A65', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">
+              <Lock className="w-3.5 h-3.5" />{showPasswordForm ? 'Cancel' : 'Change Password'}
+            </button>
+          </div>
+
+          {showPasswordForm && (
+            <div style={{ borderTop: `1px solid ${C.border}`, padding: 16 }} className="space-y-3">
+              <div>
+                <label style={labelStyle}>Current Password</label>
+                <input type="password" value={pwForm.current} onChange={e => setPw('current', e.target.value)} style={inputStyle} className="focus:border-[#76A58F]" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label style={labelStyle}>New Password</label>
+                  <input type="password" value={pwForm.next} onChange={e => setPw('next', e.target.value)} style={inputStyle} className="focus:border-[#76A58F]" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Confirm New Password</label>
+                  <input type="password" value={pwForm.confirm} onChange={e => setPw('confirm', e.target.value)} style={inputStyle} className="focus:border-[#76A58F]" />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={handleChangePassword} disabled={changingPassword}
+                  style={{ backgroundColor: C.navy, color: '#fff', padding: '7px 16px', fontSize: 11, letterSpacing: '0.1em' }}
+                  className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+                  <Lock className="w-3.5 h-3.5" />{changingPassword ? 'Updating…' : 'Update Password'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ border: `1px solid ${C.border}`, borderTop: 'none', padding: '14px 16px' }} className="flex items-center justify-between">
           <div>
-            <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Password</p>
+            <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Forgot Password</p>
             <p style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>Send a reset link to {profile.email}</p>
           </div>
           <button onClick={handlePasswordReset} disabled={resetting}

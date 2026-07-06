@@ -42,11 +42,10 @@ function sameDay(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() 
 function formatHour(h: number) { return h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm` }
 function formatMonthDay(d: Date) { return `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}` }
 
-export function ScheduleView({ jobs: initialJobs, users, orgId, initialDate, initialView }: Props) {
+export function ScheduleView({ jobs, users, orgId, initialDate, initialView }: Props) {
   const router = useRouter()
   const [view, setView] = useState<'week' | 'day' | 'month'>(initialView)
   const [focusDate, setFocusDate] = useState(() => new Date(initialDate + 'T00:00:00'))
-  const [jobs] = useState(initialJobs)
 
   const weekStart = startOfWeek(focusDate)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -234,7 +233,7 @@ export function ScheduleView({ jobs: initialJobs, users, orgId, initialDate, ini
       </div>
 
       {/* Unscheduled strip */}
-      <UnscheduledStrip jobs={initialJobs.filter(j => !j.scheduled_start)} />
+      <UnscheduledStrip jobs={jobs.filter(j => !j.scheduled_start)} />
     </div>
   )
 }

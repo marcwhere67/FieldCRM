@@ -180,6 +180,9 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
             {members.map(m => {
               const isExpanded = expandedId === m.id
               const isEditing = editingId === m.id
+              const isSelf = m.id === currentUserId
+              const canEditFull = isManager
+              const canEdit = isManager || isSelf
               const p = m.employee_profiles
               const av = AVATAR_COLORS[m.full_name.charCodeAt(0) % AVATAR_COLORS.length]
               const rb = ROLE_BADGE[m.role] ?? ROLE_BADGE.field
@@ -204,7 +207,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      {isManager && (
+                      {canEdit && (
                         <button onClick={() => isEditing ? setEditingId(null) : openEdit(m)}
                           style={{ color: C.muted, width: 28, height: 28 }} className="flex items-center justify-center hover:text-[#2C3E50] transition-colors">
                           <Pencil style={{ width: 13, height: 13 }} />
@@ -285,6 +288,10 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                   {/* Edit expanded */}
                   {isExpanded && isEditing && (
                     <div style={{ borderTop: `1px solid ${C.border}`, padding: '16px', backgroundColor: C.cream }} className="space-y-5">
+                      {!canEditFull && (
+                        <p style={{ color: C.muted, fontSize: 11 }}>You can update your skills, emergency contact and notes. Job title, pay rate and other HR details are managed by an admin.</p>
+                      )}
+                      {canEditFull && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
                           { label: 'Job title', key: 'job_title', placeholder: 'e.g. Senior Technician' },
@@ -310,6 +317,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                           <input type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="0.00" min="0" step="0.01" style={inputCls} className="focus:border-[#76A58F]" />
                         </div>
                       </div>
+                      )}
 
                       {/* Skills */}
                       <div>
@@ -330,6 +338,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                       </div>
 
                       {/* Certifications */}
+                      {canEditFull && (
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <label style={labelSt}>Certifications</label>
@@ -373,6 +382,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                           </div>
                         )}
                       </div>
+                      )}
 
                       {/* Emergency contact */}
                       <div>

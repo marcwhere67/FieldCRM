@@ -2,7 +2,6 @@ import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
-import { MobileNav } from '@/components/layout/mobile-nav'
 import { Toaster } from '@/components/ui/sonner'
 import { headers } from 'next/headers'
 
@@ -60,12 +59,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userName={profile?.full_name ?? user.email ?? 'User'}
           userRole={profile?.role ?? 'admin'}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
       </div>
-      {/* Bottom nav — mobile only */}
-      <MobileNav />
       <Toaster theme="light" />
     </div>
   )

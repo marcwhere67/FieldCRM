@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/format'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import {
   Search, Plus, Download, Upload,
   Phone, Mail, MapPin, MoreHorizontal, Users
@@ -61,16 +63,19 @@ interface Contact {
 interface Props {
   contacts: Contact[]
   teamMembers: { id: string; full_name: string }[]
+  campaigns: { id: string; name: string }[]
   userRole: string
   filters: { q?: string; status?: string; source?: string; assigned?: string }
 }
 
-export function ContactsTable({ contacts, teamMembers, userRole, filters }: Props) {
+export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filters }: Props) {
   const router = useRouter()
   const pathname = usePathname()
+  const supabase = createClient()
   const [isPending, startTransition] = useTransition()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState(filters.q ?? '')
+  const [bulkMenu, setBulkMenu] = useState<'assign' | 'campaign' | null>(null)
 
   function updateFilter(key: string, value: string | null) {
     const p = new URLSearchParams()
@@ -98,6 +103,47 @@ export function ContactsTable({ contacts, teamMembers, userRole, filters }: Prop
     const next = new Set(selected)
     next.has(id) ? next.delete(id) : next.add(id)
     setSelected(next)
+  }
+
+  async function handleAddTag() {
+    const tag = window.prompt('Tag to add to selected contacts:')?.trim()
+    if (!tag) return
+    const ids = [...selected]
+    for (const id of ids) {
+      const contact = contacts.find(c => c.id === id)
+      if (!contact || contact.tags.includes(tag)) continue
+      await supabase.from('contacts').update({ tags: [...contact.tags, tag] }).eq('id', id)
+    }
+    toast.success(`Tag added to ${ids.length} contact${ids.length === 1 ? '' : 's'}`)
+    setSelected(new Set())
+    router.refresh()
+  }
+
+  async function handleAssign(userId: string) {
+    setBulkMenu(null)
+    const { error } = await supabase.from('contacts').update({ assigned_to: userId }).in('id', [...selected])
+    if (error) { toast.error('Failed to assign contacts'); return }
+    toast.success(`Assigned ${selected.size} contact${selected.size === 1 ? '' : 's'}`)
+    setSelected(new Set())
+    router.refresh()
+  }
+
+  async function handleAddToCampaign(campaignId: string) {
+    setBulkMenu(null)
+    const { error } = await supabase.from('contacts').update({ source_campaign_id: campaignId }).in('id', [...selected])
+    if (error) { toast.error('Failed to add contacts to campaign'); return }
+    toast.success(`Added ${selected.size} contact${selected.size === 1 ? '' : 's'} to campaign`)
+    setSelected(new Set())
+    router.refresh()
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete ${selected.size} contact${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return
+    const { error } = await supabase.from('contacts').delete().in('id', [...selected])
+    if (error) { toast.error('Failed to delete contacts'); return }
+    toast.success(`Deleted ${selected.size} contact${selected.size === 1 ? '' : 's'}`)
+    setSelected(new Set())
+    router.refresh()
   }
 
   const hasFilters = filters.q || filters.status || filters.source || filters.assigned
@@ -197,11 +243,33 @@ export function ContactsTable({ contacts, teamMembers, userRole, filters }: Prop
       {selected.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-2.5" style={{ backgroundColor: 'rgba(118,165,143,0.08)', border: '1px solid rgba(118,165,143,0.2)' }}>
           <span style={{ color: '#5d8c76' }} className="text-xs">{selected.size} selected</span>
-          {['Add tag', 'Assign', 'Add to campaign'].map(a => (
-            <button key={a} style={{ color: '#5d8c76' }} className="text-xs hover:text-[#2C3E50] transition-colors">{a}</button>
-          ))}
+          <button onClick={handleAddTag} style={{ color: '#5d8c76' }} className="text-xs hover:text-[#2C3E50] transition-colors">Add tag</button>
+
+          <DropdownMenu open={bulkMenu === 'assign'} onOpenChange={o => setBulkMenu(o ? 'assign' : null)}>
+            <DropdownMenuTrigger>
+              <div style={{ color: '#5d8c76' }} className="text-xs hover:text-[#2C3E50] transition-colors cursor-pointer">Assign</div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent style={{ backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.12)' }} className="rounded-none">
+              {teamMembers.map(m => (
+                <DropdownMenuItem key={m.id} onClick={() => handleAssign(m.id)} style={{ color: '#1C2A35' }} className="text-sm">{m.full_name}</DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu open={bulkMenu === 'campaign'} onOpenChange={o => setBulkMenu(o ? 'campaign' : null)}>
+            <DropdownMenuTrigger>
+              <div style={{ color: '#5d8c76' }} className="text-xs hover:text-[#2C3E50] transition-colors cursor-pointer">Add to campaign</div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent style={{ backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.12)' }} className="rounded-none">
+              {campaigns.length === 0 && <DropdownMenuItem disabled style={{ color: '#8A9BA6' }} className="text-sm">No campaigns yet</DropdownMenuItem>}
+              {campaigns.map(c => (
+                <DropdownMenuItem key={c.id} onClick={() => handleAddToCampaign(c.id)} style={{ color: '#1C2A35' }} className="text-sm">{c.name}</DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {userRole === 'admin' && (
-            <button style={{ color: '#dc2626' }} className="text-xs hover:opacity-70 transition-opacity ml-auto">Delete</button>
+            <button onClick={handleDelete} style={{ color: '#dc2626' }} className="text-xs hover:opacity-70 transition-opacity ml-auto">Delete</button>
           )}
         </div>
       )}

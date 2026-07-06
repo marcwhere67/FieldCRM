@@ -1,7 +1,7 @@
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Briefcase, Receipt, TrendingUp, Clock, ArrowRight } from 'lucide-react'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatFullDate, getMelbourneHour, melbourneDateOnly } from '@/lib/format'
 import { AiInsightsCard } from '@/components/ai/ai-insights-card'
 import Link from 'next/link'
 
@@ -22,8 +22,8 @@ export default async function DashboardPage() {
       .eq('org_id', orgId).eq('status', 'active'),
     supabase.from('jobs').select('id, job_number, title, status, scheduled_start, scheduled_end, contact_id')
       .eq('org_id', orgId)
-      .gte('scheduled_start', new Date().toISOString().split('T')[0])
-      .lt('scheduled_start', new Date(Date.now() + 86400000).toISOString().split('T')[0])
+      .gte('scheduled_start', melbourneDateOnly())
+      .lt('scheduled_start', melbourneDateOnly(new Date(Date.now() + 86400000)))
       .order('scheduled_start'),
     supabase.from('invoices').select('total, amount_paid')
       .eq('org_id', orgId)
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   const outstanding = outstandingInvoices?.reduce((sum, inv) => sum + (inv.total - inv.amount_paid), 0) ?? 0
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
-  const hour = new Date().getHours()
+  const hour = getMelbourneHour()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   const jobStatusStyle: Record<string, { variant: string; label: string }> = {
@@ -68,7 +68,7 @@ export default async function DashboardPage() {
         <p style={{ color: '#76A58F', letterSpacing: '0.2em' }} className="text-[10px] uppercase mb-1">{greeting}</p>
         <h1 style={{ fontFamily: "var(--font-cormorant, 'Cormorant Garamond', Georgia, serif)", color: '#2C3E50' }} className="text-4xl font-light">{firstName}</h1>
         <p style={{ color: '#8A9BA6' }} className="text-sm mt-1">
-          {new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          {formatFullDate()}
         </p>
       </div>
 
@@ -194,9 +194,9 @@ export default async function DashboardPage() {
         <p style={{ color: '#8A9BA6', letterSpacing: '0.2em' }} className="text-[10px] uppercase mb-3">Quick Actions</p>
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'New Job',     href: '/jobs',      primary: true },
-            { label: 'New Quote',   href: '/quotes',    primary: false },
-            { label: 'New Contact', href: '/contacts',  primary: false },
+            { label: 'New Job',     href: '/jobs/new',     primary: true },
+            { label: 'New Quote',   href: '/quotes/new',   primary: false },
+            { label: 'New Contact', href: '/contacts/new', primary: false },
             { label: 'Clock In',    href: '/clock',     primary: false },
             { label: 'Field Map',   href: '/field-map', primary: false },
           ].map(action => (

@@ -18,7 +18,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       contacts!jobs_contact_id_fkey(id, first_name, last_name, email, phone),
       properties!jobs_property_id_fkey(id, label, address_line1, suburb, state, postcode, lat, lng, access_notes),
       quotes!jobs_quote_id_fkey(id, quote_number, total, status),
-      invoices!jobs_invoice_id_fkey(id, invoice_number, total, status)
+      invoices!fk_jobs_invoice(id, invoice_number, total, status)
     `)
     .eq('id', id)
     .eq('org_id', profile!.org_id)

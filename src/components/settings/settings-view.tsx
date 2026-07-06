@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { BusinessSettings } from './business-settings'
 import { TeamSettings } from './team-settings'
 import { ProfileSettings } from './profile-settings'
-import { Building2, Users, User } from 'lucide-react'
+import { TemplatesSettings } from './templates-settings'
+import { Building2, Users, User, Mail } from 'lucide-react'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -18,9 +19,10 @@ interface Profile { id: string; full_name: string; email: string; phone: string 
 interface Props { org: Org; team: TeamMember[]; profile: Profile; isAdmin: boolean }
 
 const TABS = [
-  { id: 'business', label: 'Business', icon: Building2, adminOnly: true },
-  { id: 'team',     label: 'Team',     icon: Users,     adminOnly: false },
-  { id: 'profile',  label: 'Profile',  icon: User,      adminOnly: false },
+  { id: 'business',  label: 'Business',  icon: Building2, adminOnly: true },
+  { id: 'templates', label: 'Templates', icon: Mail,      adminOnly: true },
+  { id: 'team',      label: 'Team',      icon: Users,     adminOnly: false },
+  { id: 'profile',   label: 'Profile',   icon: User,      adminOnly: false },
 ]
 
 export function SettingsView({ org, team, profile, isAdmin }: Props) {
@@ -57,6 +59,7 @@ export function SettingsView({ org, team, profile, isAdmin }: Props) {
 
       <div style={{ padding: '24px', backgroundColor: C.cream }}>
         {activeTab === 'business' && isAdmin && <BusinessSettings org={org} />}
+        {activeTab === 'templates' && isAdmin && <TemplatesSettings canManage={isAdmin} />}
         {activeTab === 'team' && <TeamSettings initialTeam={team} canManage={isAdmin} currentUserId={profile.id} />}
         {activeTab === 'profile' && <ProfileSettings profile={profile} />}
       </div>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format'
-import { Briefcase, FileText, Receipt, MessageSquare, StickyNote, Activity, MapPin, Phone, Mail, Building } from 'lucide-react'
+import { Briefcase, FileText, Receipt, MessageSquare, StickyNote, Activity, MapPin, Phone, Mail, Building, Folder } from 'lucide-react'
+import { ContactDocuments, type ClientDocument } from './contact-documents'
 
 const STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
   draft:       { bg: 'rgba(44,62,80,0.06)',    color: '#4A5A65', border: 'rgba(44,62,80,0.15)' },
@@ -27,6 +28,7 @@ const TABS = [
   { id: 'quotes',         label: 'Quotes',         icon: FileText },
   { id: 'invoices',       label: 'Invoices',       icon: Receipt },
   { id: 'conversations',  label: 'Conversations',  icon: MessageSquare },
+  { id: 'documents',      label: 'Documents',      icon: Folder },
   { id: 'notes',          label: 'Notes',          icon: StickyNote },
 ]
 
@@ -47,6 +49,7 @@ interface Props {
   quotes: { id: string; quote_number: string; status: string; total: number; created_at: string }[]
   invoices: { id: string; invoice_number: string; status: string; total: number; amount_paid: number; due_date: string | null }[]
   conversations: { id: string; channel: string; status: string; last_message_at: string | null; unread_count: number }[]
+  documents: ClientDocument[]
   properties: { id: string; label: string | null; address_line1: string; suburb: string; state: string; postcode: string; access_notes: string | null }[]
 }
 
@@ -222,6 +225,10 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, pr
                 ))
             }
           </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <ContactDocuments contactId={contact.id} initialDocs={documents} />
         )}
 
         {activeTab === 'notes' && (

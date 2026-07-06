@@ -30,6 +30,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
     { data: quotes },
     { data: invoices },
     { data: conversations },
+    { data: documents },
     { data: properties },
     { data: pipelineStages },
     { data: teamMembers },
@@ -38,6 +39,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
     supabase.from('quotes').select('id, quote_number, status, total, created_at').eq('contact_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('invoices').select('id, invoice_number, status, total, amount_paid, due_date').eq('contact_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('conversations').select('id, channel, status, last_message_at, unread_count').eq('contact_id', id).order('last_message_at', { ascending: false }).limit(10),
+    supabase.from('client_documents').select('*, users:uploaded_by(full_name)').eq('contact_id', id).order('created_at', { ascending: false }),
     supabase.from('properties').select('*').eq('contact_id', id),
     supabase.from('pipeline_stages').select('id, name, color').eq('org_id', profile!.org_id).eq('pipeline_type', 'leads').order('position'),
     supabase.from('users').select('id, full_name').eq('org_id', profile!.org_id).eq('is_active', true),
@@ -56,6 +58,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         quotes={quotes ?? []}
         invoices={invoices ?? []}
         conversations={conversations ?? []}
+        documents={documents ?? []}
         properties={properties ?? []}
       />
     </div>

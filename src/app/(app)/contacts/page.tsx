@@ -42,10 +42,17 @@ export default async function ContactsPage({
     .eq('org_id', profile!.org_id)
     .eq('is_active', true)
 
+  const { data: campaigns } = await supabase
+    .from('campaigns')
+    .select('id, name')
+    .eq('org_id', profile!.org_id)
+    .order('created_at', { ascending: false })
+
   return (
     <ContactsTable
       contacts={contacts ?? []}
       teamMembers={teamMembers ?? []}
+      campaigns={campaigns ?? []}
       userRole={profile!.role}
       filters={params}
     />

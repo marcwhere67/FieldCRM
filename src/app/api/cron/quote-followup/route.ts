@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { resolveSystemTemplate } from '@/lib/templates'
 
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
@@ -42,7 +43,16 @@ export async function GET(req: NextRequest) {
     if (!to || !twilioReady) { skipped++; continue }
 
     const approvalUrl = `${siteUrl}/quote-approval/${quote.id}`
-    const body = `Hi ${contact.first_name}, just checking in on quote ${quote.quote_number} from ${org?.name ?? 'us'} — ${approvalUrl}. Let us know if you have any questions!`
+    const body = await resolveSystemTemplate(
+      supabase, quote.org_id, 'quote_followup',
+      {
+        first_name: contact.first_name,
+        quote_number: quote.quote_number,
+        business_name: org?.name ?? 'us',
+        quote_url: approvalUrl,
+      },
+      'Hi {{first_name}}, just checking in on quote {{quote_number}} from {{business_name}} — {{quote_url}}. Let us know if you have any questions!',
+    )
 
     try {
       const { default: twilio } = await import('twilio')

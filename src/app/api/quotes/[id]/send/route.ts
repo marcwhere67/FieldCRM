@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveSystemTemplate } from '@/lib/templates'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -49,7 +50,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!sid || !token || !from || sid === 'placeholder' || token === 'placeholder') {
       warning = 'Twilio is not configured — quote marked as sent but no SMS was sent'
     } else {
-      const body = `Hi ${contact.first_name}, your quote ${quote.quote_number} from ${org?.name ?? 'us'} is ready to view: ${approvalUrl}`
+      const body = await resolveSystemTemplate(
+        supabase, profile.org_id, 'quote_sent',
+        {
+          first_name: contact.first_name,
+          quote_number: quote.quote_number,
+          business_name: org?.name ?? 'us',
+          quote_url: approvalUrl,
+        },
+        'Hi {{first_name}}, your quote {{quote_number}} from {{business_name}} is ready to view: {{quote_url}}',
+      )
       try {
         const { default: twilio } = await import('twilio')
         const client = twilio(sid, token)
