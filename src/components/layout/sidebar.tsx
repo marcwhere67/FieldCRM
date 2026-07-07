@@ -87,7 +87,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-2 px-0">
+      <nav className="flex-1 overflow-y-scroll py-2 px-0" style={{ scrollbarWidth: 'auto' }}>
         {NAV.map((entry, idx) => {
           if ('divider' in entry) {
             if (collapsed) return <div key={idx} style={{ borderColor: 'rgba(255,255,255,0.08)' }} className="my-2 border-t" />
