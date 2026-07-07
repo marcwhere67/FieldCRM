@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Save, KeyRound, Lock } from 'lucide-react'
+import { Save, KeyRound, Lock, Mail } from 'lucide-react'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -22,12 +23,24 @@ interface Profile { id: string; full_name: string; email: string; phone: string 
 
 export function ProfileSettings({ profile }: { profile: Profile }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [form, setForm] = useState({ full_name: profile.full_name, phone: profile.phone ?? '' })
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  const [gmailConnecting, setGmailConnecting] = useState(false)
+
+  // Handle Gmail callback
+  if (searchParams.get('gmail_connected')) {
+    toast.success('Gmail connected successfully!')
+    router.replace('/settings')
+  }
+  if (searchParams.get('gmail_error')) {
+    toast.error(`Gmail connection failed: ${searchParams.get('gmail_error')}`)
+    router.replace('/settings')
+  }
 
   function setPw(field: string, value: string) { setPwForm(f => ({ ...f, [field]: value })) }
 
@@ -177,6 +190,24 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
             style={{ border: `1px solid rgba(44,62,80,0.15)`, backgroundColor: C.cream, color: '#4A5A65', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
             className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
             <KeyRound className="w-3.5 h-3.5" />{resetting ? 'Sending…' : 'Reset Password'}
+          </button>
+        </div>
+      </div>
+
+      {/* Integrations */}
+      <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: 20 }}>
+        <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500, marginBottom: 14 }}>Integrations</h3>
+
+        <div style={{ border: `1px solid ${C.border}`, padding: '14px 16px' }} className="flex items-center justify-between">
+          <div>
+            <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Gmail</p>
+            <p style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>Connect your Gmail account to sync emails</p>
+          </div>
+          <button onClick={() => { setGmailConnecting(true); window.location.href = '/api/auth/gmail/connect' }}
+            disabled={gmailConnecting}
+            style={{ border: `1px solid rgba(44,62,80,0.15)`, backgroundColor: C.cream, color: '#4A5A65', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+            className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+            <Mail className="w-3.5 h-3.5" />{gmailConnecting ? 'Connecting…' : 'Connect'}
           </button>
         </div>
       </div>
