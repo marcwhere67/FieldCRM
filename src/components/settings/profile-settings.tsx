@@ -31,6 +31,9 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
   const [changingPassword, setChangingPassword] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [gmailConnecting, setGmailConnecting] = useState(false)
+  const [gmailStatus, setGmailStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+  const [gmailLastSync, setGmailLastSync] = useState<string | null>(null)
+  const [gmailSyncing, setGmailSyncing] = useState(false)
 
   // Handle Gmail callback result
   useEffect(() => {
@@ -42,6 +45,29 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
       router.replace('/settings')
     }
   }, [searchParams, router])
+
+  // Check Gmail connection status
+  useEffect(() => {
+    fetch('/api/gmail/emails?limit=1')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        setGmailStatus(data?.connected ? 'connected' : 'disconnected')
+        setGmailLastSync(data?.syncState?.last_sync_at ?? null)
+      })
+      .catch(() => setGmailStatus('disconnected'))
+  }, [])
+
+  async function handleGmailSync() {
+    setGmailSyncing(true)
+    try {
+      const res = await fetch('/api/gmail/sync', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success(`Synced ${data.emailsSync} emails from Gmail`)
+      setGmailLastSync(new Date().toISOString())
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Sync failed') }
+    finally { setGmailSyncing(false) }
+  }
 
   function setPw(field: string, value: string) { setPwForm(f => ({ ...f, [field]: value })) }
 
@@ -201,15 +227,32 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
 
         <div style={{ border: `1px solid ${C.border}`, padding: '14px 16px' }} className="flex items-center justify-between">
           <div>
-            <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Gmail</p>
-            <p style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>Connect your Gmail account to sync emails</p>
+            <div className="flex items-center gap-2">
+              <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Gmail</p>
+              {gmailStatus === 'connected' && (
+                <span style={{ color: '#5d8c76', backgroundColor: 'rgba(118,165,143,0.12)', fontSize: 9, letterSpacing: '0.12em', padding: '2px 8px' }} className="uppercase">Connected</span>
+              )}
+            </div>
+            <p style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>
+              {gmailStatus === 'connected'
+                ? (gmailLastSync ? `Last synced ${new Date(gmailLastSync).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : 'Connected — not synced yet')
+                : 'Connect your Gmail account to sync emails'}
+            </p>
           </div>
-          <button onClick={() => { setGmailConnecting(true); window.location.href = '/api/auth/gmail/connect' }}
-            disabled={gmailConnecting}
-            style={{ border: `1px solid rgba(44,62,80,0.15)`, backgroundColor: C.cream, color: '#4A5A65', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
-            className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
-            <Mail className="w-3.5 h-3.5" />{gmailConnecting ? 'Connecting…' : 'Connect'}
-          </button>
+          {gmailStatus === 'connected' ? (
+            <button onClick={handleGmailSync} disabled={gmailSyncing}
+              style={{ border: `1px solid rgba(118,165,143,0.3)`, backgroundColor: C.cream, color: '#5d8c76', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+              <Mail className="w-3.5 h-3.5" />{gmailSyncing ? 'Syncing…' : 'Sync Now'}
+            </button>
+          ) : (
+            <button onClick={() => { setGmailConnecting(true); window.location.href = '/api/auth/gmail/connect' }}
+              disabled={gmailConnecting || gmailStatus === 'loading'}
+              style={{ border: `1px solid rgba(44,62,80,0.15)`, backgroundColor: C.cream, color: '#4A5A65', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+              <Mail className="w-3.5 h-3.5" />{gmailConnecting ? 'Connecting…' : 'Connect'}
+            </button>
+          )}
         </div>
       </div>
 
