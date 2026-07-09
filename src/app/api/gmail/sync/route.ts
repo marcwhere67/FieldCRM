@@ -31,7 +31,7 @@ export async function POST() {
     for (const message of messages) {
       const emailData = await getGmailEmail(accessToken, message.id)
       const headers = parseEmailHeaders(emailData.payload.headers)
-      const body = decodeGmailBody(emailData.payload)
+      const { text, html } = decodeGmailBody(emailData.payload)
 
       const fromName = headers.from.includes('<') ? headers.from.split('<')[0].trim().replace(/^"|"$/g, '') : ''
       const fromEmail = extractEmail(headers.from)
@@ -47,7 +47,8 @@ export async function POST() {
             from_name: fromName,
             to_email: extractEmail(headers.to),
             subject: headers.subject,
-            body,
+            body: text || emailData.snippet || '',
+            html_body: html || null,
             received_at: new Date(parseInt(emailData.internalDate)).toISOString(),
             labels: emailData.labelIds || [],
           },

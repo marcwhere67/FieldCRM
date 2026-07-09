@@ -2,16 +2,20 @@
 // client-facing RLS policies, so OAuth tokens are never readable from the browser.
 import { createServiceClient } from './supabase/server'
 
+interface GmailPart {
+  mimeType: string
+  body?: { data?: string }
+  parts?: GmailPart[]
+}
+
 interface GmailEmail {
   id: string
   threadId: string
   labelIds: string[]
   snippet: string
   internalDate: string
-  payload?: {
+  payload?: GmailPart & {
     headers: Array<{ name: string; value: string }>
-    parts?: Array<{ mimeType: string; data?: { data: string }; body?: { data?: string } }>
-    body?: { data?: string }
   }
 }
 
@@ -109,19 +113,61 @@ export function parseEmailHeaders(headers: Array<{ name: string; value: string }
   }
 }
 
-export function decodeGmailBody(payload: GmailEmail['payload']): string {
-  if (!payload) return ''
+// Gmail nests MIME parts (multipart/mixed > multipart/alternative > content),
+// so search the whole tree for the wanted content type.
+function findPart(parts: GmailPart[], mime: string): GmailPart | null {
+  for (const p of parts) {
+    if (p.mimeType === mime && p.body?.data) return p
+    if (p.parts) {
+      const found = findPart(p.parts, mime)
+      if (found) return found
+    }
+  }
+  return null
+}
 
-  let body = ''
+function decodeB64(data: string): string {
+  return Buffer.from(data, 'base64').toString('utf-8')
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6]|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export function decodeGmailBody(payload: GmailEmail['payload']): { text: string; html: string } {
+  if (!payload) return { text: '', html: '' }
+
+  let text = ''
+  let html = ''
 
   if (payload.parts) {
-    const textPart = payload.parts.find(p => p.mimeType === 'text/plain')
-    if (textPart?.body?.data) {
-      body = Buffer.from(textPart.body.data, 'base64').toString('utf-8')
-    }
+    const textPart = findPart(payload.parts, 'text/plain')
+    const htmlPart = findPart(payload.parts, 'text/html')
+    if (textPart?.body?.data) text = decodeB64(textPart.body.data)
+    if (htmlPart?.body?.data) html = decodeB64(htmlPart.body.data)
   } else if (payload.body?.data) {
-    body = Buffer.from(payload.body.data, 'base64').toString('utf-8')
+    const decoded = decodeB64(payload.body.data)
+    if (payload.mimeType === 'text/html') html = decoded
+    else text = decoded
   }
 
-  return body
+  // HTML-only email: derive readable text so the CRM always has something to show
+  if (!text && html) text = htmlToText(html)
+
+  return { text, html }
 }
