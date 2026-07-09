@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { rateLimit, clientIp } from '@/lib/rate-limit'
 
 // Public endpoint — the unguessable quote UUID is the access token.
 // Anonymous customers can't write through RLS, so this runs server-side.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Throttle per IP: legit customers click once; scripts probing UUIDs get cut off
+  if (!rateLimit(`quote-approval:${clientIp(req)}`, 10, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const { id } = await params
   const { action } = await req.json().catch(() => ({}))
   if (action !== 'approve' && action !== 'decline') {

@@ -62,9 +62,9 @@ alter table gmail_sync_state enable row level security;
 alter table emails enable row level security;
 alter table email_contacts enable row level security;
 
+-- gmail_sync_state deliberately has NO client-facing policies: it stores OAuth
+-- tokens, so with RLS enabled only the service role (server-side) can access it.
 drop policy if exists "org members manage gmail_sync_state" on gmail_sync_state;
-create policy "org members manage gmail_sync_state" on gmail_sync_state
-  for all using (org_id = auth_user_org_id()) with check (org_id = auth_user_org_id());
 
 drop policy if exists "org members manage emails" on emails;
 create policy "org members manage emails" on emails

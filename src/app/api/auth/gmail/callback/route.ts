@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, getAppProfile } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getAppProfile } from '@/lib/supabase/server'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/settings?gmail_error=${encodeURIComponent(error)}`)
   }
 
-  if (!code || state !== user.id) {
+  // State must match the HttpOnly nonce cookie set when the flow started (CSRF protection)
+  const stateCookie = req.cookies.get('gmail_oauth_state')?.value
+  if (!code || !state || !stateCookie || state !== stateCookie) {
     return NextResponse.redirect(`${origin}/settings?gmail_error=invalid_state`)
   }
 
@@ -59,7 +61,9 @@ export async function GET(req: NextRequest) {
       throw new Error('User profile not found')
     }
 
-    const { error: insertError } = await supabase
+    // Service client: gmail_sync_state is deliberately unreachable from browser clients
+    const admin = createServiceClient()
+    const { error: insertError } = await admin
       .from('gmail_sync_state')
       .upsert(
         {
@@ -74,7 +78,9 @@ export async function GET(req: NextRequest) {
 
     if (insertError) throw insertError
 
-    return NextResponse.redirect(`${origin}/settings?gmail_connected=true`)
+    const response = NextResponse.redirect(`${origin}/settings?gmail_connected=true`)
+    response.cookies.delete('gmail_oauth_state')
+    return response
   } catch (err) {
     console.error('Gmail auth error:', err)
     return NextResponse.redirect(`${origin}/settings?gmail_error=connection_failed`)

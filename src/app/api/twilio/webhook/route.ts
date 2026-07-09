@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import twilio from 'twilio'
 
 // Twilio sends form-encoded POST to this endpoint when an SMS arrives
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text()
     const params = new URLSearchParams(body)
+
+    // Reject requests that don't carry a valid Twilio signature.
+    // Enforced once a real auth token is configured (placeholder = local dev).
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    if (authToken && authToken !== 'placeholder') {
+      const signature = req.headers.get('x-twilio-signature') ?? ''
+      const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/twilio/webhook`
+      const paramsObj = Object.fromEntries(params.entries())
+      if (!twilio.validateRequest(authToken, signature, url, paramsObj)) {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
+      }
+    }
 
     const from = params.get('From')
     const to = params.get('To')

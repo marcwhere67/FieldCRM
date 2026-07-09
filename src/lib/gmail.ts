@@ -1,4 +1,6 @@
-import { createClient } from './supabase/server'
+// Token storage uses the service client exclusively: gmail_sync_state has no
+// client-facing RLS policies, so OAuth tokens are never readable from the browser.
+import { createServiceClient } from './supabase/server'
 
 interface GmailEmail {
   id: string
@@ -14,7 +16,7 @@ interface GmailEmail {
 }
 
 export async function getGmailAccessToken(orgId: string, userId: string) {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data: syncState, error } = await supabase
     .from('gmail_sync_state')
     .select('*')
@@ -51,7 +53,7 @@ async function refreshGmailToken(orgId: string, userId: string, refreshToken: st
   const tokens = await response.json()
   if (!response.ok) throw new Error(tokens.error_description)
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   await supabase
     .from('gmail_sync_state')
     .update({

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, getAppProfile } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getAppProfile } from '@/lib/supabase/server'
 import { getGmailAccessToken, fetchGmailEmails, getGmailEmail, parseEmailHeaders, decodeGmailBody } from '@/lib/gmail'
 
 export async function POST() {
@@ -15,8 +15,11 @@ export async function POST() {
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
   }
 
+  // gmail_sync_state is only reachable via the service client (tokens live there)
+  const admin = createServiceClient()
+
   try {
-    await supabase
+    await admin
       .from('gmail_sync_state')
       .update({ sync_status: 'syncing' })
       .eq('org_id', profile.org_id)
@@ -73,7 +76,7 @@ export async function POST() {
       }
     }
 
-    await supabase
+    await admin
       .from('gmail_sync_state')
       .update({
         sync_status: 'idle',
@@ -87,7 +90,7 @@ export async function POST() {
   } catch (error) {
     console.error('Gmail sync error:', error)
 
-    await supabase
+    await admin
       .from('gmail_sync_state')
       .update({
         sync_status: 'error',

@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { formatDateTime } from '@/lib/format'
+import { jobPhotoSrc } from '@/lib/photo-url'
 import { Plus, Image as ImageIcon, FileText, Trash2, Download } from 'lucide-react'
 
 const C = {
@@ -216,13 +217,14 @@ export function JobNotes({ jobId, notes, onNoteAdded, canEdit }: Props) {
               )}
               {note.note_type === 'photo' && (
                 <div className="relative w-full rounded overflow-hidden border border-[rgba(44,62,80,0.1)]" style={{ maxHeight: 200, height: 200 }}>
+                  {/* unoptimized: the gateway needs the browser's auth cookies, which the image optimizer doesn't forward */}
                   <Image
-                    src={note.content}
+                    src={jobPhotoSrc(note.content)}
                     alt="Job note"
                     fill
                     className="object-contain"
                     sizes="100vw"
-                    quality={75}
+                    unoptimized
                   />
                 </div>
               )}

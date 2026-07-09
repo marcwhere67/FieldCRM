@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate, formatDateTime, formatMinutes } from '@/lib/format'
+import { jobPhotoSrc } from '@/lib/photo-url'
 import { ClockWidget } from '@/components/timeclock/clock-widget'
 import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight } from 'lucide-react'
 
@@ -236,13 +237,13 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
                   {job.photos.map((photo, i) => (
                     <div key={i} className="aspect-square overflow-hidden relative" style={{ backgroundColor: '#EDE8E2' }}>
                       <Image
-                        src={photo.url}
+                        src={jobPhotoSrc(photo.url)}
                         alt={photo.caption ?? `Photo ${i + 1}`}
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 50vw, 33vw"
                         priority={i === 0}
-                        quality={75}
+                        unoptimized
                       />
                     </div>
                   ))}

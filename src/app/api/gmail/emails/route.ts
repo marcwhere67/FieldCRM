@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, getAppProfile } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getAppProfile } from '@/lib/supabase/server'
 
 export async function GET(req: Request) {
   const supabase = await createClient()
@@ -15,8 +15,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    // Connection status — lets the UI know whether Gmail is linked at all
-    const { data: syncState } = await supabase
+    // Connection status via service client (table is closed to browser clients).
+    // Only non-secret columns are selected — tokens never leave the server.
+    const { data: syncState } = await createServiceClient()
       .from('gmail_sync_state')
       .select('sync_status, last_sync_at, error_message')
       .eq('org_id', profile.org_id)
