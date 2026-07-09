@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -32,15 +32,16 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [gmailConnecting, setGmailConnecting] = useState(false)
 
-  // Handle Gmail callback
-  if (searchParams.get('gmail_connected')) {
-    toast.success('Gmail connected successfully!')
-    router.replace('/settings')
-  }
-  if (searchParams.get('gmail_error')) {
-    toast.error(`Gmail connection failed: ${searchParams.get('gmail_error')}`)
-    router.replace('/settings')
-  }
+  // Handle Gmail callback result
+  useEffect(() => {
+    if (searchParams.get('gmail_connected')) {
+      toast.success('Gmail connected successfully!')
+      router.replace('/settings')
+    } else if (searchParams.get('gmail_error')) {
+      toast.error(`Gmail connection failed: ${searchParams.get('gmail_error')}`)
+      router.replace('/settings')
+    }
+  }, [searchParams, router])
 
   function setPw(field: string, value: string) { setPwForm(f => ({ ...f, [field]: value })) }
 

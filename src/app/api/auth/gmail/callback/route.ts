@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAppProfile } from '@/lib/supabase/server'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
+function siteOrigin(req: NextRequest) {
+  return process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin
+}
+
 export async function GET(req: NextRequest) {
+  const origin = siteOrigin(req)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.redirect('/login')
+    return NextResponse.redirect(`${origin}/login`)
   }
 
   const { searchParams } = new URL(req.url)
@@ -17,19 +22,18 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get('error')
 
   if (error) {
-    return NextResponse.redirect(`/settings?gmail_error=${error}`)
+    return NextResponse.redirect(`${origin}/settings?gmail_error=${encodeURIComponent(error)}`)
   }
 
   if (!code || state !== user.id) {
-    return NextResponse.redirect('/settings?gmail_error=invalid_state')
+    return NextResponse.redirect(`${origin}/settings?gmail_error=invalid_state`)
   }
 
   try {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || process.env.NEXT_PUBLIC_SITE_URL + '/api/auth/gmail/callback'
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${origin}/api/auth/gmail/callback`
 
-    // Exchange code for tokens
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -43,23 +47,24 @@ export async function GET(req: NextRequest) {
     })
 
     if (!tokenResponse.ok) {
+      const detail = await tokenResponse.text()
+      console.error('Gmail token exchange failed:', detail)
       throw new Error('Failed to exchange code for tokens')
     }
 
     const tokens = await tokenResponse.json()
-    const { profile } = await getAppProfile(supabase, user.id)
+    const profile = await getAppProfile(user.id)
 
     if (!profile) {
       throw new Error('User profile not found')
     }
 
-    // Store tokens in database
     const { error: insertError } = await supabase
       .from('gmail_sync_state')
       .upsert(
         {
           org_id: profile.org_id,
-          user_id: user.id,
+          user_id: profile.id,
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || null,
           token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
@@ -69,19 +74,9 @@ export async function GET(req: NextRequest) {
 
     if (insertError) throw insertError
 
-    return NextResponse.redirect('/settings?gmail_connected=true')
-  } catch (error) {
-    console.error('Gmail auth error:', error)
-    return NextResponse.redirect('/settings?gmail_error=connection_failed')
+    return NextResponse.redirect(`${origin}/settings?gmail_connected=true`)
+  } catch (err) {
+    console.error('Gmail auth error:', err)
+    return NextResponse.redirect(`${origin}/settings?gmail_error=connection_failed`)
   }
-}
-
-async function getAppProfile(supabase: any, userId: string) {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
-
-  return { profile }
 }
