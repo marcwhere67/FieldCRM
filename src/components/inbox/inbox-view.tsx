@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MessageThread } from './message-thread'
 import { NewConversationModal } from './new-conversation-modal'
+import { EmailInbox } from './email-inbox'
 import { MessageSquare, Plus, Search, Phone, Mail, Inbox } from 'lucide-react'
 
 const C = {
@@ -34,6 +35,7 @@ export function InboxView({ conversations: initial, orgId, currentUserId, curren
   const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null)
   const [search, setSearch] = useState('')
   const [showNew, setShowNew] = useState(false)
+  const [tab, setTab] = useState<'messages' | 'email'>('messages')
 
   const filtered = conversations.filter(c => {
     if (!search) return true
@@ -47,7 +49,26 @@ export function InboxView({ conversations: initial, orgId, currentUserId, curren
   function onNewConversation(conv: Conversation) { setConversations(prev => [conv, ...prev]); setSelectedId(conv.id); setShowNew(false) }
 
   return (
-    <div className="flex h-[calc(100vh-80px)] -mx-6 -mt-6">
+    <div className="flex flex-col h-[calc(100vh-80px)] -mx-6 -mt-6">
+      {/* Channel tabs */}
+      <div style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: '#fff', display: 'flex', padding: '0 16px', flexShrink: 0 }}>
+        {([['messages', 'Messages', MessageSquare], ['email', 'Email', Mail]] as const).map(([id, label, Icon]) => (
+          <button key={id} onClick={() => setTab(id)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '11px 16px',
+              fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: tab === id ? C.navy : C.muted,
+              borderBottom: tab === id ? `2px solid ${C.sage}` : '2px solid transparent',
+              backgroundColor: 'transparent', marginBottom: -1, transition: 'all 150ms ease',
+            }}>
+            <Icon style={{ width: 13, height: 13 }} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-1 min-h-0">
+      {tab === 'email' ? <EmailInbox /> : <>
       {/* Sidebar */}
       <div style={{ width: 300, flexShrink: 0, borderRight: `1px solid ${C.border}`, backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
         {/* Sidebar header */}
@@ -130,6 +151,8 @@ export function InboxView({ conversations: initial, orgId, currentUserId, curren
             <p style={{ color: C.muted, fontSize: 13 }}>Select a conversation</p>
           </div>
         )}
+      </div>
+      </>}
       </div>
 
       {showNew && <NewConversationModal orgId={orgId} onClose={() => setShowNew(false)} onCreated={onNewConversation} />}
