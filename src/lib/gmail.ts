@@ -64,13 +64,22 @@ async function refreshGmailToken(orgId: string, userId: string, refreshToken: st
   return tokens.access_token
 }
 
+async function gmailApiError(response: Response, fallback: string) {
+  try {
+    const data = await response.json()
+    return new Error(data?.error?.message || `${fallback} (HTTP ${response.status})`)
+  } catch {
+    return new Error(`${fallback} (HTTP ${response.status})`)
+  }
+}
+
 export async function fetchGmailEmails(accessToken: string, maxResults = 10) {
   const response = await fetch(
     `https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
 
-  if (!response.ok) throw new Error('Failed to fetch emails')
+  if (!response.ok) throw await gmailApiError(response, 'Failed to fetch emails')
   const data = await response.json()
   return data.messages || []
 }
@@ -81,7 +90,7 @@ export async function getGmailEmail(accessToken: string, messageId: string) {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
 
-  if (!response.ok) throw new Error('Failed to fetch email details')
+  if (!response.ok) throw await gmailApiError(response, 'Failed to fetch email details')
   return await response.json()
 }
 
