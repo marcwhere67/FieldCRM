@@ -171,3 +171,52 @@ export function decodeGmailBody(payload: GmailEmail['payload']): { text: string;
 
   return { text, html }
 }
+
+export async function sendEmailViaGmail(
+  accessToken: string,
+  to: string,
+  subject: string,
+  htmlBody: string,
+  textBody?: string
+) {
+  // Create a MIME message
+  const boundary = 'boundary_' + Math.random().toString(36).substr(2, 9)
+  const textContent = textBody || htmlBody.replace(/<[^>]*>/g, '')
+  
+  const mimeMessage = `From: <${to}>
+To: ${to}
+Subject: ${subject}
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="${boundary}"
+
+--${boundary}
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+
+${textContent}
+
+--${boundary}
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+
+${htmlBody}
+
+--${boundary}--`
+
+  const encodedMessage = Buffer.from(mimeMessage).toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+
+  const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ raw: encodedMessage }),
+  })
+
+  if (!response.ok) throw await gmailApiError(response, 'Failed to send email')
+  return await response.json()
+}
