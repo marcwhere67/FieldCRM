@@ -9,7 +9,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase
-    .from('users').select('org_id, full_name').eq('supabase_auth_id', user.id).single()
+    .from('users').select('id, org_id, full_name').eq('supabase_auth_id', user.id).single()
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { content, note_type } = await req.json()
@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
       org_id: profile.org_id,
       note_type,
       content,
-      created_by: user.id,
+      created_by: profile.id, // app users.id — NOT the auth id (FK targets users)
       created_by_name: profile.full_name,
     })
     .select()
