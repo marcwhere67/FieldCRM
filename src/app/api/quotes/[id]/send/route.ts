@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { formatCurrency } from '@/lib/format'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -51,35 +52,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   let sent = false
   let warning: string | null = null
-  let gmailResponse = null
+
+  const totalFormatted = formatCurrency(Number(quote.total))
 
   try {
-    console.log(`[QUOTE SEND] Starting send for quote ${quote.id}`)
-    console.log(`[QUOTE SEND] From: ${orgEmail}, To: ${contactEmail}`)
-    
     const accessToken = await getGmailAccessToken(profile.org_id, user.id)
-    console.log(`[QUOTE SEND] Got Gmail access token`)
-    
+
     const subject = `Quote ${quote.quote_number} from ${org?.name ?? 'us'}`
     const htmlBody = `
 <html>
 <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
   <p>Hi ${contact?.first_name || 'there'},</p>
-  
+
   <p>Your quote <strong>${quote.quote_number}</strong> from <strong>${org?.name}</strong> is ready.</p>
-  
-  <p><strong>Quote Total:</strong> $${(quote.total / 100).toFixed(2)}</p>
-  
+
+  <p><strong>Quote Total:</strong> ${totalFormatted}</p>
+
   <p>
     <a href="${approvalUrl}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-      View & Approve Quote
+      View &amp; Approve Quote
     </a>
   </p>
-  
+
   <p>You can also download the quote as a PDF: <a href="${pdfUrl}">Download PDF</a></p>
-  
+
   <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
-  
+
   <p>Best regards,<br>${profile.full_name}<br>${org?.name}</p>
 </body>
 </html>`
@@ -88,7 +86,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
 Your quote ${quote.quote_number} from ${org?.name} is ready.
 
-Quote Total: $${(quote.total / 100).toFixed(2)}
+Quote Total: ${totalFormatted}
 
 View & Approve: ${approvalUrl}
 Download PDF: ${pdfUrl}
@@ -99,22 +97,27 @@ Best regards,
 ${profile.full_name}
 ${org?.name}`
 
-    gmailResponse = await sendEmailViaGmail(accessToken, orgEmail, contactEmail, subject, htmlBody, textBody)
-    console.log(`[QUOTE SEND] Gmail response:`, gmailResponse)
+    await sendEmailViaGmail(accessToken, orgEmail, contactEmail, subject, htmlBody, textBody)
     sent = true
   } catch (err) {
     console.error('[QUOTE SEND] Gmail send failed:', err)
     warning = err instanceof Error ? err.message : 'Failed to send email'
   }
 
-  console.log(`[QUOTE SEND] Marking quote as sent (sent=${sent}, warning=${warning})`)
+  // Do NOT mark the quote as sent if the email never went out — surface the real error.
+  if (!sent) {
+    return NextResponse.json(
+      { sent: false, error: warning ?? 'Email could not be sent' },
+      { status: 502 },
+    )
+  }
 
   const { error } = await supabase
     .from('quotes')
     .update({ status: 'sent', sent_at: new Date().toISOString() })
     .eq('id', id)
-  
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ sent, warning, debug: { gmailResponse } })
+  return NextResponse.json({ sent: true })
 }

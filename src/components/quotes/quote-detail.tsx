@@ -59,13 +59,12 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
   const st = STATUS_STYLE[quote.status] ?? STATUS_STYLE.draft
 
   async function sendQuote() {
-    if (!contact?.phone) { toast.error('Contact has no phone number'); return }
+    if (!contact?.email) { toast.error('Contact has no email address'); return }
     startTransition(async () => {
       const res = await fetch(`/api/quotes/${quote.id}/send`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Failed to send quote'); return }
-      if (data.sent) toast.success('Quote sent via SMS')
-      else toast.warning(data.warning ?? 'Quote marked as sent')
+      toast.success(`Quote emailed to ${contact.email}`)
       router.refresh()
     })
   }
