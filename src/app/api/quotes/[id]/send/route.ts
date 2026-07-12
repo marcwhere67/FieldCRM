@@ -99,7 +99,9 @@ Best regards,
 ${profile.full_name}
 ${org?.name}`
 
-    await sendEmailViaGmail(accessToken, orgEmail, contactEmail, subject, htmlBody, textBody)
+    // Display name in From improves deliverability and how it renders in inboxes
+    const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
+    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody)
     sent = true
   } catch (err) {
     console.error('[QUOTE SEND] Gmail send failed:', err)
