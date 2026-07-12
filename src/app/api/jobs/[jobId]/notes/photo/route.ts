@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params
@@ -20,16 +20,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
     const timestamp = Date.now()
-    const filename = `${timestamp}-${file.name}`
+    // Strip anything path-hostile from the client-supplied filename
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const filename = `${timestamp}-${safeName}`
     const storagePath = `${profile.org_id}/${jobId}/${filename}`
 
-    const { data, error: uploadError } = await supabase.storage
+    // The job-photos bucket is private with NO storage.objects policies, so
+    // uploads must go through the service role — the user's client gets RLS-denied.
+    // Safe here: we've already verified the user + that the job belongs to their org,
+    // and the path is namespaced to their org. (Same pattern as client_documents.)
+    const serviceClient = createServiceClient()
+    const { error: uploadError } = await serviceClient.storage
       .from('job-photos')
-      .upload(storagePath, file, { upsert: false })
+      .upload(storagePath, file, { upsert: false, contentType: file.type || undefined })
 
     if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 })
 
-    const { data: urlData } = supabase.storage
+    // Stored in the legacy public-URL shape; jobPhotoSrc() rewrites it to the
+    // authenticated gateway (/api/storage/job-photos/*) on display.
+    const { data: urlData } = serviceClient.storage
       .from('job-photos')
       .getPublicUrl(storagePath)
 
@@ -49,6 +58,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json(note)
   } catch (err) {
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    console.error('[JOB PHOTO] Upload failed:', err)
+    const message = err instanceof Error ? err.message : 'Upload failed'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

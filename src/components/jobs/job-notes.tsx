@@ -71,13 +71,13 @@ export function JobNotes({ jobId, notes, onNoteAdded, canEdit }: Props) {
         method: 'POST',
         body: formData,
       })
-      if (!res.ok) throw new Error('Failed to upload photo')
-      const note = await res.json()
-      onNoteAdded(note)
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.error ?? 'Failed to upload photo')
+      onNoteAdded(body)
       if (fileInputRef.current) fileInputRef.current.value = ''
       toast.success('Photo added')
     } catch (err) {
-      toast.error('Failed to upload photo')
+      toast.error(err instanceof Error ? err.message : 'Failed to upload photo')
     } finally {
       setUploading(false)
     }
