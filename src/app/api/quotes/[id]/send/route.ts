@@ -51,9 +51,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   let sent = false
   let warning: string | null = null
+  let gmailResponse = null
 
   try {
+    console.log(`[QUOTE SEND] Starting send for quote ${quote.id}`)
+    console.log(`[QUOTE SEND] From: ${orgEmail}, To: ${contactEmail}`)
+    
     const accessToken = await getGmailAccessToken(profile.org_id, user.id)
+    console.log(`[QUOTE SEND] Got Gmail access token`)
     
     const subject = `Quote ${quote.quote_number} from ${org?.name ?? 'us'}`
     const htmlBody = `
@@ -94,12 +99,15 @@ Best regards,
 ${profile.full_name}
 ${org?.name}`
 
-    await sendEmailViaGmail(accessToken, orgEmail, contactEmail, subject, htmlBody, textBody)
+    gmailResponse = await sendEmailViaGmail(accessToken, orgEmail, contactEmail, subject, htmlBody, textBody)
+    console.log(`[QUOTE SEND] Gmail response:`, gmailResponse)
     sent = true
   } catch (err) {
-    console.error('Gmail send failed:', err)
+    console.error('[QUOTE SEND] Gmail send failed:', err)
     warning = err instanceof Error ? err.message : 'Failed to send email'
   }
+
+  console.log(`[QUOTE SEND] Marking quote as sent (sent=${sent}, warning=${warning})`)
 
   const { error } = await supabase
     .from('quotes')
@@ -108,5 +116,5 @@ ${org?.name}`
   
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ sent, warning })
+  return NextResponse.json({ sent, warning, debug: { gmailResponse } })
 }

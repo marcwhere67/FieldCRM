@@ -203,10 +203,16 @@ ${htmlBody}
 
 --${boundary}--`
 
+  console.log(`[GMAIL] Sending email from ${from} to ${to}`)
+  console.log(`[GMAIL] Subject: ${subject}`)
+  console.log(`[GMAIL] MIME message length: ${mimeMessage.length}`)
+
   const encodedMessage = Buffer.from(mimeMessage).toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '')
+
+  console.log(`[GMAIL] Encoded message length: ${encodedMessage.length}`)
 
   const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
@@ -217,6 +223,15 @@ ${htmlBody}
     body: JSON.stringify({ raw: encodedMessage }),
   })
 
-  if (!response.ok) throw await gmailApiError(response, 'Failed to send email')
-  return await response.json()
+  console.log(`[GMAIL] API Response status: ${response.status}`)
+  
+  const responseData = await response.json()
+  console.log(`[GMAIL] API Response:`, responseData)
+
+  if (!response.ok) {
+    throw new Error(`Gmail API error: ${responseData.error?.message || 'Unknown error'}`)
+  }
+  
+  console.log(`[GMAIL] Message sent successfully. ID: ${responseData.id}`)
+  return responseData
 }
