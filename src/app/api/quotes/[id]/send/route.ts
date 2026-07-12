@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
-import { resolveSystemTemplate } from '@/lib/templates'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -39,6 +38,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .eq('id', profile.org_id)
     .single()
 
+  const orgEmail = org?.email
+  if (!orgEmail) {
+    return NextResponse.json({
+      error: 'Organisation email not configured. Set it in Settings > Organisation'
+    }, { status: 400 })
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
   const approvalUrl = `${siteUrl}/quote-approval/${quote.id}`
   const pdfUrl = `${siteUrl}/api/portal/quotes/${quote.id}/pdf`
@@ -47,7 +53,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let warning: string | null = null
 
   try {
-    // Get Gmail access token
     const accessToken = await getGmailAccessToken(profile.org_id, user.id)
     
     const subject = `Quote ${quote.quote_number} from ${org?.name ?? 'us'}`
@@ -68,7 +73,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   
   <p>You can also download the quote as a PDF: <a href="${pdfUrl}">Download PDF</a></p>
   
-  <p>Questions? Reply to this email or contact us at ${org?.email || org?.name}.</p>
+  <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
   
   <p>Best regards,<br>${profile.full_name}<br>${org?.name}</p>
 </body>
@@ -89,14 +94,13 @@ Best regards,
 ${profile.full_name}
 ${org?.name}`
 
-    await sendEmailViaGmail(accessToken, contactEmail, subject, htmlBody, textBody)
+    await sendEmailViaGmail(accessToken, orgEmail, contactEmail, subject, htmlBody, textBody)
     sent = true
   } catch (err) {
     console.error('Gmail send failed:', err)
     warning = err instanceof Error ? err.message : 'Failed to send email'
   }
 
-  // Mark quote as sent regardless (like Twilio behavior)
   const { error } = await supabase
     .from('quotes')
     .update({ status: 'sent', sent_at: new Date().toISOString() })

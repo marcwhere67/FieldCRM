@@ -174,16 +174,16 @@ export function decodeGmailBody(payload: GmailEmail['payload']): { text: string;
 
 export async function sendEmailViaGmail(
   accessToken: string,
+  from: string,
   to: string,
   subject: string,
   htmlBody: string,
   textBody?: string
 ) {
-  // Create a MIME message
   const boundary = 'boundary_' + Math.random().toString(36).substr(2, 9)
   const textContent = textBody || htmlBody.replace(/<[^>]*>/g, '')
   
-  const mimeMessage = `From: <${to}>
+  const mimeMessage = `From: ${from}
 To: ${to}
 Subject: ${subject}
 MIME-Version: 1.0
