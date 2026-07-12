@@ -177,6 +177,8 @@ CREATE TABLE IF NOT EXISTS document_counters (
   PRIMARY KEY (org_id, doc_type, year)
 );
 
+-- SECURITY DEFINER so it can write the RLS-locked document_counters table on
+-- behalf of a browser client (which has no direct policy on that table).
 CREATE OR REPLACE FUNCTION next_document_number(p_org uuid, p_doc_type text, p_prefix text)
 RETURNS text AS $$
 DECLARE
@@ -191,7 +193,7 @@ BEGIN
 
   RETURN p_prefix || '-' || v_year || '-' || LPAD(v_next::text, 4, '0');
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Assign a number on INSERT only when one wasn't supplied.
 CREATE OR REPLACE FUNCTION assign_quote_number()
