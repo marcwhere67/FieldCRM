@@ -56,7 +56,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const totalFormatted = formatCurrency(Number(quote.total))
 
   try {
-    const accessToken = await getGmailAccessToken(profile.org_id, user.id)
+    // gmail_sync_state stores tokens under the app users.id (profile.id),
+    // NOT the Supabase auth id — same lookup the sync route uses.
+    const accessToken = await getGmailAccessToken(profile.org_id, profile.id)
 
     const subject = `Quote ${quote.quote_number} from ${org?.name ?? 'us'}`
     const htmlBody = `
