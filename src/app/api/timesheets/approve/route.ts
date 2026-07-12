@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false }, { status: 403 })
     }
 
+    // Only managers and admins may approve timesheets
+    if (!['admin', 'manager'].includes(profile.role)) {
+      return NextResponse.json({ ok: false, error: 'Insufficient permissions' }, { status: 403 })
+    }
+
     const { error } = await supabase
       .from('timesheets')
       .update({

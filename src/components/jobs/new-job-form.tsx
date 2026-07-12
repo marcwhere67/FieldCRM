@@ -15,7 +15,6 @@ interface Props {
   orgId: string
   contacts: Contact[]
   teamMembers: TeamMember[]
-  nextJobNumber: string
   initialContactId?: string
   initialProperties: Property[]
 }
@@ -33,7 +32,7 @@ const inp: React.CSSProperties = {
 
 const labelSt: React.CSSProperties = { color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }
 
-export function NewJobForm({ orgId, contacts, teamMembers, nextJobNumber, initialContactId, initialProperties }: Props) {
+export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, initialProperties }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -66,7 +65,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, nextJobNumber, initia
       org_id: orgId,
       contact_id: form.contact_id,
       property_id: form.property_id || null,
-      job_number: nextJobNumber,
+      
       title: form.title.trim(),
       description: form.description.trim() || null,
       job_type: form.job_type,
@@ -94,7 +93,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, nextJobNumber, initia
           </Link>
           <p style={{ color: C.sage, letterSpacing: '0.2em', fontSize: 10, textTransform: 'uppercase', marginBottom: 2 }}>Jobs</p>
           <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300 }}>New Job</h1>
-          <p style={{ color: C.muted, fontSize: 12 }}>{nextJobNumber}</p>
+          <p style={{ color: C.muted, fontSize: 12 }}>Number assigned on save</p>
         </div>
       </div>
 

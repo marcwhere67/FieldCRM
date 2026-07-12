@@ -16,17 +16,12 @@ export default async function NewQuotePage() {
     supabase.from('products').select('id, name, description, unit_price, unit, type, category').eq('org_id', profile!.org_id).eq('active', true).order('name'),
   ])
 
-  // Generate next quote number
-  const { count } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('org_id', profile!.org_id)
-  const nextNumber = `Q-${new Date().getFullYear()}-${String((count ?? 0) + 1).padStart(3, '0')}`
-
   return (
     <QuoteBuilder
       contacts={contacts ?? []}
       services={services ?? []}
       products={products ?? []}
       org={org}
-      nextQuoteNumber={nextNumber}
       orgId={profile!.org_id}
       mode="new"
     />

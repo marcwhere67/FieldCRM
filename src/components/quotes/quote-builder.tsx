@@ -16,7 +16,6 @@ interface Props {
   services: { id: string; name: string; description: string | null; unit_price: number; unit: string; tax_rate: number }[]
   products?: CatalogueItem[]
   org: { name: string; abn: string | null; email: string | null; phone: string | null; address: string | null; default_payment_terms_days: number | null } | null
-  nextQuoteNumber?: string
   orgId: string
   mode: 'new' | 'edit'
   quote?: {
@@ -41,7 +40,7 @@ const inp: React.CSSProperties = {
 
 const labelSt: React.CSSProperties = { color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }
 
-export function QuoteBuilder({ contacts, services, products = [], org, nextQuoteNumber, orgId, mode, quote: existingQuote, onCancel }: Props) {
+export function QuoteBuilder({ contacts, services, products = [], org, orgId, mode, quote: existingQuote, onCancel }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
@@ -85,7 +84,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, nextQuote
     setSaving(true)
     const validUntil = new Date()
     validUntil.setDate(validUntil.getDate() + validDays)
-    const payload = { org_id: orgId, contact_id: contactId, quote_number: existingQuote?.quote_number ?? nextQuoteNumber ?? '', status, line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: validUntil.toISOString().split('T')[0], sent_at: status === 'sent' ? new Date().toISOString() : null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
+    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status, line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: validUntil.toISOString().split('T')[0], sent_at: status === 'sent' ? new Date().toISOString() : null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
     if (mode === 'new') {
       const { data, error } = await supabase.from('quotes').insert(payload).select('id').single()
       if (error) { toast.error(error.message); setSaving(false); return }
@@ -121,7 +120,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, nextQuote
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300, marginBottom: 2 }}>{mode === 'new' ? 'New Quote' : 'Edit Quote'}</h1>
-          <p style={{ color: C.muted, fontSize: 12 }}>{existingQuote?.quote_number ?? nextQuoteNumber ?? ''}</p>
+          <p style={{ color: C.muted, fontSize: 12 }}>{existingQuote?.quote_number ?? (mode === 'new' ? 'Number assigned on save' : '')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={() => saveQuote('draft')} disabled={saving}

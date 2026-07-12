@@ -85,17 +85,15 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
     startTransition(async () => {
       const { data: job, error } = await supabase.from('jobs').insert({
         org_id: orgId, contact_id: contact?.id, property_id: property?.id,
-        title: `Job from ${quote.quote_number}`, status: 'pending', quote_id: quote.id,
+        title: `Job from ${quote.quote_number}`, status: 'draft', quote_id: quote.id,
       }).select('id').single()
       if (error || !job) { toast.error('Failed to convert to job'); return }
       if (quote.deposit_type !== 'none' && quote.deposit_amount > 0) {
-        const { count } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('org_id', orgId)
-        const invoiceNumber = `INV-${new Date().getFullYear()}-${String((count ?? 0) + 1).padStart(3, '0')}`
         await supabase.from('invoices').insert({
           org_id: orgId, contact_id: contact?.id, job_id: job.id, quote_id: quote.id,
-          invoice_number: invoiceNumber, invoice_type: 'deposit', status: 'sent',
+          invoice_type: 'deposit', status: 'sent',
           line_items: [{ description: `Deposit for ${quote.quote_number}`, quantity: 1, unit_price: quote.deposit_amount, tax_rate: 0, subtotal: quote.deposit_amount }],
-          subtotal: quote.deposit_amount, tax: 0, total: quote.deposit_amount, deposit_credit: 0,
+          
           due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
         })
       }
