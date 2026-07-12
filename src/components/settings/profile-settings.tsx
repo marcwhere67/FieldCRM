@@ -240,11 +240,20 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
             </p>
           </div>
           {gmailStatus === 'connected' ? (
-            <button onClick={handleGmailSync} disabled={gmailSyncing}
-              style={{ border: `1px solid rgba(118,165,143,0.3)`, backgroundColor: C.cream, color: '#5d8c76', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
-              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
-              <Mail className="w-3.5 h-3.5" />{gmailSyncing ? 'Syncing…' : 'Sync Now'}
-            </button>
+            <div className="inline-flex items-center gap-2">
+              <button onClick={handleGmailSync} disabled={gmailSyncing}
+                style={{ border: `1px solid rgba(118,165,143,0.3)`, backgroundColor: C.cream, color: '#5d8c76', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+                className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+                <Mail className="w-3.5 h-3.5" />{gmailSyncing ? 'Syncing…' : 'Sync Now'}
+              </button>
+              <button onClick={() => { setGmailConnecting(true); window.location.href = '/api/auth/gmail/connect' }}
+                disabled={gmailConnecting}
+                title="Re-authorise Gmail to refresh permissions (e.g. to enable sending quotes)"
+                style={{ border: `1px solid rgba(44,62,80,0.15)`, backgroundColor: C.cream, color: '#4A5A65', padding: '6px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+                className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+                {gmailConnecting ? 'Connecting…' : 'Reconnect'}
+              </button>
+            </div>
           ) : (
             <button onClick={() => { setGmailConnecting(true); window.location.href = '/api/auth/gmail/connect' }}
               disabled={gmailConnecting || gmailStatus === 'loading'}
