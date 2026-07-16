@@ -251,7 +251,6 @@ interface Props {
 export function InvoicePDF({ invoice, org, contact }: Props) {
   const isPaid = invoice.status === 'paid'
   const isOverdue = invoice.status === 'overdue'
-  const canPay = ['sent', 'overdue'].includes(invoice.status) && !!invoice.stripe_payment_link
 
   return (
     <Document>
@@ -331,16 +330,8 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
           </View>
         )}
 
-        {canPay && (
-          <View style={styles.paymentSection}>
-            <Text style={styles.paymentLabel}>Pay online</Text>
-            <Text style={styles.paymentText}>
-              Pay securely at:{'\n'}{invoice.stripe_payment_link}
-            </Text>
-          </View>
-        )}
 
-        {isOverdue && !canPay && (
+        {isOverdue && (
           <View style={styles.paymentSection}>
             <Text style={styles.paymentLabel}>Payment overdue</Text>
             <Text style={styles.paymentText}>

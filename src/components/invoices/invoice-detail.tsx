@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, ExternalLink, CreditCard, AlertCircle, FileText } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
@@ -46,7 +46,6 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [isPending, startTransition] = useTransition()
-  const [generatingLink, setGeneratingLink] = useState(false)
 
   const contact = Array.isArray(invoice.contacts) ? invoice.contacts[0] : invoice.contacts
   const job = Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs
@@ -92,19 +91,6 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
       if (error) { toast.error('Failed to delete'); return }
       toast.success('Invoice deleted'); router.push('/invoices')
     })
-  }
-
-  async function generateStripeLink() {
-    setGeneratingLink(true)
-    try {
-      const res = await fetch('/api/invoices/stripe-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoiceId: invoice.id }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed')
-      await navigator.clipboard.writeText(data.url)
-      toast.success('Payment link copied to clipboard'); router.refresh()
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to generate payment link')
-    } finally { setGeneratingLink(false) }
   }
 
   const canSend = invoice.status === 'draft'
@@ -153,12 +139,6 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
               <CheckCircle className="w-3.5 h-3.5" />Mark paid
             </button>
           )}
-          <button onClick={generateStripeLink} disabled={generatingLink || invoice.status === 'paid'}
-            style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
-            className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
-            <CreditCard className="w-3.5 h-3.5" />
-            {generatingLink ? 'Generating…' : invoice.stripe_payment_link ? 'Copy link' : 'Payment link'}
-          </button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -168,12 +148,6 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
               <MoreHorizontal className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }} className="rounded-none w-44">
-              {invoice.stripe_payment_link && (
-                <DropdownMenuItem style={{ color: C.fg, fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]"
-                  onClick={() => { navigator.clipboard.writeText(invoice.stripe_payment_link!); toast.success('Copied') }}>
-                  <ExternalLink className="w-3.5 h-3.5 mr-2" />Copy payment link
-                </DropdownMenuItem>
-              )}
               {canVoid && (
                 <DropdownMenuItem style={{ color: '#b45309', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={voidInvoice}>
                   <FileText className="w-3.5 h-3.5 mr-2" />Void invoice
@@ -310,19 +284,6 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
             )}
           </div>
         </div>
-
-        {/* Payment link */}
-        {invoice.stripe_payment_link && invoice.status !== 'paid' && (
-          <div style={{ borderBottom: `1px solid ${C.border}`, padding: '16px 24px' }} className="flex items-center gap-4">
-            <div className="flex-1">
-              <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>Online payment</p>
-              <p style={{ color: '#4A5A65', fontSize: 12, fontFamily: 'monospace' }} className="truncate">{invoice.stripe_payment_link}</p>
-            </div>
-            <button onClick={() => { navigator.clipboard.writeText(invoice.stripe_payment_link!); toast.success('Copied') }}
-              style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: C.cream, padding: '5px 12px', fontSize: 11, letterSpacing: '0.08em', flexShrink: 0 }}
-              className="uppercase hover:opacity-80 transition-opacity">Copy</button>
-          </div>
-        )}
 
         {invoice.notes && (
           <div style={{ padding: '20px 24px' }}>

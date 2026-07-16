@@ -96,7 +96,6 @@ export function BusinessSettings({ org }: { org: Org }) {
         <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500, marginBottom: 14 }}>Integrations</h3>
         <div className="space-y-2">
           {[
-            { label: 'Stripe', desc: 'Payment processing' },
             { label: 'Twilio', desc: 'SMS messaging' },
             { label: 'Resend', desc: 'Email delivery' },
           ].map(i => (

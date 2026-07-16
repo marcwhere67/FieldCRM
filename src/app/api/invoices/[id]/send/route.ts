@@ -66,9 +66,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     )
 
     const subject = `Invoice ${invoice.invoice_number} from ${org?.name ?? 'us'}`
-    const payLine = invoice.stripe_payment_link
-      ? `<p><a href="${invoice.stripe_payment_link}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Pay online</a></p>`
-      : ''
 
     const htmlBody = `
 <html>
@@ -78,8 +75,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   <p>Please find invoice <strong>${invoice.invoice_number}</strong> from <strong>${org?.name}</strong> attached as a PDF.</p>
 
   <p><strong>Amount due:</strong> ${balanceFormatted}${dueText ? `<br><strong>Due date:</strong> ${dueText}` : ''}</p>
-
-  ${payLine}
 
   <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
 
@@ -91,7 +86,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
 Please find invoice ${invoice.invoice_number} from ${org?.name} attached as a PDF.
 
-Amount due: ${balanceFormatted}${dueText ? `\nDue date: ${dueText}` : ''}${invoice.stripe_payment_link ? `\nPay online: ${invoice.stripe_payment_link}` : ''}
+Amount due: ${balanceFormatted}${dueText ? `\nDue date: ${dueText}` : ''}
 
 Questions? Reply to this email.
 
