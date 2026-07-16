@@ -59,10 +59,12 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
   const st = STATUS_STYLE[displayStatus] ?? STATUS_STYLE.draft
 
   async function markSent() {
+    if (!contact?.email) { toast.error('Contact has no email address'); return }
     startTransition(async () => {
-      const { error } = await supabase.from('invoices').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', invoice.id)
-      if (error) { toast.error('Failed to update'); return }
-      toast.success('Invoice marked as sent'); router.refresh()
+      const res = await fetch(`/api/invoices/${invoice.id}/send`, { method: 'POST' })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) { toast.error(data?.error ?? 'Failed to send invoice'); return }
+      toast.success(`Invoice emailed to ${contact.email}`); router.refresh()
     })
   }
 
@@ -141,7 +143,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
             <button onClick={markSent} disabled={isPending}
               style={{ backgroundColor: '#2563eb', color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
               className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
-              <Send className="w-3.5 h-3.5" />Mark sent
+              <Send className="w-3.5 h-3.5" />{isPending ? 'Sending…' : 'Send invoice'}
             </button>
           )}
           {canMarkPaid && (
