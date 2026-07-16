@@ -172,47 +172,80 @@ export function decodeGmailBody(payload: GmailEmail['payload']): { text: string;
   return { text, html }
 }
 
+export interface EmailAttachment {
+  filename: string
+  content: Buffer
+  mimeType: string
+}
+
 export async function sendEmailViaGmail(
   accessToken: string,
   from: string,
   to: string,
   subject: string,
   htmlBody: string,
-  textBody?: string
+  textBody?: string,
+  attachments?: EmailAttachment[],
 ) {
-  const boundary = 'boundary_' + Math.random().toString(36).substr(2, 9)
   const textContent = textBody || htmlBody.replace(/<[^>]*>/g, '')
-  
-  const mimeMessage = `From: ${from}
-To: ${to}
-Subject: ${subject}
-MIME-Version: 1.0
-Content-Type: multipart/alternative; boundary="${boundary}"
+  const rand = () => Math.random().toString(36).slice(2, 11)
+  const altBoundary = 'alt_' + rand()
 
---${boundary}
+  // The message body is always multipart/alternative (plain + html).
+  const altPart =
+`Content-Type: multipart/alternative; boundary="${altBoundary}"
+
+--${altBoundary}
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
 
 ${textContent}
 
---${boundary}
+--${altBoundary}
 Content-Type: text/html; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
 
 ${htmlBody}
 
---${boundary}--`
+--${altBoundary}--`
 
-  console.log(`[GMAIL] Sending email from ${from} to ${to}`)
-  console.log(`[GMAIL] Subject: ${subject}`)
-  console.log(`[GMAIL] MIME message length: ${mimeMessage.length}`)
+  let mimeMessage: string
+  if (attachments && attachments.length > 0) {
+    // Wrap body + attachments in multipart/mixed.
+    const mixedBoundary = 'mixed_' + rand()
+    const attachmentParts = attachments.map(a => {
+      const b64 = a.content.toString('base64').replace(/(.{76})/g, '$1\n')
+      return `--${mixedBoundary}
+Content-Type: ${a.mimeType}; name="${a.filename}"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="${a.filename}"
+
+${b64}`
+    }).join('\n')
+
+    mimeMessage = `From: ${from}
+To: ${to}
+Subject: ${subject}
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="${mixedBoundary}"
+
+--${mixedBoundary}
+${altPart}
+
+${attachmentParts}
+--${mixedBoundary}--`
+  } else {
+    mimeMessage = `From: ${from}
+To: ${to}
+Subject: ${subject}
+MIME-Version: 1.0
+${altPart}`
+  }
 
   const encodedMessage = Buffer.from(mimeMessage).toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '')
-
-  console.log(`[GMAIL] Encoded message length: ${encodedMessage.length}`)
 
   const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
@@ -223,15 +256,9 @@ ${htmlBody}
     body: JSON.stringify({ raw: encodedMessage }),
   })
 
-  console.log(`[GMAIL] API Response status: ${response.status}`)
-  
   const responseData = await response.json()
-  console.log(`[GMAIL] API Response:`, responseData)
-
   if (!response.ok) {
     throw new Error(`Gmail API error: ${responseData.error?.message || 'Unknown error'}`)
   }
-  
-  console.log(`[GMAIL] Message sent successfully. ID: ${responseData.id}`)
   return responseData
 }

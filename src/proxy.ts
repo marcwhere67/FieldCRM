@@ -1,9 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/auth', '/quote-approval', '/setup', '/api/twilio', '/portal', '/intake']
+const PUBLIC_PATHS = ['/login', '/auth', '/quote-approval', '/setup', '/api/twilio', '/intake']
 
 export async function proxy(request: NextRequest) {
+  // Client portal is disabled for now (to be rebuilt later). Send any /portal
+  // hit to the staff login so no half-built customer pages are reachable.
+  if (request.nextUrl.pathname.startsWith('/portal')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

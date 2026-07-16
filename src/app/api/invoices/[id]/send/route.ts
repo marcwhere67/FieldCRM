@@ -1,6 +1,11 @@
+export const runtime = 'nodejs'
+
 import { NextResponse } from 'next/server'
+import React from 'react'
+import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
 import { formatCurrency, formatDate } from '@/lib/format'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -18,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('id, invoice_number, org_id, contact_id, total, deposit_credit, due_date, stripe_payment_link, contacts!invoices_contact_id_fkey(first_name, last_name, email)')
+    .select('id, invoice_number, org_id, contact_id, status, line_items, subtotal, tax, total, notes, deposit_credit, due_date, created_at, stripe_payment_link, contacts!invoices_contact_id_fkey(first_name, last_name, email, address_line1, suburb, state, postcode)')
     .eq('id', id)
     .eq('org_id', profile.org_id)
     .single()
@@ -32,7 +37,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: org } = await supabase
     .from('organisations')
-    .select('name, email')
+    .select('name, phone, email, address, abn')
     .eq('id', profile.org_id)
     .single()
 
@@ -44,8 +49,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     )
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
-  const viewUrl = `${siteUrl}/portal/invoices/${invoice.id}`
   const balanceDue = Number(invoice.total) - Number(invoice.deposit_credit ?? 0)
   const balanceFormatted = formatCurrency(balanceDue)
   const dueText = invoice.due_date ? formatDate(invoice.due_date) : null
@@ -55,6 +58,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   try {
     const accessToken = await getGmailAccessToken(profile.org_id, profile.id)
+
+    // InvoicePDF expects `notes_client`; map from the invoice's `notes` column.
+    const invoicePdfData = { ...invoice, notes_client: invoice.notes ?? null }
+    const pdfBuffer = await renderToBuffer(
+      React.createElement(InvoicePDF, { invoice: invoicePdfData, org, contact }) as React.ReactElement<DocumentProps>,
+    )
 
     const subject = `Invoice ${invoice.invoice_number} from ${org?.name ?? 'us'}`
     const payLine = invoice.stripe_payment_link
@@ -66,13 +75,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
   <p>Hi ${contact?.first_name || 'there'},</p>
 
-  <p>Please find your invoice <strong>${invoice.invoice_number}</strong> from <strong>${org?.name}</strong> below.</p>
+  <p>Please find invoice <strong>${invoice.invoice_number}</strong> from <strong>${org?.name}</strong> attached as a PDF.</p>
 
   <p><strong>Amount due:</strong> ${balanceFormatted}${dueText ? `<br><strong>Due date:</strong> ${dueText}` : ''}</p>
 
   ${payLine}
-
-  <p>View your invoice online: <a href="${viewUrl}">${viewUrl}</a></p>
 
   <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
 
@@ -82,11 +89,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const textBody = `Hi ${contact?.first_name || 'there'},
 
-Please find your invoice ${invoice.invoice_number} from ${org?.name}.
+Please find invoice ${invoice.invoice_number} from ${org?.name} attached as a PDF.
 
-Amount due: ${balanceFormatted}${dueText ? `\nDue date: ${dueText}` : ''}
-${invoice.stripe_payment_link ? `\nPay online: ${invoice.stripe_payment_link}` : ''}
-View your invoice online: ${viewUrl}
+Amount due: ${balanceFormatted}${dueText ? `\nDue date: ${dueText}` : ''}${invoice.stripe_payment_link ? `\nPay online: ${invoice.stripe_payment_link}` : ''}
 
 Questions? Reply to this email.
 
@@ -95,7 +100,9 @@ ${profile.full_name}
 ${org?.name}`
 
     const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
-    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody)
+    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, [
+      { filename: `${invoice.invoice_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
+    ])
     sent = true
   } catch (err) {
     console.error('[INVOICE SEND] Gmail send failed:', err)
