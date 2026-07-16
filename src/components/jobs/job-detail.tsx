@@ -71,6 +71,7 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
   const [checklist, setChecklist] = useState<ChecklistItem[]>(job.checklist ?? [])
   const [status, setStatus] = useState(job.status)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [creatingInvoice, setCreatingInvoice] = useState(false)
 
   const contact = Array.isArray(job.contacts) ? job.contacts[0] : job.contacts
   const property = Array.isArray(job.properties) ? job.properties[0] : job.properties
@@ -105,6 +106,20 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
     if (error) { toast.error('Failed to update status'); setStatus(job.status) }
     else { toast.success(`Job marked as ${newStatus.replace('_', ' ')}`); router.refresh() }
     setUpdatingStatus(false)
+  }
+
+  async function createInvoice() {
+    setCreatingInvoice(true)
+    const res = await fetch(`/api/jobs/${job.id}/invoice`, { method: 'POST' })
+    const data = await res.json().catch(() => null)
+    if (!res.ok && res.status !== 409) {
+      toast.error(data?.error ?? 'Failed to create invoice')
+      setCreatingInvoice(false)
+      return
+    }
+    if (data?.warning) toast.warning(data.warning)
+    else toast.success('Invoice created')
+    router.push(`/invoices/${data.id}`)
   }
 
   return (
@@ -456,9 +471,9 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
 
           {/* Actions */}
           <div className="space-y-2">
-            {status === 'completed' && !invoice && (
-              <button style={{ backgroundColor: '#2C3E50', color: '#fff', letterSpacing: '0.1em', width: '100%', padding: '10px 16px', fontSize: 11 }} className="uppercase flex items-center justify-center gap-2 hover:opacity-80 transition-opacity">
-                <Receipt className="w-3.5 h-3.5" />Create Invoice
+            {status === 'completed' && !invoice && ['admin', 'manager'].includes(userRole) && (
+              <button onClick={createInvoice} disabled={creatingInvoice} style={{ backgroundColor: '#2C3E50', color: '#fff', letterSpacing: '0.1em', width: '100%', padding: '10px 16px', fontSize: 11 }} className="uppercase flex items-center justify-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50">
+                <Receipt className="w-3.5 h-3.5" />{creatingInvoice ? 'Creating…' : 'Create Invoice'}
               </button>
             )}
             <Link href={`/clock?job=${job.id}`} style={{ display: 'block' }}>
