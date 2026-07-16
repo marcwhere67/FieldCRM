@@ -17,11 +17,22 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json()
-  const { name, abn, phone, email, address, default_payment_terms_days, timezone } = body
+  const {
+    name, abn, phone, email, address, default_payment_terms_days, timezone,
+    bank_account_name, bank_bsb, bank_account_number, bank_payid, payment_instructions,
+  } = body
 
   const { data, error } = await supabase
     .from('organisations')
-    .update({ name, abn, phone, email, address, default_payment_terms_days, timezone, updated_at: new Date().toISOString() })
+    .update({
+      name, abn, phone, email, address, default_payment_terms_days, timezone,
+      bank_account_name: bank_account_name || null,
+      bank_bsb: bank_bsb || null,
+      bank_account_number: bank_account_number || null,
+      bank_payid: bank_payid || null,
+      payment_instructions: payment_instructions || null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', profile.org_id)
     .select()
     .single()

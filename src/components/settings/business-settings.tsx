@@ -13,7 +13,7 @@ const C = {
 
 const TIMEZONES = ['Australia/Sydney','Australia/Melbourne','Australia/Brisbane','Australia/Perth','Australia/Adelaide','Australia/Darwin','Australia/Hobart','Pacific/Auckland']
 
-interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string }
+interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string; bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null; bank_payid?: string | null; payment_instructions?: string | null }
 
 export function BusinessSettings({ org }: { org: Org }) {
   const [saving, setSaving] = useState(false)
@@ -21,6 +21,9 @@ export function BusinessSettings({ org }: { org: Org }) {
     name: org.name, abn: org.abn ?? '', phone: org.phone ?? '',
     email: org.email ?? '', address: org.address ?? '',
     default_payment_terms_days: String(org.default_payment_terms_days), timezone: org.timezone,
+    bank_account_name: org.bank_account_name ?? '', bank_bsb: org.bank_bsb ?? '',
+    bank_account_number: org.bank_account_number ?? '', bank_payid: org.bank_payid ?? '',
+    payment_instructions: org.payment_instructions ?? '',
   })
 
   function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
@@ -89,6 +92,35 @@ export function BusinessSettings({ org }: { org: Org }) {
               </SelectContent>
             </Select>
           </div>
+        </div>
+      </div>
+
+      <div style={{ backgroundColor: '#fff', border: `1px solid rgba(44,62,80,0.09)`, padding: 20 }} className="space-y-4">
+        <div>
+          <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Bank / Payment Details</h3>
+          <p style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>Shown on invoices and receipts so clients can pay by bank transfer</p>
+        </div>
+        <div>
+          <label style={labelStyle}>Account Name</label>
+          <input value={form.bank_account_name} onChange={e => set('bank_account_name', e.target.value)} placeholder="Salt Air Cleaning Pty Ltd" style={inputStyle} className="focus:border-[#76A58F]" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label style={labelStyle}>BSB</label>
+            <input value={form.bank_bsb} onChange={e => set('bank_bsb', e.target.value)} placeholder="123-456" style={inputStyle} className="focus:border-[#76A58F]" />
+          </div>
+          <div>
+            <label style={labelStyle}>Account Number</label>
+            <input value={form.bank_account_number} onChange={e => set('bank_account_number', e.target.value)} placeholder="12345678" style={inputStyle} className="focus:border-[#76A58F]" />
+          </div>
+        </div>
+        <div>
+          <label style={labelStyle}>PayID (optional)</label>
+          <input value={form.bank_payid} onChange={e => set('bank_payid', e.target.value)} placeholder="hello@saltaircleaning.com.au" style={inputStyle} className="focus:border-[#76A58F]" />
+        </div>
+        <div>
+          <label style={labelStyle}>Payment Instructions (optional)</label>
+          <input value={form.payment_instructions} onChange={e => set('payment_instructions', e.target.value)} placeholder="Please use your invoice number as the payment reference" style={inputStyle} className="focus:border-[#76A58F]" />
         </div>
       </div>
 

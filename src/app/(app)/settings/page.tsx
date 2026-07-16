@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: team }] = await Promise.all([
     supabase
       .from('organisations')
-      .select('id, name, abn, phone, email, address, default_payment_terms_days, timezone, subscription_plan')
+      .select('id, name, abn, phone, email, address, default_payment_terms_days, timezone, subscription_plan, bank_account_name, bank_bsb, bank_account_number, bank_payid, payment_instructions')
       .eq('id', profile.org_id)
       .single(),
     supabase

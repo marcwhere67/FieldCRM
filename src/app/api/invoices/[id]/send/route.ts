@@ -37,7 +37,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: org } = await supabase
     .from('organisations')
-    .select('name, phone, email, address, abn')
+    .select('name, phone, email, address, abn, bank_account_name, bank_bsb, bank_account_number, bank_payid, payment_instructions')
     .eq('id', profile.org_id)
     .single()
 
@@ -52,6 +52,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const balanceDue = Number(invoice.total) - Number(invoice.deposit_credit ?? 0)
   const balanceFormatted = formatCurrency(balanceDue)
   const dueText = invoice.due_date ? formatDate(invoice.due_date) : null
+
+  // Bank transfer block for the email (only if bank details are configured)
+  const hasBank = org?.bank_bsb || org?.bank_account_number || org?.bank_payid
+  const bankHtml = hasBank
+    ? `<p style="background:#F5F0EB;padding:12px 16px;border-radius:4px;">
+         <strong>Pay by bank transfer</strong><br>
+         ${org?.bank_account_name ? `${org.bank_account_name}<br>` : ''}
+         ${org?.bank_bsb ? `BSB: ${org.bank_bsb} &nbsp; ` : ''}${org?.bank_account_number ? `Acc: ${org.bank_account_number}` : ''}
+         ${org?.bank_payid ? `<br>PayID: ${org.bank_payid}` : ''}
+         <br>Reference: <strong>${invoice.invoice_number}</strong>
+         ${org?.payment_instructions ? `<br>${org.payment_instructions}` : ''}
+       </p>`
+    : ''
+  const bankText = hasBank
+    ? `\nPay by bank transfer:\n${org?.bank_account_name ? org.bank_account_name + '\n' : ''}${org?.bank_bsb ? 'BSB: ' + org.bank_bsb + '  ' : ''}${org?.bank_account_number ? 'Acc: ' + org.bank_account_number : ''}${org?.bank_payid ? '\nPayID: ' + org.bank_payid : ''}\nReference: ${invoice.invoice_number}${org?.payment_instructions ? '\n' + org.payment_instructions : ''}\n`
+    : ''
 
   let sent = false
   let warning: string | null = null
@@ -76,6 +92,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   <p><strong>Amount due:</strong> ${balanceFormatted}${dueText ? `<br><strong>Due date:</strong> ${dueText}` : ''}</p>
 
+  ${bankHtml}
+
   <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
 
   <p>Best regards,<br>${profile.full_name}<br>${org?.name}</p>
@@ -87,6 +105,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 Please find invoice ${invoice.invoice_number} from ${org?.name} attached as a PDF.
 
 Amount due: ${balanceFormatted}${dueText ? `\nDue date: ${dueText}` : ''}
+${bankText}
 
 Questions? Reply to this email.
 

@@ -236,6 +236,11 @@ interface Props {
     email: string | null
     address: string | null
     abn: string | null
+    bank_account_name?: string | null
+    bank_bsb?: string | null
+    bank_account_number?: string | null
+    bank_payid?: string | null
+    payment_instructions?: string | null
   }
   contact: {
     first_name: string
@@ -327,6 +332,20 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
         {isPaid && (
           <View style={styles.paidBanner}>
             <Text style={styles.paidText}>✓ Paid — Thank you for your payment.</Text>
+          </View>
+        )}
+
+        {/* Bank transfer details (shown while unpaid) */}
+        {!isPaid && (org.bank_bsb || org.bank_account_number || org.bank_payid) && (
+          <View style={styles.paymentSection}>
+            <Text style={styles.paymentLabel}>Payment — Bank Transfer</Text>
+            <Text style={styles.paymentText}>
+              {org.bank_account_name ? `${org.bank_account_name}\n` : ''}
+              {org.bank_bsb ? `BSB: ${org.bank_bsb}    ` : ''}{org.bank_account_number ? `Acc: ${org.bank_account_number}` : ''}
+              {org.bank_payid ? `\nPayID: ${org.bank_payid}` : ''}
+              {`\nReference: ${invoice.invoice_number}`}
+              {org.payment_instructions ? `\n${org.payment_instructions}` : ''}
+            </Text>
           </View>
         )}
 
