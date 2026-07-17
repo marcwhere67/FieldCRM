@@ -1,7 +1,7 @@
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Briefcase, Receipt, TrendingUp, Clock, ArrowRight } from 'lucide-react'
-import { formatCurrency, formatFullDate, getMelbourneHour, melbourneDateOnly } from '@/lib/format'
+import { formatCurrency, formatFullDate, getMelbourneHour, melbourneDateOnly, formatTime } from '@/lib/format'
 import { AiInsightsCard } from '@/components/ai/ai-insights-card'
 import Link from 'next/link'
 
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
                 <div className="flex-1 min-w-0">
                   <p style={{ color: '#1C2A35' }} className="text-sm truncate group-hover:text-[#2C3E50]">{job.title}</p>
                   <p style={{ color: '#8A9BA6' }} className="text-xs">
-                    {job.scheduled_start ? new Date(job.scheduled_start).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : 'No time set'}
+                    {job.scheduled_start ? formatTime(job.scheduled_start) : 'No time set'}
                   </p>
                 </div>
                 <StatusBadge info={jobStatusStyle[job.status] ?? { variant: 'secondary', label: job.status }} />

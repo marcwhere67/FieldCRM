@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { QuoteBuilder } from '@/components/quotes/quote-builder'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
 import { ArrowLeft, Send, CheckCircle, Copy, Trash2, Edit2, ExternalLink, MoreHorizontal } from 'lucide-react'
 import {
@@ -93,7 +93,7 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
           invoice_type: 'deposit', status: 'sent',
           line_items: [{ description: `Deposit for ${quote.quote_number}`, quantity: 1, unit_price: quote.deposit_amount, tax_rate: 0, subtotal: quote.deposit_amount }],
           
-          due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+          due_date: melbourneDateOnly(new Date(Date.now() + 7 * 86400000)),
         })
       }
       await supabase.from('quotes').update({ status: 'converted' }).eq('id', quote.id)

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { InvoicesList } from '@/components/invoices/invoices-list'
+import { melbourneDateOnly } from '@/lib/format'
 
 export default async function InvoicesPage({
   searchParams,
@@ -30,8 +31,8 @@ export default async function InvoicesPage({
   // Cap the payload at the 500 most-recent to avoid an unbounded fetch.
   const { data: invoices, count } = await query.limit(500)
 
-  // Mark overdue on the fly (status=sent and past due_date)
-  const now = new Date().toISOString().split('T')[0]
+  // Mark overdue on the fly (status=sent and past due_date), using Melbourne "today"
+  const now = melbourneDateOnly()
   const enriched = (invoices ?? []).map(inv => ({
     ...inv,
     is_overdue: inv.status === 'sent' && inv.due_date && inv.due_date < now,

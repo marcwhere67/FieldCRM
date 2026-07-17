@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { melbourneDateOnly } from '@/lib/format'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -30,13 +31,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         amount: po.total,
         tax_included: true,
         recorded_by: profile.id,
-        expense_date: new Date().toISOString().split('T')[0],
+        expense_date: melbourneDateOnly(),
       }).select('id').single()
 
       if (expense) body.expense_id = expense.id
     }
 
-    body.received_date = new Date().toISOString().split('T')[0]
+    body.received_date = melbourneDateOnly()
   }
 
   const { data, error } = await supabase

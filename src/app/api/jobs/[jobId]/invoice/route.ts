@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { melbourneDateOnly } from '@/lib/format'
 
 interface LineItem {
   description: string
@@ -64,7 +65,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
   const { data: org } = await supabase
     .from('organisations').select('default_payment_terms_days').eq('id', profile.org_id).single()
   const termsDays = org?.default_payment_terms_days ?? 14
-  const dueDate = new Date(Date.now() + termsDays * 86400000).toISOString().split('T')[0]
+  const dueDate = melbourneDateOnly(new Date(Date.now() + termsDays * 86400000))
 
   // invoice_number + totals are assigned by DB triggers (Track A).
   const { data: invoice, error: invErr } = await supabase

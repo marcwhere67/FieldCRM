@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { Plus, Trash2, ChevronLeft, Send, Save } from 'lucide-react'
 import Link from 'next/link'
 import { AiQuoteAssist } from '@/components/ai/ai-quote-assist'
@@ -93,7 +93,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
     const validUntil = new Date()
     validUntil.setDate(validUntil.getDate() + validDays)
     // Always save as a draft first; the send route flips it to 'sent' once the email goes out.
-    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status: 'draft', line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: validUntil.toISOString().split('T')[0], sent_at: null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
+    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status: 'draft', line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: melbourneDateOnly(validUntil), sent_at: null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
 
     let quoteId = existingQuote?.id
     if (mode === 'new') {

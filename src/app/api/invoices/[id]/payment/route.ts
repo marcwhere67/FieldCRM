@@ -6,7 +6,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = await req.json().catch(() => ({}))
   const amount = Number(body.amount)
   const method = String(body.method || 'bank_transfer')
-  const paymentDate = body.payment_date || new Date().toISOString().split('T')[0]
+  const paymentDate = body.payment_date || melbourneDateOnly()
   const reference = body.reference ? String(body.reference).slice(0, 200) : null
   const note = body.note ? String(body.note).slice(0, 500) : null
   const sendReceipt = body.send_receipt !== false

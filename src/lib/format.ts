@@ -11,11 +11,20 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
 export function toMelbourne(date: string | Date): Date {
-  // Convert to Melbourne time by offsetting UTC
+  // Return a Date whose LOCAL getters (getFullYear/getMonth/getDate/getDay/
+  // getHours/getMinutes) read out the Melbourne wall-clock for this instant.
+  // Uses the IANA zone via Intl so it's daylight-saving-aware (AEST +10 /
+  // AEDT +11) AND identical on server and client — no hydration mismatch.
   const d = new Date(typeof date === 'string' ? date : date.toISOString())
-  // Melbourne is UTC+10 (AEST) or UTC+11 (AEDT) — use fixed +10 for SSR consistency
-  const utc = d.getTime() + d.getTimezoneOffset() * 60000
-  return new Date(utc + 10 * 3600000)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Australia/Melbourne',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(d)
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value)
+  let hour = get('hour')
+  if (hour === 24) hour = 0 // some engines emit '24' for midnight
+  return new Date(get('year'), get('month') - 1, get('day'), hour, get('minute'), get('second'))
 }
 
 export function getMelbourneHour(date: string | Date = new Date()): number {

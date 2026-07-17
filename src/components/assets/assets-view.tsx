@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, Search, Car, Wrench, Package, HelpCircle, Pencil, Trash2, AlertTriangle, X } from 'lucide-react'
-import { formatDate } from '@/lib/format'
+import { formatDate, melbourneDateOnly } from '@/lib/format'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -44,12 +44,12 @@ const emptyForm = {
   notes: '', status: 'active' as Asset['status'],
 }
 
-function todayStr() { return new Date().toISOString().split('T')[0] }
+function todayStr() { return melbourneDateOnly() }
 function isOverdue(date: string | null) { if (!date) return false; return date < todayStr() }
 function isDueSoon(date: string | null) {
   if (!date) return false
-  const soon = new Date(); soon.setDate(soon.getDate() + 30)
-  return date >= todayStr() && date <= soon.toISOString().split('T')[0]
+  const soon = melbourneDateOnly(new Date(Date.now() + 30 * 86400000))
+  return date >= todayStr() && date <= soon
 }
 
 export function AssetsView({ initialAssets, team, canManage }: Props) {

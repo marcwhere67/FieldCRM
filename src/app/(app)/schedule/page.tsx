@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { ScheduleView } from '@/components/schedule/schedule-view'
+import { melbourneDateOnly } from '@/lib/format'
 
 export default async function SchedulePage({
   searchParams,
@@ -58,7 +59,7 @@ export default async function SchedulePage({
       jobs={jobs ?? []}
       users={users ?? []}
       orgId={profile!.org_id}
-      initialDate={focusDate.toISOString().split('T')[0]}
+      initialDate={melbourneDateOnly(focusDate)}
       initialView={(params.view as 'month' | 'week' | 'day') ?? 'week'}
     />
   )

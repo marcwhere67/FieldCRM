@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react'
+import { melbourneDateOnly } from '@/lib/format'
 
 const C = {
   cream: '#F5F0EB', navy: '#2C3E50', sage: '#76A58F',
@@ -56,17 +57,17 @@ export function ScheduleView({ jobs, users, orgId, initialDate, initialView }: P
     if (view === 'month') next.setMonth(next.getMonth() + dir)
     else next.setDate(next.getDate() + (view === 'week' ? dir * 7 : dir))
     setFocusDate(next)
-    router.replace(`/schedule?date=${next.toISOString().split('T')[0]}&view=${view}`, { scroll: false })
+    router.replace(`/schedule?date=${melbourneDateOnly(next)}&view=${view}`, { scroll: false })
   }
 
   function goToday() {
     const now = new Date(); setFocusDate(now)
-    router.replace(`/schedule?date=${now.toISOString().split('T')[0]}&view=${view}`, { scroll: false })
+    router.replace(`/schedule?date=${melbourneDateOnly(now)}&view=${view}`, { scroll: false })
   }
 
   function switchView(v: 'week' | 'day' | 'month') {
     setView(v)
-    router.replace(`/schedule?date=${focusDate.toISOString().split('T')[0]}&view=${v}`, { scroll: false })
+    router.replace(`/schedule?date=${melbourneDateOnly(focusDate)}&view=${v}`, { scroll: false })
   }
 
   function getJobsForDay(day: Date) { return jobs.filter(j => j.scheduled_start && sameDay(new Date(j.scheduled_start), day)) }

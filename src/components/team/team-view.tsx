@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, X, Pencil, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, BadgeCheck, AlertTriangle } from 'lucide-react'
-import { formatDate } from '@/lib/format'
+import { formatDate, melbourneDateOnly } from '@/lib/format'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -70,11 +70,12 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
   const [leaveUserId, setLeaveUserId] = useState(currentUserId)
 
   const pendingCount = leave.filter(l => l.status === 'pending').length
-  const today = new Date().toISOString().split('T')[0]
+  const today = melbourneDateOnly()
+  const in60Days = melbourneDateOnly(new Date(Date.now() + 60 * 86400000))
 
   const expiringSoon = members.flatMap(m =>
     (m.employee_profiles?.certifications ?? [])
-      .filter(c => c.expires && c.expires >= today && c.expires <= new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0])
+      .filter(c => c.expires && c.expires >= today && c.expires <= in60Days)
       .map(c => ({ member: m.full_name, cert: c.name, expires: c.expires }))
   )
 
@@ -261,7 +262,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                             <div className="space-y-1.5">
                               {p!.certifications.map((cert, i) => {
                                 const expired = cert.expires && cert.expires < today
-                                const expiring = cert.expires && !expired && cert.expires <= new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]
+                                const expiring = cert.expires && !expired && cert.expires <= in60Days
                                 return (
                                   <div key={i} style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: '8px 12px' }} className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-1.5">

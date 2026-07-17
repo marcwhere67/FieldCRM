@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { melbourneDateOnly } from '@/lib/format'
 
 export async function GET() {
   const supabase = await createClient()
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       description,
       amount,
       job_id: job_id || null,
-      expense_date: expense_date || new Date().toISOString().split('T')[0],
+      expense_date: expense_date || melbourneDateOnly(),
       tax_included: tax_included ?? true,
       recorded_by: profile.id,
     })

@@ -1,6 +1,7 @@
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { PayrollView } from '@/components/payroll/payroll-view'
+import { melbourneDateOnly } from '@/lib/format'
 
 export default async function PayrollPage() {
   const supabase = await createClient()
@@ -10,10 +11,11 @@ export default async function PayrollPage() {
 
   if (!profile || !['admin', 'manager'].includes(profile.role)) redirect('/dashboard')
 
-  // Default to current month
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  // Default to the current month in Melbourne time
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const [y, m] = melbourneDateOnly().split('-').map(Number)
+  const start = `${y}-${pad(m)}-01`
+  const end = `${y}-${pad(m)}-${pad(new Date(y, m, 0).getDate())}`
 
   const { data: members } = await supabase
     .from('users')

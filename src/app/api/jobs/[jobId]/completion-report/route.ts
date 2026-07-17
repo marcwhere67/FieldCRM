@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { formatDateTime } from '@/lib/format'
 
 function generatePDFContent(jobData: any, notes: any[]): string {
   const lines: string[] = []
@@ -76,12 +77,12 @@ function generatePDFContent(jobData: any, notes: any[]): string {
     lines.push('/F1 11 Tf')
     if (jobData.actual_start) {
       lines.push(`${leftMargin} ${yPos} Td`)
-      lines.push(`(Started: ${new Date(jobData.actual_start).toLocaleString()}) Tj`)
+      lines.push(`(Started: ${formatDateTime(jobData.actual_start)}) Tj`)
       yPos -= lineHeight
     }
     if (jobData.actual_end) {
       lines.push(`${leftMargin} ${yPos} Td`)
-      lines.push(`(Completed: ${new Date(jobData.actual_end).toLocaleString()}) Tj`)
+      lines.push(`(Completed: ${formatDateTime(jobData.actual_end)}) Tj`)
       yPos -= lineHeight
     }
     lines.push('ET')
@@ -116,7 +117,7 @@ function generatePDFContent(jobData: any, notes: any[]): string {
   lines.push(`BT`)
   lines.push('/F1 9 Tf')
   lines.push(`${leftMargin} 20 Td`)
-  lines.push(`(Generated on ${new Date().toLocaleString()}) Tj`)
+  lines.push(`(Generated on ${formatDateTime(new Date())}) Tj`)
   lines.push('ET')
 
   lines.push('endstream')

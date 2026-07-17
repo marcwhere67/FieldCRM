@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
 import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText } from 'lucide-react'
 import {
@@ -51,7 +51,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
   const job = Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs
   const quote = Array.isArray(invoice.quotes) ? invoice.quotes[0] : invoice.quotes
 
-  const now = new Date().toISOString().split('T')[0]
+  const now = melbourneDateOnly()
   const isOverdue = invoice.status === 'sent' && invoice.due_date && invoice.due_date < now
   const displayStatus = isOverdue ? 'overdue' : invoice.status
   const balanceDue = invoice.total - (invoice.deposit_credit ?? 0)

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
+import { melbourneDateOnly } from '@/lib/format'
 
 const CATEGORIES = ['Materials', 'Labour', 'Equipment', 'Fuel', 'Vehicle', 'Marketing', 'Software', 'Insurance', 'Subcontractor', 'Other']
 
@@ -41,7 +42,7 @@ export function LogExpenseModal({ open, onClose, onSaved }: Props) {
     category: 'Materials',
     description: '',
     amount: '',
-    expense_date: new Date().toISOString().split('T')[0],
+    expense_date: melbourneDateOnly(),
     tax_included: 'true',
   })
 
@@ -65,7 +66,7 @@ export function LogExpenseModal({ open, onClose, onSaved }: Props) {
       toast.success('Expense logged')
       onSaved(data)
       onClose()
-      setForm({ category: 'Materials', description: '', amount: '', expense_date: new Date().toISOString().split('T')[0], tax_included: 'true' })
+      setForm({ category: 'Materials', description: '', amount: '', expense_date: melbourneDateOnly(), tax_included: 'true' })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save')
     } finally { setLoading(false) }
