@@ -2,7 +2,12 @@ import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { SettingsView } from '@/components/settings/settings-view'
 import { redirect } from 'next/navigation'
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -32,6 +37,7 @@ export default async function SettingsPage() {
       team={team ?? []}
       profile={profile}
       isAdmin={profile.role === 'admin'}
+      initialTab={tab}
     />
   )
 }

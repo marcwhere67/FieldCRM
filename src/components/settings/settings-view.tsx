@@ -16,7 +16,7 @@ const C = {
 interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string }
 interface TeamMember { id: string; full_name: string; email: string; role: string; phone: string | null; is_active: boolean; hourly_rate: number | null }
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
-interface Props { org: Org; team: TeamMember[]; profile: Profile; isAdmin: boolean }
+interface Props { org: Org; team: TeamMember[]; profile: Profile; isAdmin: boolean; initialTab?: string }
 
 const TABS = [
   { id: 'business',  label: 'Business',  icon: Building2, adminOnly: true },
@@ -25,9 +25,10 @@ const TABS = [
   { id: 'profile',   label: 'Profile',   icon: User,      adminOnly: false },
 ]
 
-export function SettingsView({ org, team, profile, isAdmin }: Props) {
+export function SettingsView({ org, team, profile, isAdmin, initialTab }: Props) {
   const visibleTabs = TABS.filter(t => !t.adminOnly || isAdmin)
-  const [activeTab, setActiveTab] = useState(visibleTabs[0].id)
+  const startTab = visibleTabs.some(t => t.id === initialTab) ? initialTab! : visibleTabs[0].id
+  const [activeTab, setActiveTab] = useState(startTab)
 
   return (
     <div style={{ maxWidth: 896 }} className="space-y-0 -mx-6 -mt-6">

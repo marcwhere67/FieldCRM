@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Bell, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -48,8 +49,12 @@ export function Topbar({ userName = 'User', userRole = 'admin' }: TopbarProps) {
       {/* Divider */}
       <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.08)' }} />
 
-      {/* User */}
-      <div className="flex items-center gap-2.5">
+      {/* User — links to your profile */}
+      <Link
+        href="/settings?tab=profile"
+        aria-label="Your profile"
+        className="flex items-center gap-2.5 -mx-1 px-1 py-1 rounded transition-colors hover:bg-white/10"
+      >
         <Avatar className="w-7 h-7 rounded-none">
           <AvatarFallback style={{ backgroundColor: '#76A58F', borderRadius: 0 }} className="text-white text-[11px] font-medium">
             {initials}
@@ -59,7 +64,7 @@ export function Topbar({ userName = 'User', userRole = 'admin' }: TopbarProps) {
           <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '12px', lineHeight: 1.2, fontWeight: 500 }}>{userName}</p>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', letterSpacing: '0.05em' }} className="capitalize">{userRole}</p>
         </div>
-      </div>
+      </Link>
     </header>
   )
 }
