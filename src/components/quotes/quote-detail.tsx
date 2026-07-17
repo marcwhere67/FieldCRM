@@ -170,6 +170,23 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
         </div>
       </div>
 
+      {/* Approved → ready to schedule prompt */}
+      {quote.status === 'approved' && (
+        <div style={{ backgroundColor: 'rgba(118,165,143,0.10)', border: '1px solid rgba(118,165,143,0.28)', padding: '14px 20px' }} className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" style={{ color: '#5d8c76' }} />
+            <span style={{ color: '#3f6b57', fontSize: 13 }}>
+              Approved by the client{quote.deposit_amount > 0 ? ` — a ${formatCurrency(quote.deposit_amount)} deposit invoice will be created` : ''}. Ready to schedule.
+            </span>
+          </div>
+          <button onClick={convertToJob} disabled={isPending}
+            style={{ backgroundColor: C.navy, color: '#fff', border: 'none', padding: '9px 16px', fontSize: 11, letterSpacing: '0.08em', flexShrink: 0 }}
+            className="inline-flex items-center gap-1.5 uppercase hover:opacity-90 transition-opacity disabled:opacity-40">
+            <CheckCircle className="w-3.5 h-3.5" />{isPending ? 'Creating…' : 'Create the job'}
+          </button>
+        </div>
+      )}
+
       {/* Timeline strip */}
       <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: '12px 20px' }} className="flex flex-wrap gap-6">
         {[

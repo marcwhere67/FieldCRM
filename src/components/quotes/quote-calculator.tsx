@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Calculator, Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Calculator, Clock, AlertTriangle, CheckCircle, FileText } from 'lucide-react'
 
 type CleanType = 'standard' | 'deep'
 
@@ -127,11 +128,27 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export function QuoteCalculator() {
+  const router = useRouter()
   const [tab, setTab] = useState<'calculator' | 'hourly'>('calculator')
   const [inp, setInp] = useState<Inputs>(DEFAULT)
   const set = <K extends keyof Inputs>(key: K, val: Inputs[K]) => setInp(prev => ({ ...prev, [key]: val }))
   const r = useMemo(() => calcResult(inp), [inp])
   const fmt = (n: number) => `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+
+  function createQuoteFromCalc() {
+    const beds = inp.queenBeds + inp.twinBeds
+    const parts = [
+      inp.cleanType === 'deep' ? 'Deep clean' : 'Standard clean',
+      beds > 0 ? `${beds} bed` : '',
+      inp.fullBaths > 0 ? `${inp.fullBaths} bath` : '',
+    ].filter(Boolean)
+    const params = new URLSearchParams({
+      description: parts.join(' · '),
+      amount: r.grandTotal.toFixed(2),
+      gst: inp.gstRegistered ? '1' : '0',
+    })
+    router.push(`/quotes/new?${params.toString()}`)
+  }
 
   const TIER_COLORS: Record<string, { bg: string; color: string }> = {
     S: { bg: 'rgba(37,99,235,0.08)',   color: '#2563eb' },
@@ -316,6 +333,12 @@ export function QuoteCalculator() {
                     </div>
                   </>
                 )}
+
+                <button onClick={createQuoteFromCalc}
+                  style={{ marginTop: 16, width: '100%', backgroundColor: C.navy, color: '#fff', border: 'none', padding: '11px 16px', fontSize: 11, letterSpacing: '0.1em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  className="uppercase hover:opacity-90 transition-opacity">
+                  <FileText style={{ width: 14, height: 14 }} />Create Quote from this
+                </button>
               </div>
 
               {/* Warnings */}
