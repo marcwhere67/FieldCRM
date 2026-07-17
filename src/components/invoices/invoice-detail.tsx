@@ -57,6 +57,17 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
   const balanceDue = invoice.total - (invoice.deposit_credit ?? 0)
   const st = STATUS_STYLE[displayStatus] ?? STATUS_STYLE.draft
 
+  const [showPayment, setShowPayment] = useState(false)
+  const [payForm, setPayForm] = useState({
+    amount: balanceDue.toFixed(2),
+    payment_date: now,
+    method: 'bank_transfer',
+    reference: invoice.invoice_number,
+    note: '',
+    send_receipt: !!contact?.email,
+  })
+  const setPay = (k: string, v: string | boolean) => setPayForm(f => ({ ...f, [k]: v }))
+
   async function markSent() {
     if (!contact?.email) { toast.error('Contact has no email address'); return }
     startTransition(async () => {
@@ -67,11 +78,19 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
     })
   }
 
-  async function markPaid() {
+  async function recordPayment() {
+    if (!(Number(payForm.amount) > 0)) { toast.error('Enter an amount greater than zero'); return }
     startTransition(async () => {
-      const { error } = await supabase.from('invoices').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', invoice.id)
-      if (error) { toast.error('Failed to update'); return }
-      toast.success('Invoice marked as paid'); router.refresh()
+      const res = await fetch(`/api/invoices/${invoice.id}/payment`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payForm),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) { toast.error(data?.error ?? 'Failed to record payment'); return }
+      const msg = data.status === 'paid' ? 'Payment recorded — invoice paid in full' : `Payment recorded — ${formatCurrency(data.balance_remaining)} remaining`
+      if (data.receipt_warning) toast.warning(`${msg}. Receipt email failed: ${data.receipt_warning}`)
+      else toast.success(payForm.send_receipt && contact?.email ? `${msg} — receipt sent` : msg)
+      setShowPayment(false); router.refresh()
     })
   }
 
@@ -94,7 +113,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
   }
 
   const canSend = invoice.status === 'draft'
-  const canMarkPaid = ['sent', 'overdue'].includes(displayStatus)
+  const canMarkPaid = ['sent', 'overdue', 'partial'].includes(displayStatus)
   const canVoid = !['void', 'paid'].includes(invoice.status)
 
   return (
@@ -133,10 +152,10 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
             </button>
           )}
           {canMarkPaid && (
-            <button onClick={markPaid} disabled={isPending}
+            <button onClick={() => { setPayForm(f => ({ ...f, amount: balanceDue.toFixed(2) })); setShowPayment(true) }} disabled={isPending}
               style={{ backgroundColor: C.sage, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
               className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
-              <CheckCircle className="w-3.5 h-3.5" />Mark paid
+              <CheckCircle className="w-3.5 h-3.5" />Record payment
             </button>
           )}
           <DropdownMenu>
@@ -292,6 +311,70 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
           </div>
         )}
       </div>
+
+      {showPayment && (
+        <div onClick={() => !isPending && setShowPayment(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(28,42,53,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, width: '100%', maxWidth: 420, padding: 24 }}>
+            <h3 style={{ fontFamily: C.serif, color: C.navy, fontSize: 20, fontWeight: 300, marginBottom: 4 }}>Record Payment</h3>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 18 }}>Invoice {invoice.invoice_number} · {formatCurrency(balanceDue)} owing</p>
+
+            {(() => {
+              const lbl = { color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase' as const, marginBottom: 6, display: 'block' as const }
+              const inp = { backgroundColor: '#fff', border: `1px solid rgba(44,62,80,0.15)`, borderRadius: 0, color: C.fg, fontSize: 13, height: 36, width: '100%', padding: '0 10px', outline: 'none' as const }
+              return (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label style={lbl}>Amount</label>
+                      <input type="number" step="0.01" min="0" value={payForm.amount} onChange={e => setPay('amount', e.target.value)} style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>Date</label>
+                      <input type="date" value={payForm.payment_date} onChange={e => setPay('payment_date', e.target.value)} style={inp} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Method</label>
+                    <select value={payForm.method} onChange={e => setPay('method', e.target.value)} style={{ ...inp, appearance: 'auto' as const }}>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={lbl}>Reference</label>
+                    <input value={payForm.reference} onChange={e => setPay('reference', e.target.value)} style={inp} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Note (optional)</label>
+                    <input value={payForm.note} onChange={e => setPay('note', e.target.value)} style={inp} />
+                  </div>
+                  {contact?.email && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.fg, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={payForm.send_receipt} onChange={e => setPay('send_receipt', e.target.checked)} />
+                      Email receipt to {contact.email}
+                    </label>
+                  )}
+                </div>
+              )
+            })()}
+
+            <div className="flex justify-end gap-2" style={{ marginTop: 20 }}>
+              <button onClick={() => setShowPayment(false)} disabled={isPending}
+                style={{ border: `1px solid ${C.border}`, color: C.muted, backgroundColor: '#fff', padding: '8px 16px', fontSize: 11, letterSpacing: '0.08em' }}
+                className="uppercase hover:opacity-80 transition-opacity disabled:opacity-40">Cancel</button>
+              <button onClick={recordPayment} disabled={isPending}
+                style={{ backgroundColor: C.sage, color: '#fff', padding: '8px 16px', fontSize: 11, letterSpacing: '0.08em' }}
+                className="uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+                {isPending ? 'Recording…' : 'Record payment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
