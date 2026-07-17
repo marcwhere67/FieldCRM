@@ -11,6 +11,7 @@ interface Contact {
   first_name: string
   last_name: string
   phone: string | null
+  do_not_contact: boolean
 }
 
 interface ExecutionContext {
@@ -66,7 +67,7 @@ export async function runAutomations(
     if (context.contactId) {
       const { data } = await supabase
         .from('contacts')
-        .select('id, first_name, last_name, phone')
+        .select('id, first_name, last_name, phone, do_not_contact')
         .eq('id', context.contactId)
         .single()
       contact = data
@@ -79,10 +80,25 @@ export async function runAutomations(
     for (const step of steps) {
       try {
         if (step.type === 'send_sms') {
+          // AU Spam Act: never send to a contact who has opted out.
+          if (contact?.do_not_contact) {
+            stepsCompleted++
+            continue
+          }
+
           const template = (step.config.message as string) ?? ''
-          const message = template
+          const unsubscribeUrl = contact
+            ? `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/unsubscribe/${contact.id}`
+            : ''
+          let message = template
             .replace(/{{first_name}}/g, contact?.first_name ?? '')
             .replace(/{{last_name}}/g, contact?.last_name ?? '')
+            .replace(/{{unsubscribe_url}}/g, unsubscribeUrl)
+          // Every commercial message must carry a functional unsubscribe. If the
+          // template didn't include one, append it.
+          if (unsubscribeUrl && !template.includes('{{unsubscribe_url}}')) {
+            message += `\n\nReply STOP or opt out: ${unsubscribeUrl}`
+          }
 
           const to = contact?.phone
           if (to) {

@@ -32,6 +32,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .from('contacts')
     .select('id, email, phone', { count: 'exact' })
     .eq('org_id', profile.org_id)
+    // AU Spam Act: never include contacts who have opted out.
+    .eq('do_not_contact', false)
 
   if (campaign.type === 'email') query = query.not('email', 'is', null)
   if (campaign.type === 'sms') query = query.not('phone', 'is', null)
@@ -40,7 +42,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { count } = await query
 
-  // Placeholder send — in production wire up Resend (email) or Twilio (SMS)
+  // Placeholder send — in production wire up Resend (email) or Twilio (SMS).
+  // When wiring the real send, personalise per recipient and append the
+  // unsubscribe link so every commercial message carries one:
+  //   const unsubscribeUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/unsubscribe/${contact.id}`
+  //   body = campaign.content.replace(/{{unsubscribe_url}}/g, unsubscribeUrl)
+  //          + (campaign.content.includes('{{unsubscribe_url}}') ? '' : `\n\nUnsubscribe: ${unsubscribeUrl}`)
   const { data, error } = await supabase
     .from('campaigns')
     .update({
