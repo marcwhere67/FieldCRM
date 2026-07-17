@@ -7,6 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
 import { formatCurrency, formatDate } from '@/lib/format'
+import { captureError } from '@/lib/monitor'
+
+const SOURCE = 'api/invoices/[id]/send'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -119,7 +122,10 @@ ${org?.name}`
     ])
     sent = true
   } catch (err) {
-    console.error('[INVOICE SEND] Gmail send failed:', err)
+    await captureError(err, {
+      source: SOURCE, level: 'warning', orgId: profile.org_id, userId: profile.id,
+      context: { stage: 'gmail_send', invoiceId: id },
+    })
     warning = err instanceof Error ? err.message : 'Failed to send email'
   }
 
@@ -132,7 +138,13 @@ ${org?.name}`
     .update({ status: 'sent', sent_at: new Date().toISOString() })
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    await captureError(error, {
+      source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id,
+      context: { stage: 'status_update', invoiceId: id },
+    })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({ sent: true })
 }

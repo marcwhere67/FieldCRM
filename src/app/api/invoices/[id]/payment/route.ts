@@ -7,6 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
+import { captureError } from '@/lib/monitor'
+
+const SOURCE = 'api/invoices/[id]/payment'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -59,6 +62,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .single()
 
   if (payErr || !payment) {
+    await captureError(payErr ?? new Error('Payment insert returned no row'), {
+      source: SOURCE, level: 'critical', orgId: profile.org_id, userId: profile.id,
+      context: { invoiceId: invoice.id, amount, method },
+    })
     return NextResponse.json({ error: payErr?.message ?? 'Failed to record payment' }, { status: 400 })
   }
 
@@ -71,7 +78,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const fullyPaid = totalPaid >= amountOwed - 0.005 // cent tolerance
   const balanceRemaining = Math.max(0, Math.round((amountOwed - totalPaid) * 100) / 100)
 
-  await supabase
+  const { error: invUpdErr } = await supabase
     .from('invoices')
     .update({
       amount_paid: totalPaid,
@@ -80,6 +87,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       paid_at: fullyPaid ? new Date().toISOString() : null,
     })
     .eq('id', invoice.id)
+
+  if (invUpdErr) {
+    // Payment IS recorded but the invoice status didn't update — needs a human.
+    await captureError(invUpdErr, {
+      source: SOURCE, level: 'critical', orgId: profile.org_id, userId: profile.id,
+      context: { invoiceId: invoice.id, paymentId: payment.id, totalPaid, fullyPaid },
+    })
+  }
 
   // Email the receipt (best-effort — payment is already recorded either way)
   const contact = Array.isArray(invoice.contacts) ? invoice.contacts[0] : invoice.contacts
@@ -125,7 +140,10 @@ ${org?.name}`
         { filename: `${payment.receipt_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
       ])
     } catch (err) {
-      console.error('[RECEIPT SEND] failed:', err)
+      await captureError(err, {
+        source: SOURCE, level: 'warning', orgId: profile.org_id, userId: profile.id,
+        context: { stage: 'receipt_email', invoiceId: invoice.id, paymentId: payment.id },
+      })
       receiptWarning = err instanceof Error ? err.message : 'Receipt email failed'
     }
   }

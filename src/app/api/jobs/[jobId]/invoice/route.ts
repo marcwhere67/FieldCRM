@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { melbourneDateOnly } from '@/lib/format'
+import { captureError } from '@/lib/monitor'
+
+const SOURCE = 'api/jobs/[jobId]/invoice'
 
 interface LineItem {
   description: string
@@ -84,6 +87,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
     .single()
 
   if (invErr || !invoice) {
+    await captureError(invErr ?? new Error('Invoice insert returned no row'), {
+      source: SOURCE, level: 'critical', orgId: profile.org_id, userId: profile.id,
+      context: { jobId: job.id, quoteId: job.quote_id ?? null },
+    })
     return NextResponse.json({ error: invErr?.message ?? 'Failed to create invoice' }, { status: 400 })
   }
 
@@ -94,6 +101,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
 
   if (jobErr) {
     // Invoice exists but the link failed — surface it rather than pretending all is well.
+    await captureError(jobErr, {
+      source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id,
+      context: { jobId: job.id, invoiceId: invoice.id },
+    })
     return NextResponse.json(
       { id: invoice.id, warning: 'Invoice created but job status was not updated' },
       { status: 200 },
