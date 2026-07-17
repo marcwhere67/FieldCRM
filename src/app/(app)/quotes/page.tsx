@@ -20,13 +20,14 @@ export default async function QuotesPage({
       id, quote_number, status, subtotal, tax, total,
       valid_until, sent_at, approved_at, created_at,
       contacts!quotes_contact_id_fkey(id, first_name, last_name, email, phone)
-    `)
+    `, { count: 'exact' })
     .eq('org_id', profile!.org_id)
     .order('created_at', { ascending: false })
 
   if (params.status) query = query.eq('status', params.status)
 
-  const { data: quotes } = await query
+  // Cap the payload at the 500 most-recent to avoid an unbounded fetch.
+  const { data: quotes, count } = await query.limit(500)
 
-  return <QuotesList quotes={quotes ?? []} filters={params} />
+  return <QuotesList quotes={quotes ?? []} filters={params} total={count ?? (quotes?.length ?? 0)} />
 }

@@ -22,7 +22,7 @@ export default async function JobsPage({
       contact_id, property_id,
       contacts!jobs_contact_id_fkey(first_name, last_name, phone),
       properties!jobs_property_id_fkey(address_line1, suburb, state)
-    `)
+    `, { count: 'exact' })
     .eq('org_id', profile!.org_id)
     .order('created_at', { ascending: false })
 
@@ -30,7 +30,8 @@ export default async function JobsPage({
   if (params.from) query = query.gte('scheduled_start', params.from)
   if (params.to) query = query.lte('scheduled_start', params.to)
 
-  const { data: jobs } = await query
+  // Cap the payload at the 500 most-recent to avoid an unbounded fetch.
+  const { data: jobs, count } = await query.limit(500)
 
   const { data: teamMembers } = await supabase
     .from('users')
@@ -44,6 +45,7 @@ export default async function JobsPage({
       teamMembers={teamMembers ?? []}
       userRole={profile!.role}
       filters={params}
+      total={count ?? (jobs?.length ?? 0)}
     />
   )
 }

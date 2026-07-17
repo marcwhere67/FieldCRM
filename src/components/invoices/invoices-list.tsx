@@ -37,9 +37,10 @@ interface Invoice {
 interface Props {
   invoices: Invoice[]
   filters: { status?: string; type?: string }
+  total?: number
 }
 
-export function InvoicesList({ invoices, filters }: Props) {
+export function InvoicesList({ invoices, filters, total }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
@@ -77,7 +78,10 @@ export function InvoicesList({ invoices, filters }: Props) {
         <div>
           <p style={{ color: '#76A58F', letterSpacing: '0.2em' }} className="text-[10px] uppercase mb-1">Finance</p>
           <h1 style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50' }} className="text-3xl font-light">Invoices</h1>
-          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">{invoices.length} total</p>
+          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">
+            {(total ?? invoices.length)} total
+            {(total ?? 0) > invoices.length && <> · showing most recent {invoices.length}</>}
+          </p>
         </div>
       </div>
 

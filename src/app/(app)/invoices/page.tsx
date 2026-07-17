@@ -20,14 +20,15 @@ export default async function InvoicesPage({
       id, invoice_number, invoice_type, status, subtotal, tax, total,
       deposit_credit, due_date, paid_at, sent_at, created_at,
       contacts!invoices_contact_id_fkey(id, first_name, last_name, email)
-    `)
+    `, { count: 'exact' })
     .eq('org_id', profile!.org_id)
     .order('created_at', { ascending: false })
 
   if (params.status) query = query.eq('status', params.status)
   if (params.type) query = query.eq('invoice_type', params.type)
 
-  const { data: invoices } = await query
+  // Cap the payload at the 500 most-recent to avoid an unbounded fetch.
+  const { data: invoices, count } = await query.limit(500)
 
   // Mark overdue on the fly (status=sent and past due_date)
   const now = new Date().toISOString().split('T')[0]
@@ -36,5 +37,5 @@ export default async function InvoicesPage({
     is_overdue: inv.status === 'sent' && inv.due_date && inv.due_date < now,
   }))
 
-  return <InvoicesList invoices={enriched} filters={params} />
+  return <InvoicesList invoices={enriched} filters={params} total={count ?? enriched.length} />
 }

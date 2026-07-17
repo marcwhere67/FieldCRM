@@ -34,9 +34,10 @@ interface Quote {
 interface Props {
   quotes: Quote[]
   filters: { status?: string; q?: string }
+  total?: number
 }
 
-export function QuotesList({ quotes, filters }: Props) {
+export function QuotesList({ quotes, filters, total }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
@@ -67,7 +68,10 @@ export function QuotesList({ quotes, filters }: Props) {
         <div>
           <p style={{ color: '#76A58F', letterSpacing: '0.2em' }} className="text-[10px] uppercase mb-1">Sales</p>
           <h1 style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50' }} className="text-3xl font-light">Quotes</h1>
-          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">{quotes.length} total</p>
+          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">
+            {(total ?? quotes.length)} total
+            {(total ?? 0) > quotes.length && <> · showing most recent {quotes.length}</>}
+          </p>
         </div>
         <Link href="/quotes/new">
           <button style={{ backgroundColor: '#2C3E50', color: '#fff', letterSpacing: '0.1em' }} className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase font-normal transition-all hover:opacity-80 active:scale-[0.98]">

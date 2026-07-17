@@ -36,6 +36,7 @@ interface Props {
   teamMembers: { id: string; full_name: string }[]
   userRole: string
   filters: { q?: string; status?: string; assigned?: string; from?: string; to?: string }
+  total?: number
 }
 
 const AVATAR_COLORS = [
@@ -45,7 +46,7 @@ const AVATAR_COLORS = [
   { bg: 'rgba(37,99,235,0.08)',   color: '#2563eb' },
 ]
 
-export function JobsTable({ jobs, teamMembers, userRole, filters }: Props) {
+export function JobsTable({ jobs, teamMembers, userRole, filters, total }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
@@ -93,7 +94,10 @@ export function JobsTable({ jobs, teamMembers, userRole, filters }: Props) {
         <div>
           <p style={{ color: '#76A58F', letterSpacing: '0.2em' }} className="text-[10px] uppercase mb-1">Operations</p>
           <h1 style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50' }} className="text-3xl font-light">Jobs</h1>
-          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">{filteredJobs.length} total</p>
+          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">
+            {filteredJobs.length} total
+            {(total ?? 0) > jobs.length && <> · showing most recent {jobs.length}</>}
+          </p>
         </div>
         <Link href="/jobs/new">
           <button style={{ backgroundColor: '#2C3E50', color: '#fff', letterSpacing: '0.1em' }} className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase font-normal transition-all hover:opacity-80 active:scale-[0.98]">

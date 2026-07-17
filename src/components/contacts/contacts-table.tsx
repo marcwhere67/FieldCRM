@@ -66,9 +66,10 @@ interface Props {
   campaigns: { id: string; name: string }[]
   userRole: string
   filters: { q?: string; status?: string; source?: string; assigned?: string }
+  total?: number
 }
 
-export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filters }: Props) {
+export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filters, total }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -156,7 +157,10 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
         <div>
           <p style={{ color: '#76A58F', letterSpacing: '0.2em' }} className="text-[10px] uppercase mb-1">Directory</p>
           <h1 style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50' }} className="text-3xl font-light">Contacts</h1>
-          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">{contacts.length} total</p>
+          <p style={{ color: '#8A9BA6' }} className="text-xs mt-1">
+            {(total ?? contacts.length)} total
+            {(total ?? 0) > contacts.length && <> · showing most recent {contacts.length}</>}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" style={{ border: '1px solid rgba(44,62,80,0.15)', color: '#4A5A65', backgroundColor: '#fff', letterSpacing: '0.08em' }} className="text-xs uppercase font-normal">

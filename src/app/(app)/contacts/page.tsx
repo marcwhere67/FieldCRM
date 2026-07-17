@@ -22,7 +22,7 @@ export default async function ContactsPage({
       last_contacted_at, created_at, assigned_to, pipeline_stage_id,
       users!contacts_assigned_to_fkey(full_name),
       pipeline_stages(name, color)
-    `)
+    `, { count: 'exact' })
     .eq('org_id', profile!.org_id)
     .order('created_at', { ascending: false })
 
@@ -34,7 +34,8 @@ export default async function ContactsPage({
   if (params.source) query = query.eq('source', params.source)
   if (params.assigned) query = query.eq('assigned_to', params.assigned)
 
-  const { data: contacts } = await query
+  // Cap the payload at the 500 most-recent to avoid an unbounded fetch.
+  const { data: contacts, count } = await query.limit(500)
 
   const { data: teamMembers } = await supabase
     .from('users')
@@ -55,6 +56,7 @@ export default async function ContactsPage({
       campaigns={campaigns ?? []}
       userRole={profile!.role}
       filters={params}
+      total={count ?? (contacts?.length ?? 0)}
     />
   )
 }
