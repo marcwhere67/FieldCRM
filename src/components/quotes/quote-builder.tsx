@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
+import { computeTotals, lineSubtotal, depositAmount as calcDeposit } from '@/lib/money'
 import { Plus, Trash2, ChevronLeft, Send, Save } from 'lucide-react'
 import Link from 'next/link'
 import { AiQuoteAssist } from '@/components/ai/ai-quote-assist'
@@ -56,10 +57,8 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const [depositType, setDepositType] = useState<'none' | 'percentage' | 'fixed'>((existingQuote?.deposit_type as 'none' | 'percentage' | 'fixed') ?? 'none')
   const [depositValue, setDepositValue] = useState(existingQuote?.deposit_value ?? 0)
 
-  const subtotal      = lineItems.reduce((s, i) => s + i.subtotal, 0)
-  const tax           = lineItems.reduce((s, i) => s + (i.subtotal * i.tax_rate) / 100, 0)
-  const total         = subtotal + tax
-  const depositAmount = depositType === 'none' ? 0 : depositType === 'percentage' ? Math.round(total * depositValue / 100 * 100) / 100 : depositValue
+  const { subtotal, tax, total } = computeTotals(lineItems)
+  const depositAmount = calcDeposit(depositType, depositValue, total)
 
   function addCatalogueItem(item: CatalogueItem) {
     setLineItems(prev => [...prev, { service_id: item.id, description: item.name, quantity: 1, unit_price: item.unit_price, tax_rate: item.tax_rate ?? 10, subtotal: item.unit_price }])
@@ -72,7 +71,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
     setLineItems(prev => prev.map((item, i) => {
       if (i !== index) return item
       const updated = { ...item, [field]: value }
-      if (field === 'quantity' || field === 'unit_price') updated.subtotal = Number(updated.quantity) * Number(updated.unit_price)
+      if (field === 'quantity' || field === 'unit_price') updated.subtotal = lineSubtotal(Number(updated.quantity), Number(updated.unit_price))
       return updated
     }))
   }
