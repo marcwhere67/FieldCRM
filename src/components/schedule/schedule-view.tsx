@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react'
@@ -47,6 +47,14 @@ export function ScheduleView({ jobs, users, orgId, initialDate, initialView }: P
   const router = useRouter()
   const [view, setView] = useState<'week' | 'day' | 'month'>(initialView)
   const [focusDate, setFocusDate] = useState(() => new Date(initialDate + 'T00:00:00'))
+
+  // Week view is unusable at 7 columns on a phone — default mobile to Day view
+  // on first load, unless the user explicitly picked a view (?view= in the URL).
+  useEffect(() => {
+    if (window.innerWidth < 768 && !new URLSearchParams(window.location.search).get('view')) {
+      setView('day')
+    }
+  }, [])
 
   const weekStart = startOfWeek(focusDate)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -108,8 +116,8 @@ export function ScheduleView({ jobs, users, orgId, initialDate, initialView }: P
       </div>
 
       {/* Toolbar */}
-      <div style={{ backgroundColor: C.cream, borderBottom: `1px solid ${C.border}`, padding: '10px 24px' }} className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
+      <div style={{ backgroundColor: C.cream, borderBottom: `1px solid ${C.border}`, padding: '10px 24px' }} className="flex items-center justify-between shrink-0 flex-wrap gap-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => navigate(-1)} style={{ border: `1px solid ${C.border}`, backgroundColor: '#fff', color: '#4A5A65', width: 30, height: 30 }}
             className="flex items-center justify-center hover:opacity-80 transition-opacity">
             <ChevronLeft className="w-4 h-4" />

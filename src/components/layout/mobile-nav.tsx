@@ -21,8 +21,8 @@ export function MobileNav() {
 
   return (
     <>
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, backgroundColor: '#F5F0EB', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'stretch' }}
-        className="md:hidden safe-area-pb">
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, backgroundColor: '#F5F0EB', borderTop: `1px solid ${C.border}`, alignItems: 'stretch' }}
+        className="flex md:hidden safe-area-pb">
         {BOTTOM_NAV.map(({ label, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
