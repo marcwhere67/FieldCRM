@@ -79,24 +79,49 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
 
   function removeLine(index: number) { setLineItems(prev => prev.filter((_, i) => i !== index)) }
 
-  async function saveQuote(status: 'draft' | 'sent') {
+  async function saveQuote(action: 'draft' | 'sent') {
     if (!contactId) { toast.error('Please select a client'); return }
     if (lineItems.length === 0) { toast.error('Add at least one line item'); return }
+
+    // Sending emails the quote — the client must have an email address.
+    if (action === 'sent') {
+      const c = contacts.find(x => x.id === contactId)
+      if (!c?.email) { toast.error('This client has no email address — add one, or save as draft'); return }
+    }
+
     setSaving(true)
     const validUntil = new Date()
     validUntil.setDate(validUntil.getDate() + validDays)
-    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status, line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: validUntil.toISOString().split('T')[0], sent_at: status === 'sent' ? new Date().toISOString() : null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
+    // Always save as a draft first; the send route flips it to 'sent' once the email goes out.
+    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status: 'draft', line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: validUntil.toISOString().split('T')[0], sent_at: null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
+
+    let quoteId = existingQuote?.id
     if (mode === 'new') {
       const { data, error } = await supabase.from('quotes').insert(payload).select('id').single()
-      if (error) { toast.error(error.message); setSaving(false); return }
-      toast.success(status === 'sent' ? 'Quote sent!' : 'Quote saved as draft')
-      router.push(`/quotes/${data.id}`)
+      if (error || !data) { toast.error(error?.message ?? 'Failed to save'); setSaving(false); return }
+      quoteId = data.id
     } else {
       const { error } = await supabase.from('quotes').update(payload).eq('id', existingQuote!.id)
       if (error) { toast.error(error.message); setSaving(false); return }
-      toast.success('Quote updated'); router.refresh()
     }
+
+    if (action === 'draft') {
+      toast.success('Quote saved as draft')
+      setSaving(false)
+      router.push(`/quotes/${quoteId}`)
+      return
+    }
+
+    // action === 'sent' — actually email the quote (PDF attached) via the send route
+    const res = await fetch(`/api/quotes/${quoteId}/send`, { method: 'POST' })
+    const data = await res.json().catch(() => null)
     setSaving(false)
+    if (!res.ok) {
+      toast.error(data?.error ? `Saved as draft — sending failed: ${data.error}` : 'Saved as draft, but sending failed')
+    } else {
+      toast.success('Quote sent')
+    }
+    router.push(`/quotes/${quoteId}`)
   }
 
   const catalogueItems: CatalogueItem[] = [...services.map(s => ({ ...s, type: 'service' as const })), ...products.filter(p => !services.some(s => s.name === p.name))]
