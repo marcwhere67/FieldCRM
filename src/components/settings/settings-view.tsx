@@ -5,7 +5,8 @@ import { BusinessSettings } from './business-settings'
 import { TeamSettings } from './team-settings'
 import { ProfileSettings } from './profile-settings'
 import { TemplatesSettings } from './templates-settings'
-import { Building2, Users, User, Mail } from 'lucide-react'
+import { SystemHealth } from './system-health'
+import { Building2, Users, User, Mail, Activity } from 'lucide-react'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -23,6 +24,7 @@ const TABS = [
   { id: 'templates', label: 'Templates', icon: Mail,      adminOnly: true },
   { id: 'team',      label: 'Team',      icon: Users,     adminOnly: false },
   { id: 'profile',   label: 'Profile',   icon: User,      adminOnly: false },
+  { id: 'health',    label: 'System Health', icon: Activity, adminOnly: true },
 ]
 
 export function SettingsView({ org, team, profile, isAdmin, initialTab }: Props) {
@@ -63,6 +65,7 @@ export function SettingsView({ org, team, profile, isAdmin, initialTab }: Props)
         {activeTab === 'templates' && isAdmin && <TemplatesSettings canManage={isAdmin} />}
         {activeTab === 'team' && <TeamSettings initialTeam={team} canManage={isAdmin} currentUserId={profile.id} />}
         {activeTab === 'profile' && <ProfileSettings profile={profile} />}
+        {activeTab === 'health' && isAdmin && <SystemHealth />}
       </div>
     </div>
   )
