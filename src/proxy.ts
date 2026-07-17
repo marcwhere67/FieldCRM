@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/auth', '/quote-approval', '/setup', '/api/twilio', '/intake', '/unsubscribe']
+const PUBLIC_PATHS = ['/login', '/auth', '/quote-approval', '/api/twilio', '/intake', '/unsubscribe']
 
 export async function proxy(request: NextRequest) {
   // Client portal is disabled for now (to be rebuilt later). Send any /portal

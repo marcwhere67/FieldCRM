@@ -4,6 +4,14 @@ import { NextResponse } from 'next/server'
 // One-time setup endpoint: creates the demo org and admin user in Supabase Auth + users table.
 // Only works if no users table rows exist yet (safe to call multiple times).
 export async function POST() {
+  // SECURITY: this endpoint seeds data AND (re)sets known-password admin
+  // accounts via the service role. It takes no auth, so it must stay disabled
+  // in any live environment. It is off unless ALLOW_SETUP === 'true' is set on
+  // the server (only do that on a fresh, unseeded environment, then unset it).
+  if (process.env.ALLOW_SETUP !== 'true') {
+    return NextResponse.json({ error: 'Setup is disabled.' }, { status: 403 })
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
