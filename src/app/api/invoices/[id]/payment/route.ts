@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('id, invoice_number, org_id, contact_id, total, deposit_credit, contacts!invoices_contact_id_fkey(first_name, last_name, email)')
+    .select('id, invoice_number, org_id, contact_id, total, deposit_credit, contacts!invoices_contact_id_fkey(first_name, last_name, email), jobs!invoices_job_id_fkey(scheduled_start, actual_start)')
     .eq('id', id)
     .eq('org_id', profile.org_id)
     .single()
@@ -105,11 +105,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const { data: org } = await supabase
         .from('organisations').select('name, abn, phone, email, address').eq('id', profile.org_id).single()
 
+      const job = Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs
+      const serviceSrc = job?.actual_start ?? job?.scheduled_start
       const pdfBuffer = await renderToBuffer(
         React.createElement(ReceiptPDF, {
           payment, invoice: { invoice_number: invoice.invoice_number, total: Number(invoice.total) },
           org: org ?? { name: 'Us', abn: null, phone: null, email: null, address: null },
           contact, balanceRemaining,
+          serviceDate: serviceSrc ? melbourneDateOnly(serviceSrc) : null,
         }) as React.ReactElement<DocumentProps>,
       )
 

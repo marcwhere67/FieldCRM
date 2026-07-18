@@ -6,7 +6,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
 
 const SOURCE = 'api/invoices/[id]/send'
@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('id, invoice_number, org_id, contact_id, status, line_items, subtotal, tax, total, notes, deposit_credit, due_date, created_at, stripe_payment_link, contacts!invoices_contact_id_fkey(first_name, last_name, email, address_line1, suburb, state, postcode)')
+    .select('id, invoice_number, org_id, contact_id, status, line_items, subtotal, tax, total, notes, deposit_credit, due_date, created_at, stripe_payment_link, contacts!invoices_contact_id_fkey(first_name, last_name, email, address_line1, suburb, state, postcode), jobs!invoices_job_id_fkey(scheduled_start, actual_start)')
     .eq('id', id)
     .eq('org_id', profile.org_id)
     .single()
@@ -79,7 +79,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const accessToken = await getGmailAccessToken(profile.org_id, profile.id)
 
     // InvoicePDF expects `notes_client`; map from the invoice's `notes` column.
-    const invoicePdfData = { ...invoice, notes_client: invoice.notes ?? null }
+    const job = Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs
+    const serviceSrc = job?.actual_start ?? job?.scheduled_start
+    const invoicePdfData = {
+      ...invoice,
+      notes_client: invoice.notes ?? null,
+      service_date: serviceSrc ? melbourneDateOnly(serviceSrc) : null,
+    }
     const pdfBuffer = await renderToBuffer(
       React.createElement(InvoicePDF, { invoice: invoicePdfData, org, contact }) as React.ReactElement<DocumentProps>,
     )

@@ -57,9 +57,10 @@ interface Props {
   org: { name: string; abn: string | null; phone: string | null; email: string | null; address: string | null }
   contact: { first_name: string; last_name: string } | null
   balanceRemaining: number
+  serviceDate?: string | null
 }
 
-export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining }: Props) {
+export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining, serviceDate }: Props) {
   const fullyPaid = balanceRemaining <= 0
   return (
     <Document>
@@ -96,6 +97,12 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining }:
           <Text>Invoice</Text>
           <Text>{invoice.invoice_number}</Text>
         </View>
+        {serviceDate ? (
+          <View style={styles.row}>
+            <Text>Service date</Text>
+            <Text>{fmtDate(serviceDate)}</Text>
+          </View>
+        ) : null}
         <View style={styles.row}>
           <Text>Payment method</Text>
           <Text>{METHOD_LABEL[payment.method] ?? payment.method}</Text>

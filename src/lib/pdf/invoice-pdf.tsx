@@ -234,6 +234,7 @@ interface Props {
     total: number
     notes_client?: string | null
     deposit_credit?: number | null
+    service_date?: string | null
     due_date: string | null
     created_at: string
     stripe_payment_link?: string | null
@@ -285,6 +286,7 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
             <Text style={styles.docMeta}>
               {invoice.invoice_number}{'\n'}
               Issued: {formatDate(invoice.created_at)}{'\n'}
+              {invoice.service_date ? `Service date: ${formatDate(invoice.service_date)}\n` : ''}
               {invoice.due_date ? `Due: ${formatDate(invoice.due_date)}` : ''}
             </Text>
           </View>

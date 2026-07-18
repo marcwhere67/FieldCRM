@@ -5,6 +5,7 @@ import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
+import { melbourneDateOnly } from '@/lib/format'
 
 // Download the receipt PDF for a recorded payment (same document as the receipt email).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const [{ data: invoice }, { data: org }, { data: allPayments }] = await Promise.all([
     supabase.from('invoices')
-      .select('invoice_number, total, deposit_credit')
+      .select('invoice_number, total, deposit_credit, jobs!invoices_job_id_fkey(scheduled_start, actual_start)')
       .eq('id', payment.invoice_id)
       .single(),
     supabase.from('organisations')
@@ -46,6 +47,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const balanceRemaining = Math.max(0, Math.round((amountOwed - totalPaid) * 100) / 100)
 
   const contact = Array.isArray(payment.contacts) ? payment.contacts[0] : payment.contacts
+  const job = Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs
+  const serviceSrc = job?.actual_start ?? job?.scheduled_start
 
   const pdfBuffer = await renderToBuffer(
     React.createElement(ReceiptPDF, {
@@ -54,6 +57,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       org: org ?? { name: 'Us', abn: null, phone: null, email: null, address: null },
       contact,
       balanceRemaining,
+      serviceDate: serviceSrc ? melbourneDateOnly(serviceSrc) : null,
     }) as React.ReactElement<DocumentProps>,
   )
 
