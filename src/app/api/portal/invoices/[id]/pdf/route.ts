@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const [{ data: invoice }, { data: org }] = await Promise.all([
     admin.from('invoices')
-      .select('invoice_number, status, line_items, subtotal, tax, total, notes_client, due_date, created_at, stripe_payment_link')
+      .select('invoice_number, status, line_items, subtotal, tax, total, notes_client, deposit_credit, due_date, created_at, stripe_payment_link')
       .eq('id', id)
       .eq('contact_id', contact.id)
       .single(),

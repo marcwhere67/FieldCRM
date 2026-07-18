@@ -16,23 +16,36 @@ const METHOD_LABEL: Record<string, string> = {
   bank_transfer: 'Bank Transfer', cash: 'Cash', card: 'Card', cheque: 'Cheque', other: 'Other',
 }
 
+const NAVY = '#2C3E50'
+
 const styles = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1e293b', padding: 48, backgroundColor: '#ffffff' },
+  brandRule: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: NAVY },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
   logo: { width: 120, height: 'auto', marginBottom: 6 },
   orgContact: { fontSize: 9, color: '#64748b', lineHeight: 1.6 },
-  docTitle: { fontSize: 24, fontWeight: 'bold', color: '#2C3E50', textAlign: 'right' },
+  docTitle: { fontSize: 24, fontFamily: 'Helvetica-Bold', color: NAVY, textAlign: 'right' },
   docMeta: { fontSize: 9, color: '#64748b', textAlign: 'right', lineHeight: 1.6, marginTop: 6 },
   section: { marginBottom: 24 },
-  label: { fontSize: 8, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  label: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: NAVY, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
   strong: { fontSize: 11, color: '#1e293b' },
   paidBanner: { backgroundColor: '#dcfce7', borderRadius: 4, padding: 14, marginBottom: 24, marginTop: 8 },
-  paidText: { color: '#166534', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  paidText: { color: '#166534', fontSize: 12, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   amountRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, marginTop: 6 },
-  amountLabel: { fontSize: 13, color: '#2C3E50', fontWeight: 'bold' },
-  amountValue: { fontSize: 16, color: '#2C3E50', fontWeight: 'bold' },
-  footer: { marginTop: 40, fontSize: 8, color: '#94a3b8', textAlign: 'center' },
+  amountLabel: { fontSize: 13, color: NAVY, fontFamily: 'Helvetica-Bold' },
+  amountValue: { fontSize: 16, color: NAVY, fontFamily: 'Helvetica-Bold' },
+  footer: {
+    position: 'absolute',
+    bottom: 32,
+    left: 48,
+    right: 48,
+    borderTop: '1pt solid #e2e8f0',
+    paddingTop: 12,
+    fontSize: 8,
+    color: '#94a3b8',
+    textAlign: 'center',
+  },
 })
 
 interface Props {
@@ -48,13 +61,13 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining }:
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        <View style={styles.brandRule} fixed />
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
             <Text style={styles.orgContact}>
-              {org.name}
-              {org.phone ? `\n${org.phone}` : ''}
-              {org.email ? `\n${org.email}` : ''}
+              {[org.phone, org.email].filter(Boolean).join('  ·  ')}
+              {'\nsaltaircleaning.com.au'}
               {org.address ? `\n${org.address}` : ''}
               {org.abn ? `\nABN: ${org.abn}` : ''}
             </Text>
@@ -106,7 +119,9 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining }:
           </View>
         ) : null}
 
-        <Text style={styles.footer}>This is an official receipt for payment received against invoice {invoice.invoice_number}.</Text>
+        <Text style={styles.footer} fixed>
+          {org.name} — {payment.receipt_number} · Official receipt for payment received against invoice {invoice.invoice_number}
+        </Text>
       </Page>
     </Document>
   )

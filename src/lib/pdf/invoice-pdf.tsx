@@ -3,6 +3,9 @@ import path from 'path'
 
 const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo.png')
 
+const NAVY = '#2C3E50'
+const SAGE = '#76A58F'
+
 const styles = StyleSheet.create({
   page: {
     fontFamily: 'Helvetica',
@@ -10,6 +13,14 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     padding: 48,
     backgroundColor: '#ffffff',
+  },
+  brandRule: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: NAVY,
   },
   header: {
     flexDirection: 'row',
@@ -27,9 +38,9 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
   },
   docTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Helvetica-Bold',
-    color: '#0f172a',
+    color: NAVY,
     textAlign: 'right',
   },
   docMeta: {
@@ -49,7 +60,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#94a3b8',
+    color: NAVY,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 4,
@@ -123,7 +134,7 @@ const styles = StyleSheet.create({
   grandTotalValue: {
     fontSize: 12,
     fontFamily: 'Helvetica-Bold',
-    color: '#76A58F',
+    color: SAGE,
   },
   paidBanner: {
     marginTop: 32,
@@ -226,6 +237,7 @@ interface Props {
     tax: number
     total: number
     notes_client?: string | null
+    deposit_credit?: number | null
     due_date: string | null
     created_at: string
     stripe_payment_link?: string | null
@@ -256,22 +268,26 @@ interface Props {
 export function InvoicePDF({ invoice, org, contact }: Props) {
   const isPaid = invoice.status === 'paid'
   const isOverdue = invoice.status === 'overdue'
+  const depositCredit = Number(invoice.deposit_credit ?? 0)
+  const amountDue = invoice.total - depositCredit
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        <View style={styles.brandRule} fixed />
         {/* Header */}
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
             <Text style={styles.orgContact}>
               {[org.phone, org.email].filter(Boolean).join('  ·  ')}
+              {'\nsaltaircleaning.com.au'}
               {org.address ? `\n${org.address}` : ''}
               {org.abn ? `\nABN: ${org.abn}` : ''}
             </Text>
           </View>
           <View>
-            <Text style={styles.docTitle}>INVOICE</Text>
+            <Text style={styles.docTitle}>TAX INVOICE</Text>
             <Text style={styles.docMeta}>
               {invoice.invoice_number}{'\n'}
               Issued: {formatDate(invoice.created_at)}{'\n'}
@@ -317,15 +333,30 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
             <Text style={styles.totalsLabel}>Subtotal</Text>
             <Text style={styles.totalsValue}>{formatCurrency(invoice.subtotal)}</Text>
           </View>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>GST (10%)</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.tax)}</Text>
-          </View>
+          {invoice.tax > 0 && (
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>GST (10%)</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(invoice.tax)}</Text>
+            </View>
+          )}
           <View style={styles.totalDivider} />
           <View style={styles.grandTotalRow}>
             <Text style={styles.grandTotalLabel}>Total</Text>
             <Text style={styles.grandTotalValue}>{formatCurrency(invoice.total)}</Text>
           </View>
+          {depositCredit > 0 && (
+            <>
+              <View style={[styles.totalsRow, { marginTop: 8 }]}>
+                <Text style={styles.totalsLabel}>Less deposit paid</Text>
+                <Text style={styles.totalsValue}>-{formatCurrency(depositCredit)}</Text>
+              </View>
+              <View style={styles.totalDivider} />
+              <View style={styles.grandTotalRow}>
+                <Text style={styles.grandTotalLabel}>Amount due</Text>
+                <Text style={styles.grandTotalValue}>{formatCurrency(amountDue)}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Status banners */}
