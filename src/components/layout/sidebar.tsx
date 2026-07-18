@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, Briefcase, FileText, Receipt,
   Calendar, MessageSquare, GitBranch, Zap, Clock,
   MapPin, Megaphone, Star, TrendingUp, Settings, ShieldCheck,
-  ChevronLeft, ChevronRight, LogOut, BarChart2, BookOpen, Package, UserCheck, Truck, DollarSign, Calculator
+  ChevronLeft, ChevronRight, LogOut, BarChart2, BookOpen, Package, UserCheck, Truck, DollarSign, Calculator, Repeat
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -27,6 +27,7 @@ const NAV: NavEntry[] = [
   { divider: 'Operations' },
   { href: '/schedule', label: 'Schedule', icon: Calendar },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
+  { href: '/agreements', label: 'Recurring', icon: Repeat },
   { href: '/quotes', label: 'Quotes', icon: FileText },
   { href: '/quotes/calculator', label: 'Quote Calculator', icon: Calculator, noActive: true },
   { href: '/invoices', label: 'Invoices', icon: Receipt },

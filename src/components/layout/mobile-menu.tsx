@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Users, FileText, Receipt, Calendar, MessageSquare,
   GitBranch, Zap, Megaphone, Star, TrendingUp, Settings,
-  LogOut, X, Clock
+  LogOut, X, Clock, Repeat
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 const MENU_ITEMS = [
   { label: 'Contacts', href: '/contacts', icon: Users },
   { label: 'Schedule', href: '/schedule', icon: Calendar },
+  { label: 'Recurring', href: '/agreements', icon: Repeat },
   { label: 'Quotes', href: '/quotes', icon: FileText },
   { label: 'Invoices', href: '/invoices', icon: Receipt },
   { label: 'Pipeline', href: '/pipeline', icon: GitBranch },
