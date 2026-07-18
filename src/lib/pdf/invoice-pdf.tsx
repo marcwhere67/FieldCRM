@@ -287,7 +287,8 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
             </Text>
           </View>
           <View>
-            <Text style={styles.docTitle}>TAX INVOICE</Text>
+            {/* "Tax Invoice" is only valid (and required) when GST is charged; plain "Invoice" otherwise */}
+            <Text style={styles.docTitle}>{invoice.tax > 0 ? 'TAX INVOICE' : 'INVOICE'}</Text>
             <Text style={styles.docMeta}>
               {invoice.invoice_number}{'\n'}
               Issued: {formatDate(invoice.created_at)}{'\n'}

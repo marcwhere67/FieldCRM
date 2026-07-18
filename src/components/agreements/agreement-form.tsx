@@ -49,7 +49,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
   const [endDate, setEndDate] = useState(existing?.end_date ?? '')
   const [instructions, setInstructions] = useState(existing?.instructions ?? '')
   const [assignees, setAssignees] = useState<string[]>(existing?.assigned_users ?? [])
-  const [lines, setLines] = useState<Line[]>(existing?.line_items?.length ? existing.line_items : [{ description: '', quantity: 1, unit_price: 0, tax_rate: 10, subtotal: 0 }])
+  const [lines, setLines] = useState<Line[]>(existing?.line_items?.length ? existing.line_items : [{ description: '', quantity: 1, unit_price: 0, tax_rate: 0, subtotal: 0 }])
 
   const contactProps = properties.filter(p => p.contact_id === contactId)
   const { subtotal, tax, total } = computeTotals(lines)
@@ -186,7 +186,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
           ))}
         </div>
         <div className="flex items-center justify-between mt-2">
-          <button onClick={() => setLines(prev => [...prev, { description: '', quantity: 1, unit_price: 0, tax_rate: 10, subtotal: 0 }])}
+          <button onClick={() => setLines(prev => [...prev, { description: '', quantity: 1, unit_price: 0, tax_rate: 0, subtotal: 0 }])}
             style={{ color: C.sage, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
             <Plus style={{ width: 13, height: 13 }} /> Add line
           </button>

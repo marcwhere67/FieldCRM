@@ -61,11 +61,11 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const depositAmount = calcDeposit(depositType, depositValue, total)
 
   function addCatalogueItem(item: CatalogueItem) {
-    setLineItems(prev => [...prev, { service_id: item.id, description: item.name, quantity: 1, unit_price: item.unit_price, tax_rate: item.tax_rate ?? 10, subtotal: item.unit_price }])
+    setLineItems(prev => [...prev, { service_id: item.id, description: item.name, quantity: 1, unit_price: item.unit_price, tax_rate: item.tax_rate ?? 0, subtotal: item.unit_price }])
     setServiceSearch('')
   }
 
-  function addBlankLine() { setLineItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0, tax_rate: 10, subtotal: 0 }]) }
+  function addBlankLine() { setLineItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0, tax_rate: 0, subtotal: 0 }]) }
 
   function updateLine(index: number, field: keyof LineItem, value: string | number) {
     setLineItems(prev => prev.map((item, i) => {

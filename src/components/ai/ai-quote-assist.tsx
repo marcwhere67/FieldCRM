@@ -49,7 +49,7 @@ export function AiQuoteAssist({ services, onAdd }: Props) {
     const items = [...selected].map(i => {
       const s = suggestions[i]
       const svc = services.find(sv => sv.id === s.service_id)
-      const taxRate = svc?.tax_rate ?? 10
+      const taxRate = svc?.tax_rate ?? 0
       const subtotal = s.quantity * s.unit_price
       return { service_id: s.service_id, description: s.description, quantity: s.quantity, unit_price: s.unit_price, tax_rate: taxRate, subtotal }
     })
