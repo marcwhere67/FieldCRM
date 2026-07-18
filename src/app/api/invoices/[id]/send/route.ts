@@ -114,7 +114,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       Kind regards,<br>
       ${profile.full_name}<br>
       ${org?.name}<br>
-      ${org?.phone ? org.phone + ' · ' : ''}${orgEmail}${org?.abn ? '<br>ABN ' + org.abn : ''}
+      ${org?.phone ? org.phone + ' · ' : ''}${orgEmail} · https://saltaircleaning.com.au
     </p>
   </div>
 </body>
@@ -132,7 +132,7 @@ Please use your invoice number as the payment reference. If you have any questio
 Kind regards,
 ${profile.full_name}
 ${org?.name}
-${org?.phone ? org.phone + ' · ' : ''}${orgEmail}${org?.abn ? '\nABN ' + org.abn : ''}`
+${org?.phone ? org.phone + ' · ' : ''}${orgEmail} · https://saltaircleaning.com.au`
 
     const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, [
