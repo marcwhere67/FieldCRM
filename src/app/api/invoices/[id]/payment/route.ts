@@ -120,21 +120,48 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       const subject = `Receipt ${payment.receipt_number} from ${org?.name ?? 'us'}`
       const paidLine = formatCurrency(Number(payment.amount))
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
+      const logoUrl = `${siteUrl}/salt-air-logo.png`
       const html = `
-<html><body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-  <p>Hi ${contact.first_name || 'there'},</p>
-  <p>Thank you — we've received your payment of <strong>${paidLine}</strong> for invoice ${invoice.invoice_number}. Your receipt (${payment.receipt_number}) is attached.</p>
-  ${balanceRemaining > 0 ? `<p>Remaining balance: <strong>${formatCurrency(balanceRemaining)}</strong>.</p>` : '<p>This invoice is now paid in full.</p>'}
-  <p>Best regards,<br>${profile.full_name}<br>${org?.name}</p>
-</body></html>`
+<html>
+<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
+    <tr>
+      <td>
+        <img src="${logoUrl}" alt="${org?.name}" height="40" style="display: block;" />
+      </td>
+    </tr>
+  </table>
+
+  <div style="padding: 24px;">
+    <p>Hi ${contact.first_name || 'there'},</p>
+
+    <p>Thank you — we've received your payment of <strong>${paidLine}</strong> for invoice ${invoice.invoice_number}. Your receipt (${payment.receipt_number}) is attached.</p>
+
+    ${balanceRemaining > 0 ? `<p>Remaining balance: <strong>${formatCurrency(balanceRemaining)}</strong>.</p>` : '<p>This invoice is now paid in full.</p>'}
+
+    <p>Kind regards,</p>
+
+    <p>
+      ${profile.full_name}<br>
+      ${org?.name}<br>
+      ${org?.phone ? org.phone + '<br>' : ''}${orgEmail}<br>
+      https://saltaircleaning.com.au
+    </p>
+  </div>
+</body>
+</html>`
       const text = `Hi ${contact.first_name || 'there'},
 
 Thank you — we've received your payment of ${paidLine} for invoice ${invoice.invoice_number}. Your receipt (${payment.receipt_number}) is attached.
 ${balanceRemaining > 0 ? `Remaining balance: ${formatCurrency(balanceRemaining)}.` : 'This invoice is now paid in full.'}
 
-Best regards,
+Kind regards,
+
 ${profile.full_name}
-${org?.name}`
+${org?.name}
+${org?.phone ? org.phone + '\n' : ''}${orgEmail}
+https://saltaircleaning.com.au`
 
       await sendEmailViaGmail(accessToken, fromHeader, contact.email, subject, html, text, [
         { filename: `${payment.receipt_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
