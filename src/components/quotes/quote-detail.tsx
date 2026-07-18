@@ -80,6 +80,19 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
 
   async function copyApprovalLink() { await navigator.clipboard.writeText(approvalUrl); toast.success('Approval link copied') }
 
+  async function markApproved() {
+    if (!confirm('Mark this quote as approved on the client\'s behalf? Do this only if the client has confirmed (e.g. by phone).')) return
+    startTransition(async () => {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'approved', approved_at: new Date().toISOString() })
+        .eq('id', quote.id)
+      if (error) { toast.error('Failed to mark as approved'); return }
+      toast.success('Quote marked as approved')
+      router.refresh()
+    })
+  }
+
   async function convertToJob() {
     startTransition(async () => {
       const { data: job, error } = await supabase.from('jobs').insert({
@@ -132,6 +145,13 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
               style={{ backgroundColor: C.navy, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
               className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
               <Send className="w-3.5 h-3.5" />Send & notify
+            </button>
+          )}
+          {quote.status === 'sent' && (
+            <button onClick={markApproved} disabled={isPending}
+              style={{ backgroundColor: C.sage, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+              <CheckCircle className="w-3.5 h-3.5" />Mark approved
             </button>
           )}
           {quote.status === 'approved' && (
