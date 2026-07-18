@@ -4,7 +4,7 @@ import { registerPdfFonts, SERIF } from './fonts'
 
 registerPdfFonts()
 
-const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo.png')
+const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo-pdf.png')
 
 const NAVY = '#2C3E50'
 const SAGE = '#76A58F'
@@ -31,9 +31,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logo: {
-    width: 100,
+    width: 170,
     height: 'auto',
-    marginBottom: 10,
+  },
+  orgBlock: {
+    alignItems: 'flex-end',
   },
   orgName: {
     fontFamily: SERIF,
@@ -41,11 +43,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: NAVY,
     marginBottom: 4,
+    textAlign: 'right',
   },
   orgContact: {
     fontSize: 9,
     color: '#64748b',
     lineHeight: 1.6,
+    textAlign: 'right',
+  },
+  partiesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  metaBlock: {
+    alignItems: 'flex-end',
   },
   docLabel: {
     fontSize: 9,
@@ -91,7 +103,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#eef4f0',
     borderRadius: 4,
     padding: '8 10',
     marginBottom: 2,
@@ -99,7 +111,7 @@ const styles = StyleSheet.create({
   tableHeaderText: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#64748b',
+    color: '#3f6b57',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -293,16 +305,31 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.brandRule} fixed />
-        {/* Header */}
+        {/* Header — logo left, business details top-right */}
         <View style={styles.header}>
-          <View>
-            <Image src={LOGO_PATH} style={styles.logo} />
+          <Image src={LOGO_PATH} style={styles.logo} />
+          <View style={styles.orgBlock}>
             <Text style={styles.orgName}>{org.name}</Text>
             <Text style={styles.orgContact}>
               {org.abn ? `ABN ${org.abn}\n` : ''}{org.email ?? ''}{org.phone ? `\n${org.phone}` : ''}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Parties — bill-to left, invoice meta right (symmetrical) */}
+        <View style={styles.partiesRow}>
           <View>
+            <Text style={styles.sectionLabel}>Bill to</Text>
+            <Text style={styles.billTo}>
+              {contact.first_name} {contact.last_name}{'\n'}
+              {contact.email}
+              {contact.address_line1 ? `\n${contact.address_line1}` : ''}
+              {contact.suburb ? `\n${contact.suburb}${contact.state ? ` ${contact.state}` : ''}${contact.postcode ? ` ${contact.postcode}` : ''}` : ''}
+            </Text>
+          </View>
+          <View style={styles.metaBlock}>
             {/* "Tax Invoice" is only valid (and required) when GST is charged; plain "Invoice" otherwise */}
             <Text style={styles.docLabel}>{invoice.tax > 0 ? 'Tax Invoice' : 'Invoice'}</Text>
             <Text style={styles.docTitle}>{invoice.invoice_number}</Text>
@@ -312,19 +339,6 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
               {invoice.due_date ? `Due: ${formatDate(invoice.due_date)}` : ''}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* Bill to */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Bill to</Text>
-          <Text style={styles.billTo}>
-            {contact.first_name} {contact.last_name}{'\n'}
-            {contact.email}
-            {contact.address_line1 ? `\n${contact.address_line1}` : ''}
-            {contact.suburb ? `\n${contact.suburb}${contact.state ? ` ${contact.state}` : ''}${contact.postcode ? ` ${contact.postcode}` : ''}` : ''}
-          </Text>
         </View>
 
         {/* Line items */}

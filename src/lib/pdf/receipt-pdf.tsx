@@ -4,7 +4,7 @@ import { registerPdfFonts, SERIF } from './fonts'
 
 registerPdfFonts()
 
-const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo.png')
+const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo-pdf.png')
 
 function money(n: number) {
   return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -25,9 +25,12 @@ const styles = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1e293b', padding: 48, backgroundColor: '#ffffff' },
   brandRule: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: NAVY },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
-  logo: { width: 100, height: 'auto', marginBottom: 10 },
-  orgName: { fontFamily: SERIF, fontWeight: 'normal', fontSize: 20, color: NAVY, marginBottom: 4 },
-  orgContact: { fontSize: 9, color: '#64748b', lineHeight: 1.6 },
+  logo: { width: 170, height: 'auto' },
+  orgBlock: { alignItems: 'flex-end' },
+  orgName: { fontFamily: SERIF, fontWeight: 'normal', fontSize: 20, color: NAVY, marginBottom: 4, textAlign: 'right' },
+  orgContact: { fontSize: 9, color: '#64748b', lineHeight: 1.6, textAlign: 'right' },
+  partiesRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  metaBlock: { alignItems: 'flex-end' },
   docLabel: { fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, textAlign: 'right' },
   docTitle: { fontFamily: SERIF, fontWeight: 'semibold', fontSize: 26, color: NAVY, textAlign: 'right', marginTop: 2 },
   docMeta: { fontSize: 9, color: '#64748b', textAlign: 'right', lineHeight: 1.6, marginTop: 8 },
@@ -71,26 +74,30 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining, s
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.brandRule} fixed />
+        {/* Header — logo left, business details top-right */}
         <View style={styles.header}>
-          <View>
-            <Image src={LOGO_PATH} style={styles.logo} />
+          <Image src={LOGO_PATH} style={styles.logo} />
+          <View style={styles.orgBlock}>
             <Text style={styles.orgName}>{org.name}</Text>
             <Text style={styles.orgContact}>
               {org.abn ? `ABN ${org.abn}\n` : ''}{org.email ?? ''}{org.phone ? `\n${org.phone}` : ''}
             </Text>
           </View>
+        </View>
+
+        {/* Parties — received-from left, receipt meta right (symmetrical) */}
+        <View style={styles.partiesRow}>
           <View>
+            <Text style={styles.label}>Received from</Text>
+            <Text style={styles.strong}>{contact ? `${contact.first_name} ${contact.last_name}` : '—'}</Text>
+          </View>
+          <View style={styles.metaBlock}>
             <Text style={styles.docLabel}>Receipt</Text>
             <Text style={styles.docTitle}>{payment.receipt_number}</Text>
             <Text style={styles.docMeta}>
               {fmtDate(payment.recorded_at)}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Received from</Text>
-          <Text style={styles.strong}>{contact ? `${contact.first_name} ${contact.last_name}` : '—'}</Text>
         </View>
 
         <View style={styles.paidBanner}>
