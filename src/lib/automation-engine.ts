@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { captureError } from '@/lib/monitor'
 
 interface Step {
   id: string
@@ -92,6 +93,38 @@ export async function runAutomations(
       contact,
     )
   }
+}
+
+// Drains all due items from automation_queue: claims them atomically, then
+// resumes each paused workflow. Safe against concurrent runs (the single
+// UPDATE ... WHERE status='pending' means a loser re-evaluates and skips).
+export async function drainAutomationQueue(supabase: SupabaseClient): Promise<{ claimed: number; processed: number; failed: number }> {
+  const now = new Date().toISOString()
+  const { data: claimed, error: claimErr } = await supabase
+    .from('automation_queue')
+    .update({ status: 'processing', updated_at: now })
+    .eq('status', 'pending')
+    .lte('scheduled_for', now)
+    .select('id, org_id, workflow_id, execution_id, contact_id, step_index')
+
+  if (claimErr) {
+    await captureError(claimErr, { source: 'automation:drain', level: 'error', context: { stage: 'claim' } })
+    return { claimed: 0, processed: 0, failed: 0 }
+  }
+
+  let processed = 0, failed = 0
+  for (const item of claimed ?? []) {
+    try {
+      await resumeQueuedItem(supabase, item)
+      await supabase.from('automation_queue').update({ status: 'done', processed_at: new Date().toISOString() }).eq('id', item.id)
+      processed++
+    } catch (err) {
+      await supabase.from('automation_queue').update({ status: 'failed', processed_at: new Date().toISOString() }).eq('id', item.id)
+      await captureError(err, { source: 'automation:drain', level: 'error', orgId: item.org_id, context: { queueId: item.id, executionId: item.execution_id } })
+      failed++
+    }
+  }
+  return { claimed: claimed?.length ?? 0, processed, failed }
 }
 
 // Resume a paused execution from the queue (called by the cron worker). Loads

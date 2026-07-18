@@ -5,11 +5,7 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/automations",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/generate-jobs",
+      "path": "/api/cron/tick",
       "schedule": "0 6 * * *"
     }
   ]
