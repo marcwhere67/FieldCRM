@@ -1,5 +1,8 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
+import { registerPdfFonts, SERIF } from './fonts'
+
+registerPdfFonts()
 
 const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo.png')
 
@@ -30,24 +33,40 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 'auto',
-    marginBottom: 6,
+    marginBottom: 10,
+  },
+  orgName: {
+    fontFamily: SERIF,
+    fontWeight: 'normal',
+    fontSize: 20,
+    color: NAVY,
+    marginBottom: 4,
   },
   orgContact: {
     fontSize: 9,
     color: '#64748b',
     lineHeight: 1.6,
   },
+  docLabel: {
+    fontSize: 9,
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textAlign: 'right',
+  },
   docTitle: {
-    fontSize: 20,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: SERIF,
+    fontWeight: 'semibold',
+    fontSize: 26,
     color: NAVY,
     textAlign: 'right',
+    marginTop: 2,
   },
   docMeta: {
     fontSize: 9,
     color: '#64748b',
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: 8,
     lineHeight: 1.6,
   },
   divider: {
@@ -127,13 +146,15 @@ const styles = StyleSheet.create({
     width: 220,
   },
   grandTotalLabel: {
-    fontSize: 12,
-    fontFamily: 'Helvetica-Bold',
-    color: '#0f172a',
+    fontSize: 15,
+    fontFamily: SERIF,
+    fontWeight: 'semibold',
+    color: NAVY,
   },
   grandTotalValue: {
-    fontSize: 12,
-    fontFamily: 'Helvetica-Bold',
+    fontSize: 15,
+    fontFamily: SERIF,
+    fontWeight: 'semibold',
     color: SAGE,
   },
   paidBanner: {
@@ -276,15 +297,16 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
+            <Text style={styles.orgName}>{org.name}</Text>
             <Text style={styles.orgContact}>
-              {org.phone ? `${org.phone}\n` : ''}{org.email ?? ''}{org.abn ? `\nABN ${org.abn}` : ''}
+              {org.abn ? `ABN ${org.abn}\n` : ''}{org.email ?? ''}{org.phone ? `\n${org.phone}` : ''}
             </Text>
           </View>
           <View>
             {/* "Tax Invoice" is only valid (and required) when GST is charged; plain "Invoice" otherwise */}
-            <Text style={styles.docTitle}>{invoice.tax > 0 ? 'TAX INVOICE' : 'INVOICE'}</Text>
+            <Text style={styles.docLabel}>{invoice.tax > 0 ? 'Tax Invoice' : 'Invoice'}</Text>
+            <Text style={styles.docTitle}>{invoice.invoice_number}</Text>
             <Text style={styles.docMeta}>
-              {invoice.invoice_number}{'\n'}
               Issued: {formatDate(invoice.created_at)}{'\n'}
               {invoice.service_date ? `Service date: ${formatDate(invoice.service_date)}\n` : ''}
               {invoice.due_date ? `Due: ${formatDate(invoice.due_date)}` : ''}

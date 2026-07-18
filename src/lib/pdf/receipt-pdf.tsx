@@ -1,5 +1,8 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
+import { registerPdfFonts, SERIF } from './fonts'
+
+registerPdfFonts()
 
 const LOGO_PATH = path.join(process.cwd(), 'public', 'salt-air-logo.png')
 
@@ -22,10 +25,12 @@ const styles = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1e293b', padding: 48, backgroundColor: '#ffffff' },
   brandRule: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: NAVY },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
-  logo: { width: 100, height: 'auto', marginBottom: 6 },
+  logo: { width: 100, height: 'auto', marginBottom: 10 },
+  orgName: { fontFamily: SERIF, fontWeight: 'normal', fontSize: 20, color: NAVY, marginBottom: 4 },
   orgContact: { fontSize: 9, color: '#64748b', lineHeight: 1.6 },
-  docTitle: { fontSize: 24, fontFamily: 'Helvetica-Bold', color: NAVY, textAlign: 'right' },
-  docMeta: { fontSize: 9, color: '#64748b', textAlign: 'right', lineHeight: 1.6, marginTop: 6 },
+  docLabel: { fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, textAlign: 'right' },
+  docTitle: { fontFamily: SERIF, fontWeight: 'semibold', fontSize: 26, color: NAVY, textAlign: 'right', marginTop: 2 },
+  docMeta: { fontSize: 9, color: '#64748b', textAlign: 'right', lineHeight: 1.6, marginTop: 8 },
   section: { marginBottom: 24 },
   label: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: NAVY, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
   strong: { fontSize: 11, color: '#1e293b' },
@@ -33,8 +38,8 @@ const styles = StyleSheet.create({
   paidText: { color: '#166534', fontSize: 12, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   amountRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, marginTop: 6 },
-  amountLabel: { fontSize: 13, color: NAVY, fontFamily: 'Helvetica-Bold' },
-  amountValue: { fontSize: 16, color: NAVY, fontFamily: 'Helvetica-Bold' },
+  amountLabel: { fontSize: 15, color: NAVY, fontFamily: SERIF, fontWeight: 'semibold' },
+  amountValue: { fontSize: 18, color: NAVY, fontFamily: SERIF, fontWeight: 'semibold' },
   footer: {
     position: 'absolute',
     bottom: 32,
@@ -69,15 +74,16 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining, s
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
+            <Text style={styles.orgName}>{org.name}</Text>
             <Text style={styles.orgContact}>
-              {org.phone ? `${org.phone}\n` : ''}{org.email ?? ''}{org.abn ? `\nABN ${org.abn}` : ''}
+              {org.abn ? `ABN ${org.abn}\n` : ''}{org.email ?? ''}{org.phone ? `\n${org.phone}` : ''}
             </Text>
           </View>
           <View>
-            <Text style={styles.docTitle}>RECEIPT</Text>
+            <Text style={styles.docLabel}>Receipt</Text>
+            <Text style={styles.docTitle}>{payment.receipt_number}</Text>
             <Text style={styles.docMeta}>
-              {payment.receipt_number}
-              {`\n${fmtDate(payment.recorded_at)}`}
+              {fmtDate(payment.recorded_at)}
             </Text>
           </View>
         </View>
