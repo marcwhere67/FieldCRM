@@ -68,40 +68,57 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     )
 
     const subject = `Quote ${quote.quote_number} from ${org?.name ?? 'us'}`
+    const logoUrl = `${siteUrl}/salt-air-logo.png`
     const htmlBody = `
 <html>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-  <p>Hi ${contact?.first_name || 'there'},</p>
+<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
+    <tr>
+      <td>
+        <img src="${logoUrl}" alt="${org?.name}" height="40" style="display: block;" />
+      </td>
+    </tr>
+  </table>
 
-  <p>Your quote <strong>${quote.quote_number}</strong> from <strong>${org?.name}</strong> is ready — the full quote is attached as a PDF.</p>
+  <div style="padding: 24px;">
+    <p>Hi ${contact?.first_name || 'there'},</p>
 
-  <p><strong>Quote Total:</strong> ${totalFormatted}</p>
+    <p>Thank you for your enquiry. Please find your quote for the discussed work attached.</p>
 
-  <p>
-    <a href="${approvalUrl}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-      View &amp; Approve Quote
-    </a>
-  </p>
+    <p><strong>Quote Total: ${totalFormatted}</strong></p>
 
-  <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
+    <p>
+      <a href="${approvalUrl}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+        View &amp; Approve Quote
+      </a>
+    </p>
 
-  <p>Best regards,<br>${profile.full_name}<br>${org?.name}</p>
+    <p>This quote is valid for 14 days. If you'd like to proceed, click the button above. For any questions, feel free to call or reply to this email.</p>
+
+    <p>
+      Kind regards,<br>
+      ${profile.full_name}<br>
+      ${org?.name}<br>
+      ${org?.phone ? org.phone + ' · ' : ''}${orgEmail}${org?.abn ? '<br>ABN ' + org.abn : ''}
+    </p>
+  </div>
 </body>
 </html>`
 
     const textBody = `Hi ${contact?.first_name || 'there'},
 
-Your quote ${quote.quote_number} from ${org?.name} is ready — the full quote is attached as a PDF.
+Thank you for your enquiry. Please find your quote for the discussed work attached.
 
 Quote Total: ${totalFormatted}
 
 View & Approve: ${approvalUrl}
 
-Questions? Reply to this email.
+This quote is valid for 14 days. If you'd like to proceed, click the link above. For any questions, feel free to call or reply to this email.
 
-Best regards,
+Kind regards,
 ${profile.full_name}
-${org?.name}`
+${org?.name}
+${org?.phone ? org.phone + ' · ' : ''}${orgEmail}${org?.abn ? '\nABN ' + org.abn : ''}`
 
     const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, [

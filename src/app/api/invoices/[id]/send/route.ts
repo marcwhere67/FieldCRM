@@ -85,36 +85,54 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     )
 
     const subject = `Invoice ${invoice.invoice_number} from ${org?.name ?? 'us'}`
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
+    const logoUrl = `${siteUrl}/salt-air-logo.png`
 
     const htmlBody = `
 <html>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-  <p>Hi ${contact?.first_name || 'there'},</p>
+<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
+    <tr>
+      <td>
+        <img src="${logoUrl}" alt="${org?.name}" height="40" style="display: block;" />
+      </td>
+    </tr>
+  </table>
 
-  <p>Please find invoice <strong>${invoice.invoice_number}</strong> from <strong>${org?.name}</strong> attached as a PDF.</p>
+  <div style="padding: 24px;">
+    <p>Hi ${contact?.first_name || 'there'},</p>
 
-  <p><strong>Amount due:</strong> ${balanceFormatted}${dueText ? `<br><strong>Due date:</strong> ${dueText}` : ''}</p>
+    <p>Thank you for choosing ${org?.name}. Please find your invoice for the completed work attached.</p>
 
-  ${bankHtml}
+    <p><strong>Amount due: ${balanceFormatted}</strong>${dueText ? `<br><strong>Due: ${dueText}</strong>` : ''}</p>
 
-  <p>Questions? Reply to this email or contact us at ${orgEmail}.</p>
+    ${bankHtml}
 
-  <p>Best regards,<br>${profile.full_name}<br>${org?.name}</p>
+    <p>Please use your invoice number as the payment reference. If you have any questions, feel free to call or reply to this email.</p>
+
+    <p>
+      Kind regards,<br>
+      ${profile.full_name}<br>
+      ${org?.name}<br>
+      ${org?.phone ? org.phone + ' · ' : ''}${orgEmail}${org?.abn ? '<br>ABN ' + org.abn : ''}
+    </p>
+  </div>
 </body>
 </html>`
 
     const textBody = `Hi ${contact?.first_name || 'there'},
 
-Please find invoice ${invoice.invoice_number} from ${org?.name} attached as a PDF.
+Thank you for choosing ${org?.name}. Please find your invoice for the completed work attached.
 
-Amount due: ${balanceFormatted}${dueText ? `\nDue date: ${dueText}` : ''}
+Amount due: ${balanceFormatted}${dueText ? `\nDue: ${dueText}` : ''}
 ${bankText}
 
-Questions? Reply to this email.
+Please use your invoice number as the payment reference. If you have any questions, feel free to call or reply to this email.
 
-Best regards,
+Kind regards,
 ${profile.full_name}
-${org?.name}`
+${org?.name}
+${org?.phone ? org.phone + ' · ' : ''}${orgEmail}${org?.abn ? '\nABN ' + org.abn : ''}`
 
     const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, [
