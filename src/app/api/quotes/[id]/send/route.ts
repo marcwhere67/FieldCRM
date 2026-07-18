@@ -83,7 +83,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   <div style="padding: 24px;">
     <p>Hi ${contact?.first_name || 'there'},</p>
 
-    <p>Thank you for your enquiry. Please find your quote for the discussed work attached.</p>
+    <p>Thank you for your enquiry with ${org?.name}. Please find your quote for the discussed work attached.</p>
 
     <p><strong>Quote Total: ${totalFormatted}</strong></p>
 
@@ -109,7 +109,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const textBody = `Hi ${contact?.first_name || 'there'},
 
-Thank you for your enquiry. Please find your quote for the discussed work attached.
+Thank you for your enquiry with ${org?.name}. Please find your quote for the discussed work attached.
 
 Quote Total: ${totalFormatted}
 
