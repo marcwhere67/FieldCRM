@@ -11,9 +11,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica',
     fontSize: 10,
     color: '#1e293b',
-    paddingTop: 48,
-    paddingHorizontal: 48,
-    paddingBottom: 84,
+    padding: 48,
     backgroundColor: '#ffffff',
   },
   brandRule: {
@@ -160,20 +158,23 @@ const styles = StyleSheet.create({
   notes: {
     marginTop: 14,
     padding: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#eef4f0',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: '#cfe0d6',
     borderRadius: 4,
   },
   notesLabel: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#94a3b8',
+    color: '#3f6b57',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 6,
   },
   notesText: {
     fontSize: 9,
-    color: '#475569',
+    color: '#3f6b57',
     lineHeight: 1.6,
   },
   statusBadge: {
@@ -262,13 +263,16 @@ export function QuotePDF({ quote, org, contact }: Props) {
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
+            <Text style={styles.orgContact}>
+              {org.phone ? `${org.phone}\n` : ''}{org.email ?? ''}{org.abn ? `\nABN ${org.abn}` : ''}
+            </Text>
           </View>
           <View>
             <Text style={styles.docTitle}>QUOTE</Text>
             <Text style={styles.docMeta}>
               {quote.quote_number}{'\n'}
-              Date: {formatDate(quote.created_at)}{'\n'}
-              {quote.valid_until ? `Valid until: ${formatDate(quote.valid_until)}` : ''}
+              Quote date: {formatDate(quote.created_at)}{'\n'}
+              {quote.valid_until ? `Expiry date: ${formatDate(quote.valid_until)}` : ''}
             </Text>
           </View>
         </View>
@@ -349,15 +353,6 @@ export function QuotePDF({ quote, org, contact }: Props) {
           </View>
         )}
 
-        {/* Footer — contact strip */}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>
-            {[org.address, org.phone, org.email].filter(Boolean).join('  ·  ')}
-          </Text>
-          <Text style={styles.footerText}>
-            saltaircleaning.com.au{org.abn ? `  ·  ABN ${org.abn}` : ''}
-          </Text>
-        </View>
       </Page>
     </Document>
   )
