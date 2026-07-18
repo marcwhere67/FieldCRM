@@ -95,11 +95,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     <p>This quote is valid for 14 days. If you'd like to proceed, click the button above. For any questions, feel free to call or reply to this email.</p>
 
+    <p>Kind regards,</p>
+
     <p>
-      Kind regards,<br>
       ${profile.full_name}<br>
       ${org?.name}<br>
-      ${org?.phone ? org.phone + ' · ' : ''}${orgEmail} · https://saltaircleaning.com.au
+      ${org?.phone ? org.phone + '<br>' : ''}${orgEmail}<br>
+      https://saltaircleaning.com.au
     </p>
   </div>
 </body>
@@ -116,9 +118,11 @@ View & Approve: ${approvalUrl}
 This quote is valid for 14 days. If you'd like to proceed, click the link above. For any questions, feel free to call or reply to this email.
 
 Kind regards,
+
 ${profile.full_name}
 ${org?.name}
-${org?.phone ? org.phone + ' · ' : ''}${orgEmail} · https://saltaircleaning.com.au`
+${org?.phone ? org.phone + '\n' : ''}${orgEmail}
+https://saltaircleaning.com.au`
 
     const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, [
