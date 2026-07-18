@@ -27,23 +27,29 @@ interface Contact { id: string; first_name: string; last_name: string; company_n
 interface Property { id: string; label: string | null; address_line1: string | null; suburb: string | null; contact_id: string }
 interface Team { id: string; full_name: string }
 interface Line { description: string; quantity: number; unit_price: number; tax_rate: number; subtotal: number }
+export interface ExistingAgreement {
+  id: string; contact_id: string; property_id: string | null; title: string; frequency: Frequency
+  anchor_date: string; start_time: string; duration_minutes: number; end_date: string | null
+  instructions: string | null; assigned_users: string[] | null; line_items: Line[] | null
+}
 
-export function AgreementForm({ contacts, properties, team, initialContactId }: {
-  contacts: Contact[]; properties: Property[]; team: Team[]; initialContactId: string | null
+export function AgreementForm({ contacts, properties, team, initialContactId, existing }: {
+  contacts: Contact[]; properties: Property[]; team: Team[]; initialContactId: string | null; existing?: ExistingAgreement | null
 }) {
   const router = useRouter()
+  const editing = !!existing
   const [saving, setSaving] = useState(false)
-  const [contactId, setContactId] = useState(initialContactId ?? '')
-  const [propertyId, setPropertyId] = useState('')
-  const [title, setTitle] = useState('')
-  const [frequency, setFrequency] = useState<Frequency>('fortnightly')
-  const [anchorDate, setAnchorDate] = useState(melbourneDateOnly())
-  const [startTime, setStartTime] = useState('09:00')
-  const [duration, setDuration] = useState(120)
-  const [endDate, setEndDate] = useState('')
-  const [instructions, setInstructions] = useState('')
-  const [assignees, setAssignees] = useState<string[]>([])
-  const [lines, setLines] = useState<Line[]>([{ description: '', quantity: 1, unit_price: 0, tax_rate: 10, subtotal: 0 }])
+  const [contactId, setContactId] = useState(existing?.contact_id ?? initialContactId ?? '')
+  const [propertyId, setPropertyId] = useState(existing?.property_id ?? '')
+  const [title, setTitle] = useState(existing?.title ?? '')
+  const [frequency, setFrequency] = useState<Frequency>(existing?.frequency ?? 'fortnightly')
+  const [anchorDate, setAnchorDate] = useState(existing?.anchor_date ?? melbourneDateOnly())
+  const [startTime, setStartTime] = useState((existing?.start_time ?? '09:00').slice(0, 5))
+  const [duration, setDuration] = useState(existing?.duration_minutes ?? 120)
+  const [endDate, setEndDate] = useState(existing?.end_date ?? '')
+  const [instructions, setInstructions] = useState(existing?.instructions ?? '')
+  const [assignees, setAssignees] = useState<string[]>(existing?.assigned_users ?? [])
+  const [lines, setLines] = useState<Line[]>(existing?.line_items?.length ? existing.line_items : [{ description: '', quantity: 1, unit_price: 0, tax_rate: 10, subtotal: 0 }])
 
   const contactProps = properties.filter(p => p.contact_id === contactId)
   const { subtotal, tax, total } = computeTotals(lines)
@@ -70,8 +76,8 @@ export function AgreementForm({ contacts, properties, team, initialContactId }: 
     if (!contactId) { toast.error('Choose a customer'); return }
     setSaving(true)
     try {
-      const res = await fetch('/api/agreements', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(editing ? `/api/agreements/${existing!.id}` : '/api/agreements', {
+        method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title, contact_id: contactId, property_id: propertyId || null, frequency,
           anchor_date: anchorDate, start_time: startTime, duration_minutes: duration,
@@ -81,12 +87,12 @@ export function AgreementForm({ contacts, properties, team, initialContactId }: 
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to create')
-      toast.success('Recurring service set up')
-      router.push('/agreements')
+      if (!res.ok) throw new Error(data.error || 'Failed to save')
+      toast.success(editing ? 'Changes saved' : 'Recurring service set up')
+      router.push(editing ? `/agreements/${existing!.id}` : '/agreements')
       router.refresh()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create')
+      toast.error(e instanceof Error ? e.message : 'Failed to save')
       setSaving(false)
     }
   }
@@ -94,10 +100,10 @@ export function AgreementForm({ contacts, properties, team, initialContactId }: 
   return (
     <div style={{ maxWidth: 720 }} className="space-y-6">
       <div>
-        <Link href="/agreements" style={{ color: C.muted, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <ArrowLeft style={{ width: 13, height: 13 }} /> Recurring services
+        <Link href={editing ? `/agreements/${existing!.id}` : '/agreements'} style={{ color: C.muted, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <ArrowLeft style={{ width: 13, height: 13 }} /> {editing ? 'Back to service' : 'Recurring services'}
         </Link>
-        <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300, marginTop: 8 }}>New recurring service</h1>
+        <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300, marginTop: 8 }}>{editing ? 'Edit recurring service' : 'New recurring service'}</h1>
       </div>
 
       {/* Customer + property */}
@@ -219,9 +225,9 @@ export function AgreementForm({ contacts, properties, team, initialContactId }: 
       <div className="flex items-center gap-3 pt-2">
         <button onClick={submit} disabled={saving}
           style={{ backgroundColor: C.navy, color: '#fff', padding: '11px 24px', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>
-          {saving ? 'Setting up…' : 'Set up recurring service'}
+          {saving ? 'Saving…' : editing ? 'Save changes' : 'Set up recurring service'}
         </button>
-        <Link href="/agreements" style={{ color: C.muted, fontSize: 12 }}>Cancel</Link>
+        <Link href={editing ? `/agreements/${existing!.id}` : '/agreements'} style={{ color: C.muted, fontSize: 12 }}>Cancel</Link>
       </div>
     </div>
   )

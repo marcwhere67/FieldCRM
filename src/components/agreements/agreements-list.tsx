@@ -60,8 +60,9 @@ export function AgreementsList({ agreements, isManager }: { agreements: Agreemen
             const total = computeTotals((Array.isArray(a.line_items) ? a.line_items : []) as MoneyLine[]).total
             const next = a.active ? nextDate(a) : null
             return (
-              <div key={a.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`, opacity: a.active ? 1 : 0.55 }}>
+              <Link key={a.id} href={`/agreements/${a.id}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`, opacity: a.active ? 1 : 0.55, textDecoration: 'none' }}
+                className="hover:bg-[#FAFAF8] transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p style={{ color: C.fg, fontSize: 14, fontWeight: 500 }}>{a.title}</p>
@@ -73,7 +74,7 @@ export function AgreementsList({ agreements, isManager }: { agreements: Agreemen
                   </p>
                 </div>
                 <span style={{ fontFamily: C.serif, color: C.navy, fontSize: 18 }}>{formatCurrency(total)}</span>
-              </div>
+              </Link>
             )
           })}
         </div>
