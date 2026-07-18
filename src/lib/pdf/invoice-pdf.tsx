@@ -11,7 +11,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica',
     fontSize: 10,
     color: '#1e293b',
-    padding: 48,
+    paddingTop: 48,
+    paddingHorizontal: 48,
+    paddingBottom: 84,
     backgroundColor: '#ffffff',
   },
   brandRule: {
@@ -193,13 +195,13 @@ const styles = StyleSheet.create({
     left: 48,
     right: 48,
     borderTop: '1pt solid #e2e8f0',
-    paddingTop: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingTop: 10,
   },
   footerText: {
     fontSize: 8,
     color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 1.5,
   },
 })
 
@@ -212,13 +214,6 @@ function formatDate(s: string | null | undefined) {
   const d = new Date(s)
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  sent: 'Unpaid',
-  paid: 'Paid',
-  overdue: 'Overdue',
-  void: 'Void',
 }
 
 interface LineItem {
@@ -279,12 +274,6 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
-            <Text style={styles.orgContact}>
-              {[org.phone, org.email].filter(Boolean).join('  ·  ')}
-              {'\nsaltaircleaning.com.au'}
-              {org.address ? `\n${org.address}` : ''}
-              {org.abn ? `\nABN: ${org.abn}` : ''}
-            </Text>
           </View>
           <View>
             {/* "Tax Invoice" is only valid (and required) when GST is charged; plain "Invoice" otherwise */}
@@ -402,10 +391,14 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
           </View>
         )}
 
-        {/* Footer */}
+        {/* Footer — contact strip */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>{org.name} — {invoice.invoice_number}</Text>
-          <Text style={styles.footerText}>Status: {STATUS_LABELS[invoice.status] ?? invoice.status}</Text>
+          <Text style={styles.footerText}>
+            {[org.address, org.phone, org.email].filter(Boolean).join('  ·  ')}
+          </Text>
+          <Text style={styles.footerText}>
+            saltaircleaning.com.au{org.abn ? `  ·  ABN ${org.abn}` : ''}
+          </Text>
         </View>
       </Page>
     </Document>

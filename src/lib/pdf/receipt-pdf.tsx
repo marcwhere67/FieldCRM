@@ -19,7 +19,7 @@ const METHOD_LABEL: Record<string, string> = {
 const NAVY = '#2C3E50'
 
 const styles = StyleSheet.create({
-  page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1e293b', padding: 48, backgroundColor: '#ffffff' },
+  page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1e293b', paddingTop: 48, paddingHorizontal: 48, paddingBottom: 84, backgroundColor: '#ffffff' },
   brandRule: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: NAVY },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
   logo: { width: 100, height: 'auto', marginBottom: 6 },
@@ -41,10 +41,13 @@ const styles = StyleSheet.create({
     left: 48,
     right: 48,
     borderTop: '1pt solid #e2e8f0',
-    paddingTop: 12,
+    paddingTop: 10,
+  },
+  footerText: {
     fontSize: 8,
     color: '#94a3b8',
     textAlign: 'center',
+    lineHeight: 1.5,
   },
 })
 
@@ -65,12 +68,6 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining }:
         <View style={styles.header}>
           <View>
             <Image src={LOGO_PATH} style={styles.logo} />
-            <Text style={styles.orgContact}>
-              {[org.phone, org.email].filter(Boolean).join('  ·  ')}
-              {'\nsaltaircleaning.com.au'}
-              {org.address ? `\n${org.address}` : ''}
-              {org.abn ? `\nABN: ${org.abn}` : ''}
-            </Text>
           </View>
           <View>
             <Text style={styles.docTitle}>RECEIPT</Text>
@@ -119,9 +116,15 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining }:
           </View>
         ) : null}
 
-        <Text style={styles.footer} fixed>
-          {org.name} — {payment.receipt_number} · Official receipt for payment received against invoice {invoice.invoice_number}
-        </Text>
+        {/* Footer — contact strip */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>
+            {[org.address, org.phone, org.email].filter(Boolean).join('  ·  ')}
+          </Text>
+          <Text style={styles.footerText}>
+            saltaircleaning.com.au{org.abn ? `  ·  ABN ${org.abn}` : ''}
+          </Text>
+        </View>
       </Page>
     </Document>
   )
