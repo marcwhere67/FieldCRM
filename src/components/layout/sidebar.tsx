@@ -8,51 +8,77 @@ import {
   LayoutDashboard, Users, Briefcase, FileText, Receipt,
   Calendar, MessageSquare, GitBranch, Zap, Clock,
   MapPin, Megaphone, Star, TrendingUp, Settings, ShieldCheck,
-  ChevronLeft, ChevronRight, LogOut, BarChart2, BookOpen, Package, UserCheck, Truck, DollarSign, Calculator, Repeat, Coins
+  ChevronLeft, ChevronRight, ChevronDown, LogOut, BarChart2, BookOpen, Package, UserCheck, Truck, DollarSign, Calculator, Repeat, Coins
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 type NavLink = { href: string; label: string; icon: React.ElementType; noActive?: boolean }
-type NavDivider = { divider: string }
-type NavEntry = NavLink | NavDivider
+type NavGroup = { label: string; items: NavLink[] }
 
-const NAV: NavEntry[] = [
+// Everyday items — always visible, no header.
+const PRIMARY: NavLink[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { divider: 'CRM' },
   { href: '/contacts', label: 'Contacts', icon: Users },
-  { href: '/pipeline', label: 'Pipeline', icon: GitBranch },
-  { href: '/inbox', label: 'Inbox', icon: MessageSquare },
-  { divider: 'Operations' },
   { href: '/schedule', label: 'Schedule', icon: Calendar },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/agreements', label: 'Recurring', icon: Repeat },
   { href: '/quotes', label: 'Quotes', icon: FileText },
-  { href: '/quotes/calculator', label: 'Quote Calculator', icon: Calculator, noActive: true },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
-  { divider: 'Field' },
-  { href: '/field-map', label: 'Field Map', icon: MapPin },
-  { href: '/timesheets', label: 'Timesheets', icon: Clock },
-  { href: '/assets', label: 'Assets', icon: Package },
-  { href: '/team', label: 'Team', icon: UserCheck },
-  { divider: 'Business' },
-  { href: '/suppliers', label: 'Suppliers', icon: Truck },
-  { href: '/payroll', label: 'Payroll', icon: DollarSign },
-  { href: '/marketing', label: 'Marketing', icon: Megaphone },
-  { href: '/reputation', label: 'Reputation', icon: Star },
-  { href: '/reports', label: 'Reports', icon: BarChart2 },
-  { href: '/catalogue', label: 'Catalogue', icon: BookOpen },
-  { href: '/finances', label: 'Finances', icon: TrendingUp },
-  { href: '/job-costing', label: 'Job Costing', icon: Coins },
-  { href: '/automations', label: 'Automations', icon: Zap },
-  { href: '/admin', label: 'Admin Hub', icon: ShieldCheck },
+  { href: '/inbox', label: 'Inbox', icon: MessageSquare },
 ]
+
+// Secondary items — collapsible groups, collapsed by default.
+const GROUPS: NavGroup[] = [
+  { label: 'Operations', items: [
+    { href: '/pipeline', label: 'Pipeline', icon: GitBranch },
+    { href: '/agreements', label: 'Recurring', icon: Repeat },
+    { href: '/quotes/calculator', label: 'Quote Calculator', icon: Calculator, noActive: true },
+    { href: '/field-map', label: 'Field Map', icon: MapPin },
+    { href: '/timesheets', label: 'Timesheets', icon: Clock },
+    { href: '/assets', label: 'Assets', icon: Package },
+    { href: '/team', label: 'Team', icon: UserCheck },
+  ] },
+  { label: 'Money', items: [
+    { href: '/finances', label: 'Finances', icon: TrendingUp },
+    { href: '/job-costing', label: 'Job Costing', icon: Coins },
+    { href: '/payroll', label: 'Payroll', icon: DollarSign },
+    { href: '/reports', label: 'Reports', icon: BarChart2 },
+  ] },
+  { label: 'Growth', items: [
+    { href: '/marketing', label: 'Marketing', icon: Megaphone },
+    { href: '/reputation', label: 'Reputation', icon: Star },
+    { href: '/automations', label: 'Automations', icon: Zap },
+  ] },
+  { label: 'Admin', items: [
+    { href: '/suppliers', label: 'Suppliers', icon: Truck },
+    { href: '/catalogue', label: 'Catalogue', icon: BookOpen },
+    { href: '/admin', label: 'Admin Hub', icon: ShieldCheck },
+  ] },
+]
+
+const ALL_HREFS = [...PRIMARY, ...GROUPS.flatMap(g => g.items)].map(l => l.href)
+
+function useActive(pathname: string) {
+  return (href: string, noActive?: boolean) => {
+    if (noActive) return false
+    const moreSpecific = ALL_HREFS.some(h => h !== href && h.startsWith(href + '/') && pathname.startsWith(h))
+    return !moreSpecific && (pathname === href || pathname.startsWith(href + '/'))
+  }
+}
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const isActive = useActive(pathname)
+
+  // Auto-open the group that contains the current page; keep others closed.
+  const [open, setOpen] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    for (const g of GROUPS) initial[g.label] = g.items.some(i => isActive(i.href, i.noActive))
+    return initial
+  })
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -60,84 +86,97 @@ export function Sidebar() {
     router.push('/login')
   }
 
+  function itemStyle(active: boolean) {
+    return active
+      ? { color: '#fff', borderLeft: '2px solid #76A58F', backgroundColor: 'rgba(118,165,143,0.12)' }
+      : { color: 'rgba(255,255,255,0.55)', borderLeft: '2px solid transparent' }
+  }
+
+  const linkClass = (active: boolean) => cn(
+    'flex items-center gap-3 px-4 py-[9px] text-[12.5px] font-normal tracking-[0.02em] transition-colors',
+    !active && 'hover:text-white hover:bg-white/5',
+    collapsed && 'justify-center px-0',
+  )
+
+  function NavItem({ item }: { item: NavLink }) {
+    const active = isActive(item.href, item.noActive)
+    const Icon = item.icon
+    return (
+      <Link href={item.href} title={collapsed ? item.label : undefined} style={itemStyle(active)} className={linkClass(active)}>
+        <Icon className="w-[15px] h-[15px] shrink-0" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </Link>
+    )
+  }
+
   return (
     <aside
       style={{ backgroundColor: '#2C3E50', borderRight: '1px solid rgba(255,255,255,0.08)' }}
-      className={cn(
-        'flex flex-col h-screen transition-all duration-200 shrink-0',
-        collapsed ? 'w-16' : 'w-56'
-      )}
+      className={cn('flex flex-col h-screen transition-all duration-200 shrink-0', collapsed ? 'w-16' : 'w-56')}
     >
       {/* Logo */}
       <div
         style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-        className={cn('flex items-center justify-center px-4 py-4', collapsed ? 'px-2' : 'px-4')}
+        className={cn('flex items-center py-4', collapsed ? 'justify-center px-2' : 'px-5')}
       >
         {collapsed ? (
           <div style={{ backgroundColor: '#76A58F', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: '#fff', fontSize: 11, letterSpacing: '0.08em', fontWeight: 600 }}>SA</span>
           </div>
         ) : (
-          <div className="flex flex-col items-start w-full gap-1">
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: '6px 10px', display: 'inline-block' }}>
-              <img src="/salt-air-logo.png" alt="Salt Air Cleaning" className="h-7 w-auto" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              <span style={{ color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', display: 'none' }} className="logo-fallback">SALT AIR</span>
-            </div>
-            <span style={{ color: 'rgba(255,255,255,0.22)', letterSpacing: '0.25em', paddingLeft: 2 }} className="text-[7px] font-normal uppercase tracking-widest">FieldCRM</span>
+          <div className="flex flex-col items-start gap-1.5">
+            <img
+              src="/salt-air-logo-white.png"
+              alt="Salt Air Cleaning"
+              className="h-8 w-auto"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+            <span style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.28em' }} className="text-[8px] uppercase">FieldCRM</span>
           </div>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-scroll py-2 px-0" style={{ scrollbarWidth: 'auto' }}>
-        {NAV.map((entry, idx) => {
-          if ('divider' in entry) {
-            if (collapsed) return <div key={idx} style={{ borderColor: 'rgba(255,255,255,0.08)' }} className="my-2 border-t" />
-            return (
-              <p key={idx} style={{ color: 'rgba(255,255,255,0.25)', letterSpacing: '0.2em' }} className="px-5 pt-5 pb-1 text-[8px] font-normal uppercase select-none">
-                {entry.divider}
-              </p>
-            )
-          }
-          const { href, label, icon: Icon, noActive } = entry
-          const navHrefs = NAV.filter(e => 'href' in e).map(e => (e as NavLink).href)
-          const moreSpecificMatch = navHrefs.some(h => h !== href && h.startsWith(href + '/') && pathname.startsWith(h))
-          const active = !noActive && !moreSpecificMatch && (pathname === href || pathname.startsWith(href + '/'))
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              style={active
-                ? { color: '#fff', borderLeft: '2px solid #76A58F', backgroundColor: 'rgba(118,165,143,0.12)' }
-                : { color: 'rgba(255,255,255,0.5)', borderLeft: '2px solid transparent' }
-              }
-              className={cn(
-                'flex items-center gap-3 px-4 py-[8px] text-[12px] font-normal tracking-[0.03em] transition-colors mb-0',
-                !active && 'hover:text-white hover:bg-white/5',
-                collapsed && 'justify-center px-0'
-              )}
-            >
-              <Icon className="w-[15px] h-[15px] shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </Link>
-          )
-        })}
+      <nav
+        className="flex-1 overflow-y-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {/* Primary */}
+        {PRIMARY.map(item => <NavItem key={item.href} item={item} />)}
+
+        {/* Collapsed: show group items flat, separated by rules */}
+        {collapsed
+          ? GROUPS.map(g => (
+              <React.Fragment key={g.label}>
+                <div style={{ borderColor: 'rgba(255,255,255,0.08)' }} className="my-2 border-t" />
+                {g.items.map(item => <NavItem key={item.href} item={item} />)}
+              </React.Fragment>
+            ))
+          : GROUPS.map(g => {
+              const isOpen = open[g.label]
+              const hasActive = g.items.some(i => isActive(i.href, i.noActive))
+              return (
+                <div key={g.label} className="mt-2">
+                  <button
+                    onClick={() => setOpen(o => ({ ...o, [g.label]: !o[g.label] }))}
+                    style={{ color: hasActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.4)', letterSpacing: '0.18em' }}
+                    className="w-full flex items-center justify-between px-5 pt-3 pb-1.5 text-[10px] uppercase select-none hover:text-white/70 transition-colors"
+                  >
+                    <span>{g.label}</span>
+                    <ChevronDown className={cn('w-3 h-3 transition-transform', !isOpen && '-rotate-90')} />
+                  </button>
+                  {isOpen && g.items.map(item => <NavItem key={item.href} item={item} />)}
+                </div>
+              )
+            })}
       </nav>
 
       {/* Bottom */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="px-0 pb-2 pt-1 space-y-0">
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="pb-2 pt-1">
         <Link
           href="/settings"
           title={collapsed ? 'Settings' : undefined}
-          style={pathname.startsWith('/settings')
-            ? { color: '#fff', borderLeft: '2px solid #76A58F', backgroundColor: 'rgba(118,165,143,0.12)' }
-            : { color: 'rgba(255,255,255,0.5)', borderLeft: '2px solid transparent' }
-          }
-          className={cn(
-            'flex items-center gap-3 px-4 py-[8px] text-[12px] font-normal tracking-[0.03em] transition-colors hover:text-white hover:bg-white/5',
-            collapsed && 'justify-center px-0'
-          )}
+          style={itemStyle(pathname.startsWith('/settings'))}
+          className={linkClass(pathname.startsWith('/settings'))}
         >
           <Settings className="w-[15px] h-[15px] shrink-0" />
           {!collapsed && <span>Settings</span>}
@@ -148,8 +187,8 @@ export function Sidebar() {
           title={collapsed ? 'Sign out' : undefined}
           style={{ color: 'rgba(255,255,255,0.35)', borderLeft: '2px solid transparent' }}
           className={cn(
-            'w-full flex items-center gap-3 px-4 py-[8px] text-[12px] font-normal tracking-[0.03em] transition-colors hover:text-red-300 hover:bg-white/5',
-            collapsed && 'justify-center px-0'
+            'w-full flex items-center gap-3 px-4 py-[9px] text-[12.5px] font-normal tracking-[0.02em] transition-colors hover:text-red-300 hover:bg-white/5',
+            collapsed && 'justify-center px-0',
           )}
         >
           <LogOut className="w-[15px] h-[15px] shrink-0" />
@@ -161,14 +200,13 @@ export function Sidebar() {
           title={collapsed ? 'Expand' : undefined}
           style={{ color: 'rgba(255,255,255,0.25)', borderLeft: '2px solid transparent' }}
           className={cn(
-            'w-full flex items-center gap-3 px-4 py-[8px] text-[12px] font-normal tracking-[0.03em] transition-colors hover:text-white hover:bg-white/5',
-            collapsed && 'justify-center px-0'
+            'w-full flex items-center gap-3 px-4 py-[9px] text-[12.5px] font-normal tracking-[0.02em] transition-colors hover:text-white hover:bg-white/5',
+            collapsed && 'justify-center px-0',
           )}
         >
           {collapsed
             ? <ChevronRight className="w-[15px] h-[15px]" />
-            : <><ChevronLeft className="w-[15px] h-[15px]" /><span>Collapse</span></>
-          }
+            : <><ChevronLeft className="w-[15px] h-[15px]" /><span>Collapse</span></>}
         </button>
       </div>
     </aside>
