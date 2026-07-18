@@ -88,8 +88,8 @@ export function Sidebar() {
 
   function itemStyle(active: boolean) {
     return active
-      ? { color: '#fff', borderLeft: '2px solid #76A58F', backgroundColor: 'rgba(118,165,143,0.12)' }
-      : { color: 'rgba(255,255,255,0.55)', borderLeft: '2px solid transparent' }
+      ? { color: '#fff', borderLeft: '2px solid #76A58F', backgroundColor: 'rgba(118,165,143,0.18)' }
+      : { color: 'rgba(255,255,255,0.62)', borderLeft: '2px solid transparent' }
   }
 
   const linkClass = (active: boolean) => cn(
@@ -155,16 +155,24 @@ export function Sidebar() {
               const isOpen = open[g.label]
               const hasActive = g.items.some(i => isActive(i.href, i.noActive))
               return (
-                <div key={g.label} className="mt-2">
+                <div key={g.label} className="mt-0.5">
                   <button
                     onClick={() => setOpen(o => ({ ...o, [g.label]: !o[g.label] }))}
-                    style={{ color: hasActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.4)', letterSpacing: '0.18em' }}
-                    className="w-full flex items-center justify-between px-5 pt-3 pb-1.5 text-[10px] uppercase select-none hover:text-white/70 transition-colors"
+                    style={{ color: hasActive || isOpen ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)', letterSpacing: '0.18em' }}
+                    className="w-full flex items-center justify-between px-5 pt-2.5 pb-1.5 text-[10px] uppercase select-none hover:text-white/70 transition-colors"
                   >
                     <span>{g.label}</span>
-                    <ChevronDown className={cn('w-3 h-3 transition-transform', !isOpen && '-rotate-90')} />
+                    <ChevronDown className={cn('w-3 h-3 opacity-70 transition-transform duration-200', !isOpen && '-rotate-90')} />
                   </button>
-                  {isOpen && g.items.map(item => <NavItem key={item.href} item={item} />)}
+                  {/* animated expand/collapse via grid-rows 0fr -> 1fr */}
+                  <div
+                    className="grid transition-[grid-template-rows] duration-200 ease-out"
+                    style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+                  >
+                    <div className="overflow-hidden">
+                      {g.items.map(item => <NavItem key={item.href} item={item} />)}
+                    </div>
+                  </div>
                 </div>
               )
             })}
