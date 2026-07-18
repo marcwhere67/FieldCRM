@@ -30,7 +30,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
 
   const { data: job } = await supabase
     .from('jobs')
-    .select('id, org_id, contact_id, quote_id, title, invoice_id, materials_used')
+    .select('id, org_id, contact_id, quote_id, title, invoice_id, materials_used, line_items')
     .eq('id', jobId)
     .eq('org_id', profile.org_id)
     .single()
@@ -49,6 +49,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
     if (quote?.line_items && Array.isArray(quote.line_items) && quote.line_items.length > 0) {
       lineItems = quote.line_items as LineItem[]
     }
+  }
+
+  // Recurring/agreement jobs carry their agreed price directly on the job.
+  if (lineItems.length === 0 && Array.isArray(job.line_items) && job.line_items.length > 0) {
+    lineItems = job.line_items as LineItem[]
   }
 
   if (lineItems.length === 0 && Array.isArray(job.materials_used) && job.materials_used.length > 0) {
