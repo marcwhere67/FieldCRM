@@ -31,6 +31,13 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     .eq('id', profile!.org_id)
     .single()
 
+  // Payments recorded against this invoice (for history + receipt downloads)
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('id, receipt_number, amount, method, recorded_at, reference')
+    .eq('invoice_id', id)
+    .order('recorded_at', { ascending: false })
+
   // If this is a final invoice, find the deposit invoice for this job
   let depositInvoice = null
   if (invoice.job_id && invoice.invoice_type === 'final') {
@@ -49,6 +56,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       org={org}
       orgId={profile!.org_id}
       depositInvoice={depositInvoice}
+      payments={payments ?? []}
     />
   )
 }

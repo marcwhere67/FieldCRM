@@ -25,10 +25,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   logo: {
-    width: 120,
+    width: 100,
     height: 'auto',
     marginBottom: 6,
   },
@@ -330,15 +330,17 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
 
         {/* Totals */}
         <View style={styles.totalsSection}>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Subtotal</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.subtotal)}</Text>
-          </View>
           {invoice.tax > 0 && (
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>GST (10%)</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(invoice.tax)}</Text>
-            </View>
+            <>
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Subtotal</Text>
+                <Text style={styles.totalsValue}>{formatCurrency(invoice.subtotal)}</Text>
+              </View>
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>GST (10%)</Text>
+                <Text style={styles.totalsValue}>{formatCurrency(invoice.tax)}</Text>
+              </View>
+            </>
           )}
           <View style={styles.totalDivider} />
           <View style={styles.grandTotalRow}>

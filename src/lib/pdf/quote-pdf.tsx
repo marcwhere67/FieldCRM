@@ -25,10 +25,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   logo: {
-    width: 120,
+    width: 100,
     height: 'auto',
     marginBottom: 6,
   },
@@ -52,10 +52,10 @@ const styles = StyleSheet.create({
   },
   divider: {
     borderBottom: '1pt solid #e2e8f0',
-    marginBottom: 24,
+    marginBottom: 18,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 18,
   },
   sectionLabel: {
     fontSize: 8,
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
   },
   notes: {
-    marginTop: 32,
+    marginTop: 14,
     padding: 12,
     backgroundColor: '#f8fafc',
     borderRadius: 4,
@@ -317,15 +317,17 @@ export function QuotePDF({ quote, org, contact }: Props) {
 
         {/* Totals */}
         <View style={styles.totalsSection}>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Subtotal</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(quote.subtotal)}</Text>
-          </View>
           {quote.tax > 0 && (
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>GST (10%)</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(quote.tax)}</Text>
-            </View>
+            <>
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Subtotal</Text>
+                <Text style={styles.totalsValue}>{formatCurrency(quote.subtotal)}</Text>
+              </View>
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>GST (10%)</Text>
+                <Text style={styles.totalsValue}>{formatCurrency(quote.tax)}</Text>
+              </View>
+            </>
           )}
           <View style={styles.totalDivider} />
           <View style={styles.grandTotalRow}>

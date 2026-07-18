@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
-import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText, Download } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
@@ -40,9 +40,10 @@ interface Invoice {
 }
 interface Org { name: string; abn: string | null; email: string | null; phone: string | null; address: string | null; logo_url: string | null; default_payment_terms_days: number | null }
 interface DepositInvoice { id: string; invoice_number: string; total: number; status: string; paid_at: string | null }
-interface Props { invoice: Invoice; org: Org | null; orgId: string; depositInvoice: DepositInvoice | null }
+interface Payment { id: string; receipt_number: string | null; amount: number; method: string; recorded_at: string | null; reference: string | null }
+interface Props { invoice: Invoice; org: Org | null; orgId: string; depositInvoice: DepositInvoice | null; payments?: Payment[] }
 
-export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
+export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = [] }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [isPending, startTransition] = useTransition()
@@ -158,6 +159,11 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
               <CheckCircle className="w-3.5 h-3.5" />Record payment
             </button>
           )}
+          <a href={`/api/invoices/${invoice.id}/pdf`} download
+            style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', textDecoration: 'none' }}
+            className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">
+            <Download className="w-3.5 h-3.5" />PDF
+          </a>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -311,6 +317,30 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice }: Props) {
           </div>
         )}
       </div>
+
+      {/* Payment history */}
+      {payments.length > 0 && (
+        <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }}>
+          <div style={{ borderBottom: `1px solid ${C.border}`, padding: '14px 24px' }}>
+            <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Payments</p>
+          </div>
+          {payments.map(p => (
+            <div key={p.id} style={{ borderBottom: `1px solid ${C.border}`, padding: '12px 24px' }} className="flex items-center gap-4 flex-wrap">
+              <span style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>{formatCurrency(p.amount)}</span>
+              <span style={{ color: '#4A5A65', fontSize: 12 }}>{p.recorded_at ? formatDate(p.recorded_at) : '—'}</span>
+              <span style={{ color: C.muted, fontSize: 12 }} className="capitalize">{p.method.replace(/_/g, ' ')}</span>
+              {p.reference && <span style={{ color: C.muted, fontSize: 12 }}>Ref: {p.reference}</span>}
+              {p.receipt_number && (
+                <a href={`/api/payments/${p.id}/pdf`} download
+                  style={{ marginLeft: 'auto', border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '5px 12px', fontSize: 10, letterSpacing: '0.08em', textDecoration: 'none' }}
+                  className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">
+                  <Download className="w-3 h-3" />{p.receipt_number}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {showPayment && (
         <div onClick={() => !isPending && setShowPayment(false)}

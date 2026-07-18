@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { QuoteBuilder } from '@/components/quotes/quote-builder'
 import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
-import { ArrowLeft, Send, CheckCircle, Copy, Trash2, Edit2, ExternalLink, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle, Copy, Trash2, Edit2, ExternalLink, MoreHorizontal, Download } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
@@ -161,6 +161,11 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
               <CheckCircle className="w-3.5 h-3.5" />Convert to job
             </button>
           )}
+          <a href={`/api/quotes/${quote.id}/pdf`} download
+            style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', textDecoration: 'none' }}
+            className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">
+            <Download className="w-3.5 h-3.5" />PDF
+          </a>
           <button onClick={copyApprovalLink}
             style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
             className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">

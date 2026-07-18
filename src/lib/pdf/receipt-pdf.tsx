@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1e293b', padding: 48, backgroundColor: '#ffffff' },
   brandRule: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: NAVY },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
-  logo: { width: 120, height: 'auto', marginBottom: 6 },
+  logo: { width: 100, height: 'auto', marginBottom: 6 },
   orgContact: { fontSize: 9, color: '#64748b', lineHeight: 1.6 },
   docTitle: { fontSize: 24, fontFamily: 'Helvetica-Bold', color: NAVY, textAlign: 'right' },
   docMeta: { fontSize: 9, color: '#64748b', textAlign: 'right', lineHeight: 1.6, marginTop: 6 },
