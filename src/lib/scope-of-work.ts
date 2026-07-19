@@ -22,24 +22,45 @@ const REGULAR_BULLETS = [
   'Skirting boards dusted',
 ]
 
-// Deep Clean = Regular scope (the deep "thoroughly cleaned" skirting line replaces the
-// regular "dusted" one) + the deep-specific extras, all in one list.
+// Deep Clean — one list, ordered by area (kitchen → bathrooms → bedrooms/living →
+// floors & finishing) with the deep-specific extras folded into their relevant area.
 const DEEP_BULLETS = [
-  ...REGULAR_BULLETS.filter(b => b !== 'Skirting boards dusted'),
-  'Interior cupboards cleaned (non-food cupboards only)',
+  // Kitchen
+  'Kitchen bench tops, splashbacks and surfaces cleaned',
+  'Sink and cooktop cleaned',
+  'Exterior of appliances wiped',
   'Interior microwave cleaning',
+  'Interior cupboards cleaned (non-food cupboards only)',
+  // Bathrooms
+  'Bathrooms: toilet, shower, sinks and visible surfaces cleaned',
   'Bathrooms given additional detailed cleaning including grout attention where required',
+  // Bedrooms & living
+  'Bedrooms and living areas tidied and cleaned',
+  // Floors & finishing
+  'Floors vacuumed and mopped throughout accessible areas',
   'Skirting boards thoroughly cleaned',
   'Window tracks cleaned where accessible',
   'Additional detailed attention to high and hard-to-reach areas',
 ]
 
-// Airbnb / Short-Stay Turnover = full Regular scope + turnover extras, all in one list.
+// Airbnb / Short-Stay Turnover — one list, ordered by area, with the handover/turnover
+// tasks grouped together at the end.
 const AIRBNB_BULLETS = [
-  ...REGULAR_BULLETS,
+  // Kitchen
+  'Kitchen bench tops, splashbacks and surfaces cleaned',
+  'Sink and cooktop cleaned',
+  'Exterior of appliances wiped',
   'Interior check of cupboards and appliances',
   'Washing dishes and returning them to cupboards where required',
+  // Bathrooms
+  'Bathrooms: toilet, shower, sinks and visible surfaces cleaned',
+  // Bedrooms & living
+  'Bedrooms and living areas tidied and cleaned',
   'Linen changed and beds remade',
+  // Floors & finishing
+  'Floors vacuumed and mopped throughout accessible areas',
+  'Skirting boards dusted',
+  // Turnover / handover
   'Full property reset and staging for the next guest',
   'Restocking of provided guest amenities',
   'BBQ maintenance between guest stays',
