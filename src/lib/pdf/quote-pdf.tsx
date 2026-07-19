@@ -449,24 +449,12 @@ export function QuotePDF({ quote, org, contact }: Props) {
             <Text style={styles.scopeIntro}>{scope.intro}</Text>
 
             <Text style={styles.scopeSubLabel}>Includes:</Text>
-            {scope.baseBullets.map((b, i) => (
-              <View key={`base-${i}`} style={styles.bullet} wrap={false}>
+            {scope.includes.map((b, i) => (
+              <View key={`inc-${i}`} style={styles.bullet} wrap={false}>
                 <Text style={styles.bulletDot}>•</Text>
                 <Text style={styles.bulletText}>{b}</Text>
               </View>
             ))}
-
-            {scope.extras && scope.extras.length > 0 && (
-              <>
-                <Text style={styles.scopeSubLabel}>{scope.extrasLabel}</Text>
-                {scope.extras.map((b, i) => (
-                  <View key={`extra-${i}`} style={styles.bullet} wrap={false}>
-                    <Text style={styles.bulletDot}>•</Text>
-                    <Text style={styles.bulletText}>{b}</Text>
-                  </View>
-                ))}
-              </>
-            )}
 
             <View style={styles.scopeConditions}>
               <Text style={styles.scopeTitle}>General Service Conditions</Text>
