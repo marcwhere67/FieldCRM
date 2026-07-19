@@ -12,29 +12,39 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 // Mirrors sidebar.tsx's PRIMARY + GROUPS, minus items already in the bottom bar (Dashboard/Jobs/Clock/Map).
-const MENU_ITEMS = [
-  { label: 'Contacts', href: '/contacts', icon: Users },
-  { label: 'Schedule', href: '/schedule', icon: Calendar },
-  { label: 'Quotes', href: '/quotes', icon: FileText },
-  { label: 'Invoices', href: '/invoices', icon: Receipt },
-  { label: 'Inbox', href: '/inbox', icon: MessageSquare },
-  { label: 'Pipeline', href: '/pipeline', icon: GitBranch },
-  { label: 'Recurring', href: '/agreements', icon: Repeat },
-  { label: 'Quote Calculator', href: '/quotes/calculator', icon: Calculator },
-  { label: 'Timesheets', href: '/timesheets', icon: Clock },
-  { label: 'Assets', href: '/assets', icon: Package },
-  { label: 'Team', href: '/team', icon: UserCheck },
-  { label: 'Finances', href: '/finances', icon: TrendingUp },
-  { label: 'Job Costing', href: '/job-costing', icon: Coins },
-  { label: 'Payroll', href: '/payroll', icon: DollarSign },
-  { label: 'Reports', href: '/reports', icon: BarChart2 },
-  { label: 'Marketing', href: '/marketing', icon: Megaphone },
-  { label: 'Reputation', href: '/reputation', icon: Star },
-  { label: 'Automations', href: '/automations', icon: Zap },
-  { label: 'Suppliers', href: '/suppliers', icon: Truck },
-  { label: 'Catalogue', href: '/catalogue', icon: BookOpen },
-  { label: 'Admin Hub', href: '/admin', icon: ShieldCheck },
-  { label: 'Settings', href: '/settings', icon: Settings },
+const MENU_GROUPS = [
+  { label: 'Everyday', items: [
+    { label: 'Contacts', href: '/contacts', icon: Users },
+    { label: 'Schedule', href: '/schedule', icon: Calendar },
+    { label: 'Quotes', href: '/quotes', icon: FileText },
+    { label: 'Invoices', href: '/invoices', icon: Receipt },
+    { label: 'Inbox', href: '/inbox', icon: MessageSquare },
+  ] },
+  { label: 'Operations', items: [
+    { label: 'Pipeline', href: '/pipeline', icon: GitBranch },
+    { label: 'Recurring', href: '/agreements', icon: Repeat },
+    { label: 'Quote Calculator', href: '/quotes/calculator', icon: Calculator },
+    { label: 'Timesheets', href: '/timesheets', icon: Clock },
+    { label: 'Assets', href: '/assets', icon: Package },
+    { label: 'Team', href: '/team', icon: UserCheck },
+  ] },
+  { label: 'Money', items: [
+    { label: 'Finances', href: '/finances', icon: TrendingUp },
+    { label: 'Job Costing', href: '/job-costing', icon: Coins },
+    { label: 'Payroll', href: '/payroll', icon: DollarSign },
+    { label: 'Reports', href: '/reports', icon: BarChart2 },
+  ] },
+  { label: 'Growth', items: [
+    { label: 'Marketing', href: '/marketing', icon: Megaphone },
+    { label: 'Reputation', href: '/reputation', icon: Star },
+    { label: 'Automations', href: '/automations', icon: Zap },
+  ] },
+  { label: 'Admin', items: [
+    { label: 'Suppliers', href: '/suppliers', icon: Truck },
+    { label: 'Catalogue', href: '/catalogue', icon: BookOpen },
+    { label: 'Admin Hub', href: '/admin', icon: ShieldCheck },
+    { label: 'Settings', href: '/settings', icon: Settings },
+  ] },
 ]
 
 // Field/technician role only ever sees these — must mirror sidebar.tsx's FIELD_ALLOWED_HREFS.
@@ -47,7 +57,9 @@ const C = { navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB', muted: '#8A9BA6'
 export function MobileMenu({ open, onClose, role }: Props) {
   const pathname = usePathname()
   const router = useRouter()
-  const items = role === 'field' ? MENU_ITEMS.filter(i => FIELD_ALLOWED_HREFS.has(i.href)) : MENU_ITEMS
+  const groups = role === 'field'
+    ? MENU_GROUPS.map(g => ({ ...g, items: g.items.filter(i => FIELD_ALLOWED_HREFS.has(i.href)) })).filter(g => g.items.length > 0)
+    : MENU_GROUPS
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -69,23 +81,32 @@ export function MobileMenu({ open, onClose, role }: Props) {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, padding: 12 }}>
-          {items.map(({ label, href, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
-            return (
-              <Link key={href} href={href} onClick={onClose}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 12,
-                  color: active ? C.sage : C.muted, textDecoration: 'none', fontSize: 11,
-                  backgroundColor: active ? 'rgba(118,165,143,0.1)' : 'transparent',
-                  border: `1px solid ${active ? 'rgba(118,165,143,0.2)' : 'transparent'}`,
-                  transition: 'background-color 150ms',
-                }}>
-                <Icon style={{ width: 18, height: 18 }} />
-                <span style={{ textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
-              </Link>
-            )
-          })}
+        <div style={{ padding: '4px 12px 12px' }}>
+          {groups.map(g => (
+            <div key={g.label} style={{ marginTop: 12 }}>
+              <div style={{ color: C.muted, fontSize: 10, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 4px 6px' }}>
+                {g.label}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                {g.items.map(({ label, href, icon: Icon }) => {
+                  const active = pathname === href || pathname.startsWith(href + '/')
+                  return (
+                    <Link key={href} href={href} onClick={onClose}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 12,
+                        color: active ? C.sage : C.muted, textDecoration: 'none', fontSize: 11,
+                        backgroundColor: active ? 'rgba(118,165,143,0.1)' : 'transparent',
+                        border: `1px solid ${active ? 'rgba(118,165,143,0.2)' : 'transparent'}`,
+                        transition: 'background-color 150ms',
+                      }}>
+                      <Icon style={{ width: 18, height: 18 }} />
+                      <span style={{ textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div style={{ padding: '8px 12px 24px', borderTop: `1px solid ${C.border}` }}>
