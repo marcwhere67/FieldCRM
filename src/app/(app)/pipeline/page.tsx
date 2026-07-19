@@ -19,6 +19,7 @@ export default async function PipelinePage() {
     .from('contacts')
     .select('id, first_name, last_name, company_name, phone, email, pipeline_stage_id, created_at')
     .eq('org_id', profile!.org_id)
+    .is('archived_at', null)
     .order('created_at', { ascending: false })
 
   return (

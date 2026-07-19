@@ -5,7 +5,7 @@ import { ContactsTable } from '@/components/contacts/contacts-table'
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; source?: string; assigned?: string }>
+  searchParams: Promise<{ q?: string; status?: string; source?: string; assigned?: string; archived?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
@@ -25,6 +25,10 @@ export default async function ContactsPage({
     `, { count: 'exact' })
     .eq('org_id', profile!.org_id)
     .order('created_at', { ascending: false })
+
+  // Hide archived contacts unless explicitly viewing the archive.
+  if (params.archived === '1') query = query.not('archived_at', 'is', null)
+  else query = query.is('archived_at', null)
 
   if (params.q) {
     const q = params.q

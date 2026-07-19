@@ -65,7 +65,7 @@ interface Props {
   teamMembers: { id: string; full_name: string }[]
   campaigns: { id: string; name: string }[]
   userRole: string
-  filters: { q?: string; status?: string; source?: string; assigned?: string }
+  filters: { q?: string; status?: string; source?: string; assigned?: string; archived?: string }
   total?: number
 }
 
@@ -84,8 +84,20 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
     if (filters.status) p.set('status', filters.status)
     if (filters.source) p.set('source', filters.source)
     if (filters.assigned) p.set('assigned', filters.assigned)
+    if (filters.archived) p.set('archived', filters.archived)
     if (value && value !== 'all') { p.set(key, value) } else { p.delete(key) }
     startTransition(() => router.push(`${pathname}?${p.toString()}`))
+  }
+
+  const viewingArchived = filters.archived === '1'
+
+  async function handleRestore() {
+    const n = selected.size
+    const { error } = await supabase.from('contacts').update({ archived_at: null }).in('id', [...selected])
+    if (error) { toast.error(`Failed to restore: ${error.message}`); return }
+    toast.success(`Restored ${n} contact${n === 1 ? '' : 's'}`)
+    setSelected(new Set())
+    router.refresh()
   }
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
@@ -139,10 +151,19 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete ${selected.size} contact${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return
-    const { error } = await supabase.from('contacts').delete().in('id', [...selected])
-    if (error) { toast.error(`Failed to delete contacts: ${error.message}`); return }
-    toast.success(`Deleted ${selected.size} contact${selected.size === 1 ? '' : 's'}`)
+    const n = selected.size
+    if (!confirm(`Delete ${n} contact${n === 1 ? '' : 's'}? Contacts with quotes, jobs or invoices are archived (hidden but kept); leads with no history are permanently deleted.`)) return
+    const res = await fetch('/api/contacts/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [...selected] }),
+    })
+    const result = await res.json().catch(() => ({}))
+    if (!res.ok) { toast.error(result.error ?? 'Failed to delete contacts'); return }
+    const parts = []
+    if (result.deleted) parts.push(`${result.deleted} deleted`)
+    if (result.archived) parts.push(`${result.archived} archived (had history)`)
+    toast.success(parts.join(' · ') || 'Done')
     setSelected(new Set())
     router.refresh()
   }
@@ -241,6 +262,14 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
             Clear
           </button>
         )}
+
+        <button
+          style={{ color: viewingArchived ? '#2C3E50' : '#8A9BA6' }}
+          className="text-xs hover:text-[#2C3E50] transition-colors px-2 ml-auto"
+          onClick={() => startTransition(() => router.push(viewingArchived ? pathname : `${pathname}?archived=1`))}
+        >
+          {viewingArchived ? '← Back to active' : 'View archived'}
+        </button>
       </div>
 
       {/* Bulk actions */}
@@ -272,7 +301,9 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {userRole === 'admin' && (
+          {viewingArchived ? (
+            <button onClick={handleRestore} style={{ color: '#5d8c76' }} className="text-xs hover:text-[#2C3E50] transition-colors ml-auto">Restore</button>
+          ) : userRole === 'admin' && (
             <button onClick={handleDelete} style={{ color: '#dc2626' }} className="text-xs hover:opacity-70 transition-opacity ml-auto">Delete</button>
           )}
         </div>
