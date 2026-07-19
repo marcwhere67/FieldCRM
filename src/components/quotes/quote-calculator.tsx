@@ -11,14 +11,14 @@ interface Inputs {
   cleanType: CleanType; frequency: Frequency
   queenBeds: number; twinBeds: number; fullBaths: number; powderRooms: number
   livingRooms: number; diningAreas: number; kitchens: number; laundries: number; storeys: number
-  linenBeds: number; ovenClean: boolean; interiorFridge: boolean; balcony: boolean; gstRegistered: boolean
+  linenBeds: number; ovenClean: boolean; interiorFridge: boolean; balcony: boolean; vanityCupboards: boolean; gstRegistered: boolean
 }
 
 const DEFAULT: Inputs = {
   cleanType: 'regular', frequency: 'oneoff',
   queenBeds: 0, twinBeds: 0, fullBaths: 0, powderRooms: 0,
   livingRooms: 0, diningAreas: 0, kitchens: 0, laundries: 0, storeys: 0,
-  linenBeds: 0, ovenClean: false, interiorFridge: false, balcony: false, gstRegistered: false,
+  linenBeds: 0, ovenClean: false, interiorFridge: false, balcony: false, vanityCupboards: false, gstRegistered: false,
 }
 
 const CLEAN_LABELS: Record<CleanType, string> = { regular: 'Regular Clean', deep: 'Deep Clean', airbnb: 'Airbnb Turnover' }
@@ -29,6 +29,10 @@ const C = {
   fg: '#1C2A35', muted: '#8A9BA6', border: 'rgba(44,62,80,0.09)',
   serif: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)",
 }
+
+const LABOUR_BASE = 45          // employee base wage / hr
+const LABOUR_RATE = 50.40       // base + 12% super
+const MARGIN_DIVISOR = 0.75     // 25% profit margin (price = cost ÷ 0.75)
 
 function roundTo5(n: number) { return Math.round(n / 5) * 5 }
 
@@ -51,9 +55,10 @@ function calcResult(inp: Inputs) {
   if (extraStoreys > 0) roomBreakdown.push({ label: `Additional storey ×${extraStoreys}`, mins: (deep ? 42 : 30) * extraStoreys })
 
   const addOnBreakdown: { label: string; cost: number; mins: number }[] = []
-  if (inp.ovenClean)      addOnBreakdown.push({ label: 'Oven clean', cost: 75, mins: 60 })
-  if (inp.interiorFridge) addOnBreakdown.push({ label: 'Interior fridge', cost: 25, mins: 20 })
+  if (inp.ovenClean)      addOnBreakdown.push({ label: 'Oven clean', cost: 150, mins: 60 })
+  if (inp.interiorFridge) addOnBreakdown.push({ label: 'Interior fridge', cost: 30, mins: 20 })
   if (inp.balcony)        addOnBreakdown.push({ label: 'Balcony / outdoor area', cost: 30, mins: 25 })
+  if (inp.vanityCupboards) addOnBreakdown.push({ label: 'Vanity cupboards & drawers', cost: 40, mins: 35 })
 
   const linenCost   = inp.linenBeds * 25
   const linenMins   = inp.linenBeds * 15
@@ -61,14 +66,15 @@ function calcResult(inp: Inputs) {
   const addOnMins   = addOnBreakdown.reduce((s, a) => s + a.mins, 0)
   const addOnCost   = addOnBreakdown.reduce((s, a) => s + a.cost, 0)
   const bufferMins  = deep ? Math.round(baseJobMins * 0.15) : 0
-  const totalJobMins = baseJobMins + bufferMins + addOnMins + linenMins
+  const pricingMins = baseJobMins + bufferMins          // room work only — drives the job price
+  const totalJobMins = pricingMins + addOnMins + linenMins  // full time (for scheduling + effective rate)
   const totalHours  = totalJobMins / 60
-  const labourCost  = totalHours * 44.80
+  const labourCost  = (pricingMins / 60) * LABOUR_RATE  // add-ons/linen are flat fees, not re-charged as labour
   const nonLabourBase = hasAnyRoom ? (deep ? (tier === 'S' ? 130 : tier === 'M' ? 137 : 145) : (tier === 'S' ? 120 : tier === 'M' ? 125 : 130)) : 0
   const nonLabourMultiplier = deep && hasAnyRoom ? (totalHours >= 15 ? 4 : totalHours >= 10 ? 3 : totalHours >= 5 ? 2 : 1) : 1
   const nonLabourCost = nonLabourBase * nonLabourMultiplier
   const jobCosts    = labourCost + nonLabourCost
-  const rawPrice    = hasAnyRoom ? jobCosts / 0.65 : 0
+  const rawPrice    = hasAnyRoom ? jobCosts / MARGIN_DIVISOR : 0
   const roundedPrice = roundTo5(rawPrice)
   const floorApplied = hasAnyRoom && roundedPrice < 180
   const finalJobPrice = hasAnyRoom ? (floorApplied ? 180 : roundedPrice) : 0
@@ -83,7 +89,7 @@ function calcResult(inp: Inputs) {
   if (extraStoreys > 0) warnings.push('Multi-storey property — confirm staircase access.')
   if (floorApplied) warnings.push('Minimum job floor of $180 applied — actual cost was lower.')
   if (deep && nonLabourMultiplier > 1) warnings.push(`Non-labour multiplier ×${nonLabourMultiplier} applied (${totalHours.toFixed(1)}h billed).`)
-  return { tier, totalBeds, deep, roomBreakdown, addOnBreakdown, baseJobMins, bufferMins, totalJobMins, totalHours, labourCost, nonLabourCost, nonLabourBase, nonLabourMultiplier, jobCosts, rawPrice, finalJobPrice, floorApplied, profitAmount, profitMargin, linenCost, linenMins, addOnCost, grandTotal, gstAmount, grandTotalIncGst, effectiveHourly, warnings }
+  return { tier, totalBeds, deep, roomBreakdown, addOnBreakdown, baseJobMins, bufferMins, pricingMins, totalJobMins, totalHours, labourCost, nonLabourCost, nonLabourBase, nonLabourMultiplier, jobCosts, rawPrice, finalJobPrice, floorApplied, profitAmount, profitMargin, linenCost, linenMins, addOnCost, grandTotal, gstAmount, grandTotalIncGst, effectiveHourly, warnings }
 }
 
 function Row({ label, value, bold, green }: { label: string; value: string; bold?: boolean; green?: boolean }) {
@@ -250,20 +256,20 @@ export function QuoteCalculator() {
           <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: 24, maxWidth: 480 }} className="space-y-4">
             <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Hourly Rate Reference</p>
             <div className="space-y-1">
-              <Row label="Base wage" value="$40.00 / hr" />
-              <Row label="Superannuation (12%)" value="$4.80 / hr" />
-              <Row label="Total labour rate" value="$44.80 / hr" bold />
+              <Row label="Base wage" value={`${fmt(LABOUR_BASE)} / hr`} />
+              <Row label="Superannuation (12%)" value={`${fmt(LABOUR_BASE * 0.12)} / hr`} />
+              <Row label="Total labour rate" value={`${fmt(LABOUR_RATE)} / hr`} bold />
             </div>
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }} className="space-y-1">
-              <p style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>After 35% profit margin (÷ 0.65)</p>
-              <Row label="Quoted rate (35% margin)" value={`${fmt(44.80 / 0.65)} / hr`} bold green />
+              <p style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>After 25% profit margin (÷ 0.75)</p>
+              <Row label="Quoted rate (25% margin)" value={`${fmt(LABOUR_RATE / MARGIN_DIVISOR)} / hr`} bold green />
             </div>
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }} className="space-y-1">
               <p style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>Your current quote effective rate</p>
               <Row label="Total billed hours" value={`${r.totalHours.toFixed(2)} hrs`} />
               <Row label="Grand total (ex. GST)" value={fmt(r.grandTotal)} />
               <Row label="Effective hourly rate" value={r.totalHours > 0 ? `${fmt(r.effectiveHourly)} / hr` : '—'} bold green />
-              <Row label="Profit per hour" value={r.totalHours > 0 ? `${fmt(r.effectiveHourly - 44.80)} / hr` : '—'} green />
+              <Row label="Profit per hour" value={r.totalHours > 0 ? `${fmt(r.effectiveHourly - LABOUR_RATE)} / hr` : '—'} green />
             </div>
           </div>
         )}
@@ -307,9 +313,10 @@ export function QuoteCalculator() {
               </Card>
 
               <Card title="Extras">
-                <Toggle label="Oven clean — $75" value={inp.ovenClean} onChange={v => set('ovenClean', v)} />
-                <Toggle label="Interior fridge — $25" value={inp.interiorFridge} onChange={v => set('interiorFridge', v)} />
+                <Toggle label="Oven clean — $150" value={inp.ovenClean} onChange={v => set('ovenClean', v)} />
+                <Toggle label="Interior fridge — $30" value={inp.interiorFridge} onChange={v => set('interiorFridge', v)} />
                 <Toggle label="Balcony / outdoor — $30" value={inp.balcony} onChange={v => set('balcony', v)} />
+                <Toggle label="Vanity cupboards & drawers — $40" value={inp.vanityCupboards} onChange={v => set('vanityCupboards', v)} />
                 <div style={{ marginTop: 4 }}>
                   <Stepper label="Linen service — $25 / bed" value={inp.linenBeds} onChange={v => set('linenBeds', v)} />
                 </div>
@@ -339,7 +346,7 @@ export function QuoteCalculator() {
 
                   <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: 20 }}>
                     <p style={{ color: C.navy, fontSize: 12, fontWeight: 500, marginBottom: 12 }}>Cost Breakdown</p>
-                    <Row label={`Labour (${r.totalHours.toFixed(2)} hrs × $44.80)`} value={fmt(r.labourCost)} />
+                    <Row label={`Labour (${(r.pricingMins / 60).toFixed(2)} hrs × ${fmt(LABOUR_RATE)})`} value={fmt(r.labourCost)} />
                     <Row label={`Non-labour (Tier ${r.tier}${r.deep && r.nonLabourMultiplier > 1 ? ` ×${r.nonLabourMultiplier}` : ''})`} value={fmt(r.nonLabourCost)} />
                     <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 4 }}>
                       <Row label="Total job costs" value={fmt(r.jobCosts)} bold />
