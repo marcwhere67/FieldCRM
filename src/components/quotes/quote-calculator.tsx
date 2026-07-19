@@ -44,16 +44,16 @@ function calcResult(inp: Inputs) {
   const totalBeds = inp.queenBeds + inp.twinBeds
   const tier = totalBeds <= 2 ? 'S' : totalBeds <= 4 ? 'M' : 'L'
   const roomBreakdown: { label: string; mins: number }[] = []
-  if (inp.queenBeds > 0) roomBreakdown.push({ label: `Queen bedroom ×${inp.queenBeds}`, mins: (deep ? 49 : 35) * inp.queenBeds })
-  if (inp.twinBeds > 0)  roomBreakdown.push({ label: `Twin/single bedroom ×${inp.twinBeds}`, mins: (deep ? 70 : 50) * inp.twinBeds })
+  if (inp.queenBeds > 0) roomBreakdown.push({ label: `Queen bedroom ×${inp.queenBeds}`, mins: (deep ? 49 : 15) * inp.queenBeds })
+  if (inp.twinBeds > 0)  roomBreakdown.push({ label: `Twin/single bedroom ×${inp.twinBeds}`, mins: (deep ? 70 : 15) * inp.twinBeds })
   if (inp.fullBaths > 0) roomBreakdown.push({ label: `Full bathroom ×${inp.fullBaths}`, mins: (deep ? 90 : 35) * inp.fullBaths })
   if (inp.powderRooms > 0) roomBreakdown.push({ label: `Powder room ×${inp.powderRooms}`, mins: (deep ? 28 : 20) * inp.powderRooms })
-  if (inp.livingRooms > 0) roomBreakdown.push({ label: `Living/games room ×${inp.livingRooms}`, mins: (deep ? 28 : 20) * inp.livingRooms })
-  if (inp.diningAreas > 0) roomBreakdown.push({ label: `Dining area ×${inp.diningAreas}`, mins: (deep ? 28 : 20) * inp.diningAreas })
+  if (inp.livingRooms > 0) roomBreakdown.push({ label: `Living/games room ×${inp.livingRooms}`, mins: (deep ? 28 : 10) * inp.livingRooms })
+  if (inp.diningAreas > 0) roomBreakdown.push({ label: `Dining area ×${inp.diningAreas}`, mins: (deep ? 28 : 10) * inp.diningAreas })
   const hasAnyRoom = inp.queenBeds > 0 || inp.twinBeds > 0 || inp.fullBaths > 0 || inp.powderRooms > 0 || inp.livingRooms > 0 || inp.diningAreas > 0 || inp.kitchens > 0 || inp.laundries > 0
   if (hasAnyRoom) roomBreakdown.push({ label: 'Hallways & touch points', mins: deep ? 42 : 30 })
   if (inp.kitchens > 0) roomBreakdown.push({ label: `Kitchen ×${inp.kitchens}`, mins: (deep ? 105 : 45) * inp.kitchens })
-  if (inp.laundries > 0) roomBreakdown.push({ label: `Laundry ×${inp.laundries}`, mins: (deep ? 60 : 30) * inp.laundries })
+  if (inp.laundries > 0) roomBreakdown.push({ label: `Laundry ×${inp.laundries}`, mins: (deep ? 60 : 10) * inp.laundries })
 
   const addOnBreakdown: { label: string; cost: number; mins: number }[] = []
   if (inp.ovenClean)      addOnBreakdown.push({ label: 'Oven clean', cost: 150, mins: 60 })
