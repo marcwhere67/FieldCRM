@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitor'
+import { notifyNewLead } from '@/lib/notify'
 
 const cap = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '')
 
@@ -93,6 +94,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500, headers })
+
+  // CRM-native notification: email the org's inbox via connected Gmail.
+  // Best-effort (never throws) — the lead is already saved.
+  await notifyNewLead(org.id, {
+    name: [firstName, lastName].filter(Boolean).join(' '),
+    phone,
+    email,
+    address,
+    serviceType,
+    notes: notesParts.join('\n') || null,
+  })
 
   // Relay the same submission to Formspree so the existing email notification
   // keeps working while the CRM becomes the source of truth. Best-effort —
