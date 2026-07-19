@@ -17,7 +17,7 @@ interface Inputs {
 const DEFAULT: Inputs = {
   cleanType: 'regular', frequency: 'oneoff',
   queenBeds: 0, twinBeds: 0, fullBaths: 0, powderRooms: 0,
-  livingRooms: 0, diningAreas: 0, kitchens: 0, laundries: 0, storeys: 0,
+  livingRooms: 0, diningAreas: 0, kitchens: 0, laundries: 0, storeys: 1,
   linenBeds: 0, ovenClean: false, interiorFridge: false, balcony: false, vanityCupboards: false, gstRegistered: false,
 }
 
@@ -54,8 +54,6 @@ function calcResult(inp: Inputs) {
   if (hasAnyRoom) roomBreakdown.push({ label: 'Hallways & touch points', mins: deep ? 42 : 30 })
   if (inp.kitchens > 0) roomBreakdown.push({ label: `Kitchen ×${inp.kitchens}`, mins: (deep ? 105 : 45) * inp.kitchens })
   if (inp.laundries > 0) roomBreakdown.push({ label: `Laundry ×${inp.laundries}`, mins: (deep ? 60 : 30) * inp.laundries })
-  const extraStoreys = Math.max(0, inp.storeys - 1)
-  if (extraStoreys > 0) roomBreakdown.push({ label: `Additional storey ×${extraStoreys}`, mins: (deep ? 42 : 30) * extraStoreys })
 
   const addOnBreakdown: { label: string; cost: number; mins: number }[] = []
   if (inp.ovenClean)      addOnBreakdown.push({ label: 'Oven clean', cost: 150, mins: 60 })
@@ -65,14 +63,17 @@ function calcResult(inp: Inputs) {
 
   const linenCost   = inp.linenBeds * 25
   const linenMins   = inp.linenBeds * 15
+  const extraStoreys = Math.max(0, inp.storeys - 1)   // storeys=1 (single storey) is the free baseline
+  const storeyCost  = extraStoreys * 50   // flat fee — not run through labour/overhead/margin/min-job-floor
+  const storeyMins  = extraStoreys * 30   // shown in time breakdown only, doesn't re-charge into labour
   const baseJobMins = roomBreakdown.reduce((s, r) => s + r.mins, 0)
   const addOnMins   = addOnBreakdown.reduce((s, a) => s + a.mins, 0)
   const addOnCost   = addOnBreakdown.reduce((s, a) => s + a.cost, 0)
   const bufferMins  = deep ? Math.round(baseJobMins * 0.15) : 0
   const pricingMins = baseJobMins + bufferMins          // room work only — drives the job price
-  const totalJobMins = pricingMins + addOnMins + linenMins  // full time (for scheduling + effective rate)
+  const totalJobMins = pricingMins + addOnMins + linenMins + storeyMins  // full time (for scheduling + effective rate)
   const totalHours  = totalJobMins / 60
-  const labourCost  = (pricingMins / 60) * LABOUR_RATE  // add-ons/linen are flat fees, not re-charged as labour
+  const labourCost  = (pricingMins / 60) * LABOUR_RATE  // add-ons/linen/storeys are flat fees, not re-charged as labour
   const overheadCost = (pricingMins / 60) * OVERHEAD_RATE  // fixed monthly costs recovered per billed hour
   const jobCosts    = labourCost + overheadCost
   const rawPrice    = hasAnyRoom ? jobCosts / MARGIN_DIVISOR : 0
@@ -81,7 +82,7 @@ function calcResult(inp: Inputs) {
   const finalJobPrice = hasAnyRoom ? (floorApplied ? 180 : roundedPrice) : 0
   const profitAmount = finalJobPrice - jobCosts
   const profitMargin = finalJobPrice > 0 ? (profitAmount / finalJobPrice) * 100 : 0
-  const grandTotal  = finalJobPrice + linenCost + addOnCost
+  const grandTotal  = finalJobPrice + linenCost + addOnCost + storeyCost
   const gstAmount   = inp.gstRegistered ? Math.round(grandTotal * 0.1 * 100) / 100 : 0
   const grandTotalIncGst = grandTotal + gstAmount
   const effectiveHourly  = totalHours > 0 ? grandTotal / totalHours : 0
@@ -89,7 +90,7 @@ function calcResult(inp: Inputs) {
   if (deep && totalHours > 8) warnings.push('Large deep clean — confirm scope and access with client before quoting.')
   if (extraStoreys > 0) warnings.push('Multi-storey property — confirm staircase access.')
   if (floorApplied) warnings.push('Minimum job floor of $180 applied — actual cost was lower.')
-  return { tier, totalBeds, deep, roomBreakdown, addOnBreakdown, baseJobMins, bufferMins, pricingMins, totalJobMins, totalHours, labourCost, overheadCost, jobCosts, rawPrice, finalJobPrice, floorApplied, profitAmount, profitMargin, linenCost, linenMins, addOnCost, grandTotal, gstAmount, grandTotalIncGst, effectiveHourly, warnings }
+  return { tier, totalBeds, deep, roomBreakdown, addOnBreakdown, baseJobMins, bufferMins, pricingMins, totalJobMins, totalHours, labourCost, overheadCost, jobCosts, rawPrice, finalJobPrice, floorApplied, profitAmount, profitMargin, linenCost, linenMins, storeyCost, storeyMins, addOnCost, grandTotal, gstAmount, grandTotalIncGst, effectiveHourly, warnings }
 }
 
 function Row({ label, value, bold, green }: { label: string; value: string; bold?: boolean; green?: boolean }) {
@@ -190,6 +191,7 @@ export function QuoteCalculator() {
       <div>
         <Row label="Job price" value={fmt(r.finalJobPrice)} />
         {r.linenCost > 0 && <Row label={`Linen service (${inp.linenBeds} bed)`} value={fmt(r.linenCost)} />}
+        {r.storeyCost > 0 && <Row label={`Storeys (${inp.storeys})`} value={fmt(r.storeyCost)} />}
         {r.addOnBreakdown.map((a, i) => <Row key={i} label={a.label} value={fmt(a.cost)} />)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 8 }}>
@@ -287,7 +289,8 @@ export function QuoteCalculator() {
 
               <Card title="Rooms">
                 <SubLabel>Levels</SubLabel>
-                <Stepper label="Storeys" value={inp.storeys} onChange={v => set('storeys', v)} />
+                <Stepper label="Storeys" value={inp.storeys} min={1} onChange={v => set('storeys', v)} />
+                <p style={{ color: C.muted, fontSize: 10, marginTop: -6, marginBottom: 8 }}>1 = single storey, no extra charge</p>
                 <SubLabel>Bedrooms</SubLabel>
                 <Stepper label="Queen bedrooms" value={inp.queenBeds} onChange={v => set('queenBeds', v)} />
                 <Stepper label="Twin / single bedrooms" value={inp.twinBeds} onChange={v => set('twinBeds', v)} />
@@ -327,6 +330,7 @@ export function QuoteCalculator() {
                     </div>
                     {r.roomBreakdown.map((row, i) => <Row key={i} label={row.label} value={`${row.mins} min`} />)}
                     {inp.linenBeds > 0 && <Row label={`Linen service ×${inp.linenBeds} bed`} value={`${r.linenMins} min`} />}
+                    {r.storeyMins > 0 && <Row label={`Storeys ×${inp.storeys}`} value={`${r.storeyMins} min`} />}
                     {r.addOnBreakdown.map((a, i) => <Row key={i} label={a.label} value={`${a.mins} min`} />)}
                     <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 4 }}>
                       {r.bufferMins > 0 && <Row label="Unseen property buffer (+15%)" value={`${r.bufferMins} min`} />}
