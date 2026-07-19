@@ -141,7 +141,7 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
   async function handleDelete() {
     if (!confirm(`Delete ${selected.size} contact${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return
     const { error } = await supabase.from('contacts').delete().in('id', [...selected])
-    if (error) { toast.error('Failed to delete contacts'); return }
+    if (error) { toast.error(`Failed to delete contacts: ${error.message}`); return }
     toast.success(`Deleted ${selected.size} contact${selected.size === 1 ? '' : 's'}`)
     setSelected(new Set())
     router.refresh()
