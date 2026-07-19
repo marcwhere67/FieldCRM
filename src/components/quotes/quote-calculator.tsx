@@ -366,7 +366,7 @@ export function QuoteCalculator() {
 
       {/* Mobile pinned price bar (sits above the bottom nav) */}
       {tab === 'calculator' && (
-        <div className="lg:hidden" style={{ position: 'fixed', left: 0, right: 0, bottom: 64, zIndex: 40, backgroundColor: '#fff', borderTop: `1px solid ${C.border}`, boxShadow: '0 -4px 16px rgba(44,62,80,0.08)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="flex lg:hidden" style={{ position: 'fixed', left: 0, right: 0, bottom: 64, zIndex: 40, backgroundColor: '#fff', borderTop: `1px solid ${C.border}`, boxShadow: '0 -4px 16px rgba(44,62,80,0.08)', padding: '10px 16px', alignItems: 'center', gap: 12 }}>
           <div style={{ lineHeight: 1.1 }}>
             <div style={{ color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Total{inp.gstRegistered ? ' inc. GST' : ' ex. GST'}</div>
             <div style={{ fontFamily: C.serif, color: C.sage, fontSize: 24, fontWeight: 400 }}>{fmt(inp.gstRegistered ? r.grandTotalIncGst : r.grandTotal)}</div>
