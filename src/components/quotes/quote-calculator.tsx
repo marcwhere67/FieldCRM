@@ -33,6 +33,9 @@ const C = {
 const LABOUR_BASE = 45          // employee base wage / hr
 const LABOUR_RATE = 50.40       // base + 12% super
 const MARGIN_DIVISOR = 0.75     // 25% profit margin (price = cost ÷ 0.75)
+const MONTHLY_OVERHEAD = 1884           // Salt Air fixed monthly running costs
+const BILLABLE_HOURS_PER_MONTH = 80     // charged hours/month — update as volume grows
+const OVERHEAD_RATE = MONTHLY_OVERHEAD / BILLABLE_HOURS_PER_MONTH  // ≈ $23.55/hr recovered per billed hour
 
 function roundTo5(n: number) { return Math.round(n / 5) * 5 }
 
@@ -70,10 +73,8 @@ function calcResult(inp: Inputs) {
   const totalJobMins = pricingMins + addOnMins + linenMins  // full time (for scheduling + effective rate)
   const totalHours  = totalJobMins / 60
   const labourCost  = (pricingMins / 60) * LABOUR_RATE  // add-ons/linen are flat fees, not re-charged as labour
-  const nonLabourBase = hasAnyRoom ? (deep ? (tier === 'S' ? 130 : tier === 'M' ? 137 : 145) : (tier === 'S' ? 120 : tier === 'M' ? 125 : 130)) : 0
-  const nonLabourMultiplier = deep && hasAnyRoom ? (totalHours >= 15 ? 4 : totalHours >= 10 ? 3 : totalHours >= 5 ? 2 : 1) : 1
-  const nonLabourCost = nonLabourBase * nonLabourMultiplier
-  const jobCosts    = labourCost + nonLabourCost
+  const overheadCost = (pricingMins / 60) * OVERHEAD_RATE  // fixed monthly costs recovered per billed hour
+  const jobCosts    = labourCost + overheadCost
   const rawPrice    = hasAnyRoom ? jobCosts / MARGIN_DIVISOR : 0
   const roundedPrice = roundTo5(rawPrice)
   const floorApplied = hasAnyRoom && roundedPrice < 180
@@ -88,8 +89,7 @@ function calcResult(inp: Inputs) {
   if (deep && totalHours > 8) warnings.push('Large deep clean — confirm scope and access with client before quoting.')
   if (extraStoreys > 0) warnings.push('Multi-storey property — confirm staircase access.')
   if (floorApplied) warnings.push('Minimum job floor of $180 applied — actual cost was lower.')
-  if (deep && nonLabourMultiplier > 1) warnings.push(`Non-labour multiplier ×${nonLabourMultiplier} applied (${totalHours.toFixed(1)}h billed).`)
-  return { tier, totalBeds, deep, roomBreakdown, addOnBreakdown, baseJobMins, bufferMins, pricingMins, totalJobMins, totalHours, labourCost, nonLabourCost, nonLabourBase, nonLabourMultiplier, jobCosts, rawPrice, finalJobPrice, floorApplied, profitAmount, profitMargin, linenCost, linenMins, addOnCost, grandTotal, gstAmount, grandTotalIncGst, effectiveHourly, warnings }
+  return { tier, totalBeds, deep, roomBreakdown, addOnBreakdown, baseJobMins, bufferMins, pricingMins, totalJobMins, totalHours, labourCost, overheadCost, jobCosts, rawPrice, finalJobPrice, floorApplied, profitAmount, profitMargin, linenCost, linenMins, addOnCost, grandTotal, gstAmount, grandTotalIncGst, effectiveHourly, warnings }
 }
 
 function Row({ label, value, bold, green }: { label: string; value: string; bold?: boolean; green?: boolean }) {
@@ -184,12 +184,6 @@ export function QuoteCalculator() {
     router.push(`/quotes/new?${params.toString()}`)
   }
 
-  const TIER_COLORS: Record<string, { bg: string; color: string }> = {
-    S: { bg: 'rgba(37,99,235,0.08)',   color: '#2563eb' },
-    M: { bg: 'rgba(245,158,11,0.08)',  color: '#b45309' },
-    L: { bg: 'rgba(220,38,38,0.07)',   color: '#dc2626' },
-  }
-
   const priceCard = (
     <div style={{ backgroundColor: '#fff', border: `1px solid rgba(118,165,143,0.35)`, borderTop: `3px solid ${C.sage}`, borderRadius: 0, padding: 20 }}>
       <p style={{ color: C.muted, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 14 }}>Final Quoted Price</p>
@@ -259,10 +253,12 @@ export function QuoteCalculator() {
               <Row label="Base wage" value={`${fmt(LABOUR_BASE)} / hr`} />
               <Row label="Superannuation (12%)" value={`${fmt(LABOUR_BASE * 0.12)} / hr`} />
               <Row label="Total labour rate" value={`${fmt(LABOUR_RATE)} / hr`} bold />
+              <Row label={`Overhead recovery (${BILLABLE_HOURS_PER_MONTH} hrs/mo)`} value={`${fmt(OVERHEAD_RATE)} / hr`} />
+              <Row label="Total cost rate" value={`${fmt(LABOUR_RATE + OVERHEAD_RATE)} / hr`} bold />
             </div>
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }} className="space-y-1">
-              <p style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>After 25% profit margin (÷ 0.75)</p>
-              <Row label="Quoted rate (25% margin)" value={`${fmt(LABOUR_RATE / MARGIN_DIVISOR)} / hr`} bold green />
+              <p style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>Fixed costs: {fmt(MONTHLY_OVERHEAD)}/mo ÷ {BILLABLE_HOURS_PER_MONTH} hrs. After 25% margin (÷ 0.75):</p>
+              <Row label="Minimum charge rate" value={`${fmt((LABOUR_RATE + OVERHEAD_RATE) / MARGIN_DIVISOR)} / hr`} bold green />
             </div>
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }} className="space-y-1">
               <p style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>Your current quote effective rate</p>
@@ -304,12 +300,6 @@ export function QuoteCalculator() {
                 <SubLabel>Kitchen & Laundry</SubLabel>
                 <Stepper label="Kitchens" value={inp.kitchens} onChange={v => set('kitchens', v)} />
                 <Stepper label="Laundries" value={inp.laundries} onChange={v => set('laundries', v)} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
-                  <span style={{ color: C.muted, fontSize: 10 }}>Tier:</span>
-                  <span style={{ fontSize: 10, padding: '2px 8px', letterSpacing: '0.1em', textTransform: 'uppercase', backgroundColor: TIER_COLORS[r.tier].bg, color: TIER_COLORS[r.tier].color }}>
-                    {r.tier} — {r.totalBeds} bed{r.totalBeds !== 1 ? 's' : ''}
-                  </span>
-                </div>
               </Card>
 
               <Card title="Extras">
@@ -347,7 +337,7 @@ export function QuoteCalculator() {
                   <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: 20 }}>
                     <p style={{ color: C.navy, fontSize: 12, fontWeight: 500, marginBottom: 12 }}>Cost Breakdown</p>
                     <Row label={`Labour (${(r.pricingMins / 60).toFixed(2)} hrs × ${fmt(LABOUR_RATE)})`} value={fmt(r.labourCost)} />
-                    <Row label={`Non-labour (Tier ${r.tier}${r.deep && r.nonLabourMultiplier > 1 ? ` ×${r.nonLabourMultiplier}` : ''})`} value={fmt(r.nonLabourCost)} />
+                    <Row label={`Overhead (${(r.pricingMins / 60).toFixed(2)} hrs × ${fmt(OVERHEAD_RATE)})`} value={fmt(r.overheadCost)} />
                     <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 4 }}>
                       <Row label="Total job costs" value={fmt(r.jobCosts)} bold />
                       <Row label="Profit amount" value={fmt(r.profitAmount)} />
