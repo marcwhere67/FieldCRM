@@ -5,25 +5,35 @@ import { usePathname } from 'next/navigation'
 import {
   Users, FileText, Receipt, Calendar, MessageSquare,
   GitBranch, Zap, Megaphone, Star, TrendingUp, Settings,
-  LogOut, X, Clock, Repeat, Coins
+  LogOut, X, Clock, Repeat, Coins, Calculator, Package,
+  UserCheck, DollarSign, BarChart2, Truck, BookOpen, ShieldCheck
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+// Mirrors sidebar.tsx's PRIMARY + GROUPS, minus items already in the bottom bar (Dashboard/Jobs/Clock/Map).
 const MENU_ITEMS = [
   { label: 'Contacts', href: '/contacts', icon: Users },
   { label: 'Schedule', href: '/schedule', icon: Calendar },
-  { label: 'Recurring', href: '/agreements', icon: Repeat },
   { label: 'Quotes', href: '/quotes', icon: FileText },
   { label: 'Invoices', href: '/invoices', icon: Receipt },
-  { label: 'Pipeline', href: '/pipeline', icon: GitBranch },
   { label: 'Inbox', href: '/inbox', icon: MessageSquare },
+  { label: 'Pipeline', href: '/pipeline', icon: GitBranch },
+  { label: 'Recurring', href: '/agreements', icon: Repeat },
+  { label: 'Quote Calculator', href: '/quotes/calculator', icon: Calculator },
   { label: 'Timesheets', href: '/timesheets', icon: Clock },
-  { label: 'Automations', href: '/automations', icon: Zap },
-  { label: 'Marketing', href: '/marketing', icon: Megaphone },
-  { label: 'Reputation', href: '/reputation', icon: Star },
+  { label: 'Assets', href: '/assets', icon: Package },
+  { label: 'Team', href: '/team', icon: UserCheck },
   { label: 'Finances', href: '/finances', icon: TrendingUp },
   { label: 'Job Costing', href: '/job-costing', icon: Coins },
+  { label: 'Payroll', href: '/payroll', icon: DollarSign },
+  { label: 'Reports', href: '/reports', icon: BarChart2 },
+  { label: 'Marketing', href: '/marketing', icon: Megaphone },
+  { label: 'Reputation', href: '/reputation', icon: Star },
+  { label: 'Automations', href: '/automations', icon: Zap },
+  { label: 'Suppliers', href: '/suppliers', icon: Truck },
+  { label: 'Catalogue', href: '/catalogue', icon: BookOpen },
+  { label: 'Admin Hub', href: '/admin', icon: ShieldCheck },
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
