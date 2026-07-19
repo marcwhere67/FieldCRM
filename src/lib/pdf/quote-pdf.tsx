@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
 import { registerPdfFonts, SERIF } from './fonts'
+import { getScope, GENERAL_CONDITIONS } from '../scope-of-work'
 
 registerPdfFonts()
 
@@ -236,6 +237,55 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 1.5,
   },
+  scopeSection: {
+    marginTop: 26,
+  },
+  scopeHeading: {
+    fontFamily: SERIF,
+    fontWeight: 'semibold',
+    fontSize: 16,
+    color: NAVY,
+    marginBottom: 10,
+  },
+  scopeTitle: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 10,
+    color: NAVY,
+    marginBottom: 3,
+  },
+  scopeIntro: {
+    fontSize: 9,
+    color: '#475569',
+    lineHeight: 1.5,
+    marginBottom: 8,
+  },
+  scopeSubLabel: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: '#334155',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  bullet: {
+    flexDirection: 'row',
+    marginBottom: 3,
+  },
+  bulletDot: {
+    fontSize: 9,
+    color: SAGE,
+    width: 12,
+  },
+  bulletText: {
+    fontSize: 9,
+    color: '#334155',
+    lineHeight: 1.4,
+    flex: 1,
+  },
+  scopeConditions: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTop: '1pt solid #e2e8f0',
+  },
 })
 
 function formatCurrency(n: number) {
@@ -268,6 +318,7 @@ interface Props {
     valid_until: string | null
     deposit_amount: number | null
     created_at: string
+    clean_type?: string | null
   }
   org: {
     name: string
@@ -288,6 +339,7 @@ interface Props {
 }
 
 export function QuotePDF({ quote, org, contact }: Props) {
+  const scope = getScope(quote.clean_type)
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -386,6 +438,45 @@ export function QuotePDF({ quote, org, contact }: Props) {
           <View style={styles.notes}>
             <Text style={styles.notesLabel}>Notes</Text>
             <Text style={styles.notesText}>{quote.notes_client}</Text>
+          </View>
+        )}
+
+        {/* Scope of Work — driven by the quote's clean type */}
+        {scope && (
+          <View style={styles.scopeSection} break>
+            <Text style={styles.scopeHeading}>Scope of Work</Text>
+            <Text style={styles.scopeTitle}>{scope.title}</Text>
+            <Text style={styles.scopeIntro}>{scope.intro}</Text>
+
+            <Text style={styles.scopeSubLabel}>Includes:</Text>
+            {scope.baseBullets.map((b, i) => (
+              <View key={`base-${i}`} style={styles.bullet} wrap={false}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Text style={styles.bulletText}>{b}</Text>
+              </View>
+            ))}
+
+            {scope.extras && scope.extras.length > 0 && (
+              <>
+                <Text style={styles.scopeSubLabel}>{scope.extrasLabel}</Text>
+                {scope.extras.map((b, i) => (
+                  <View key={`extra-${i}`} style={styles.bullet} wrap={false}>
+                    <Text style={styles.bulletDot}>•</Text>
+                    <Text style={styles.bulletText}>{b}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+
+            <View style={styles.scopeConditions}>
+              <Text style={styles.scopeTitle}>General Service Conditions</Text>
+              {GENERAL_CONDITIONS.map((b, i) => (
+                <View key={`cond-${i}`} style={styles.bullet} wrap={false}>
+                  <Text style={styles.bulletDot}>•</Text>
+                  <Text style={styles.bulletText}>{b}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 

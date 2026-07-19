@@ -146,6 +146,8 @@ export function QuoteCalculator() {
       description: parts.join(' · '),
       amount: r.grandTotal.toFixed(2),
       gst: inp.gstRegistered ? '1' : '0',
+      // Carry the clean type through as the Scope of Work type (builder can change it).
+      clean_type: inp.cleanType === 'deep' ? 'deep' : 'regular',
     })
     router.push(`/quotes/new?${params.toString()}`)
   }

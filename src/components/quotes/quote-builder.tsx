@@ -20,9 +20,11 @@ interface Props {
   orgId: string
   mode: 'new' | 'edit'
   initialLineItems?: LineItem[]
+  initialCleanType?: string
   quote?: {
     id: string; quote_number: string; contact_id?: string; line_items: LineItem[]
     notes_client: string | null; notes_internal: string | null; valid_until: string | null
+    clean_type?: string | null
     deposit_type?: string; deposit_value?: number; deposit_amount?: number
     contacts?: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }[] | { id: string; first_name: string; last_name: string; email: string | null; phone: string | null } | null
   }
@@ -42,7 +44,7 @@ const inp: React.CSSProperties = {
 
 const labelSt: React.CSSProperties = { color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }
 
-export function QuoteBuilder({ contacts, services, products = [], org, orgId, mode, quote: existingQuote, initialLineItems, onCancel }: Props) {
+export function QuoteBuilder({ contacts, services, products = [], org, orgId, mode, quote: existingQuote, initialLineItems, initialCleanType, onCancel }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
@@ -56,6 +58,9 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const [serviceSearch, setServiceSearch] = useState('')
   const [depositType, setDepositType] = useState<'none' | 'percentage' | 'fixed'>((existingQuote?.deposit_type as 'none' | 'percentage' | 'fixed') ?? 'none')
   const [depositValue, setDepositValue] = useState(existingQuote?.deposit_value ?? 0)
+  const [cleanType, setCleanType] = useState<'none' | 'regular' | 'deep' | 'airbnb'>(
+    (existingQuote?.clean_type as 'regular' | 'deep' | 'airbnb') ?? (initialCleanType as 'regular' | 'deep' | 'airbnb') ?? 'none',
+  )
 
   const { subtotal, tax, total } = computeTotals(lineItems)
   const depositAmount = calcDeposit(depositType, depositValue, total)
@@ -92,7 +97,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
     const validUntil = new Date()
     validUntil.setDate(validUntil.getDate() + validDays)
     // Always save as a draft first; the send route flips it to 'sent' once the email goes out.
-    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status: 'draft', line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: melbourneDateOnly(validUntil), sent_at: null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount }
+    const payload = { org_id: orgId, contact_id: contactId, ...(!existingQuote && { quote_number: '' }), status: 'draft', line_items: lineItems, subtotal, tax, total, notes_client: notes || null, notes_internal: internalNotes || null, valid_until: melbourneDateOnly(validUntil), sent_at: null, deposit_type: depositType, deposit_value: depositValue, deposit_amount: depositAmount, clean_type: cleanType === 'none' ? null : cleanType }
 
     let quoteId = existingQuote?.id
     if (mode === 'new') {
@@ -281,6 +286,30 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
             <div>
               <label style={labelSt}>Valid for (days)</label>
               <input type="number" value={validDays} onChange={e => setValidDays(parseInt(e.target.value) || 30)} min="1" max="365" style={{ ...inp }} />
+            </div>
+            <div>
+              <label style={labelSt}>Scope of work (clean type)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {([
+                  ['none', 'None'],
+                  ['regular', 'Regular'],
+                  ['deep', 'Deep'],
+                  ['airbnb', 'Airbnb'],
+                ] as const).map(([val, label]) => (
+                  <button key={val} type="button" onClick={() => setCleanType(val)}
+                    style={{
+                      padding: '7px 0', fontSize: 11, letterSpacing: '0.04em', cursor: 'pointer',
+                      border: `1px solid ${cleanType === val ? C.sage : C.border}`,
+                      backgroundColor: cleanType === val ? C.sage : '#fff',
+                      color: cleanType === val ? '#fff' : C.muted,
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ color: C.muted, fontSize: 10, marginTop: 6, lineHeight: 1.4 }}>
+                Adds a matching Scope of Work page to the quote. &quot;None&quot; = no scope shown.
+              </p>
             </div>
           </div>
 

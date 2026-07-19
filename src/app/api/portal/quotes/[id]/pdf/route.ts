@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const [{ data: quote }, { data: org }] = await Promise.all([
     admin.from('quotes')
-      .select('quote_number, status, line_items, subtotal, tax, total, notes_client, valid_until, deposit_type, deposit_amount, created_at')
+      .select('quote_number, status, line_items, subtotal, tax, total, notes_client, valid_until, deposit_type, deposit_amount, clean_type, created_at')
       .eq('id', id)
       .eq('contact_id', contact.id)
       .single(),
