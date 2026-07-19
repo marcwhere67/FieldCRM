@@ -27,13 +27,17 @@ const MENU_ITEMS = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
-interface Props { open: boolean; onClose: () => void }
+// Field/technician role only ever sees these — must mirror sidebar.tsx's FIELD_ALLOWED_HREFS.
+const FIELD_ALLOWED_HREFS = new Set(['/dashboard', '/schedule', '/jobs', '/timesheets', '/field-map'])
+
+interface Props { open: boolean; onClose: () => void; role?: string }
 
 const C = { navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB', muted: '#8A9BA6', border: 'rgba(44,62,80,0.09)' }
 
-export function MobileMenu({ open, onClose }: Props) {
+export function MobileMenu({ open, onClose, role }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const items = role === 'field' ? MENU_ITEMS.filter(i => FIELD_ALLOWED_HREFS.has(i.href)) : MENU_ITEMS
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -56,7 +60,7 @@ export function MobileMenu({ open, onClose }: Props) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, padding: 12 }}>
-          {MENU_ITEMS.map(({ label, href, icon: Icon }) => {
+          {items.map(({ label, href, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link key={href} href={href} onClick={onClose}

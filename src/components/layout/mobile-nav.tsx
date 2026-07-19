@@ -15,7 +15,7 @@ const BOTTOM_NAV = [
 
 const C = { navy: '#2C3E50', sage: '#76A58F', muted: '#8A9BA6', border: 'rgba(44,62,80,0.09)' }
 
-export function MobileNav() {
+export function MobileNav({ role }: { role?: string }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -40,7 +40,7 @@ export function MobileNav() {
         </button>
       </nav>
 
-      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} role={role} />
     </>
   )
 }

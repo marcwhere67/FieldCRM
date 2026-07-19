@@ -57,6 +57,9 @@ const GROUPS: NavGroup[] = [
   ] },
 ]
 
+// Field/technician role only ever sees these — everything else is hidden.
+const FIELD_ALLOWED_HREFS = new Set(['/dashboard', '/schedule', '/jobs', '/timesheets', '/field-map'])
+
 const ALL_HREFS = [...PRIMARY, ...GROUPS.flatMap(g => g.items)].map(l => l.href)
 
 function useActive(pathname: string) {
@@ -67,16 +70,22 @@ function useActive(pathname: string) {
   }
 }
 
-export function Sidebar() {
+export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const isActive = useActive(pathname)
+  const isField = role === 'field'
+
+  const primary = isField ? PRIMARY.filter(i => FIELD_ALLOWED_HREFS.has(i.href)) : PRIMARY
+  const groups = isField
+    ? GROUPS.map(g => ({ ...g, items: g.items.filter(i => FIELD_ALLOWED_HREFS.has(i.href)) })).filter(g => g.items.length > 0)
+    : GROUPS
 
   // Auto-open the group that contains the current page; keep others closed.
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {}
-    for (const g of GROUPS) initial[g.label] = g.items.some(i => isActive(i.href, i.noActive))
+    for (const g of groups) initial[g.label] = g.items.some(i => isActive(i.href, i.noActive))
     return initial
   })
 

@@ -20,6 +20,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') ?? ''
 
+  // Field/technician role is limited to on-the-job pages — everything else
+  // (quotes, money, admin, growth) redirects home even via direct URL.
+  const FIELD_ALLOWED = ['/dashboard', '/schedule', '/jobs', '/timesheets', '/field-map', '/clock', '/settings']
+  if (profile?.role === 'field') {
+    const segment = '/' + pathname.split('/')[1]
+    if (!FIELD_ALLOWED.includes(segment)) redirect('/dashboard')
+  }
+
   const titleMap: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/contacts': 'Contacts',
@@ -54,7 +62,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex h-screen bg-[#F5F0EB]">
         {/* Sidebar — desktop only */}
         <div className="hidden md:flex">
-          <Sidebar />
+          <Sidebar role={profile?.role ?? 'admin'} />
         </div>
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Topbar
@@ -66,7 +74,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
         {/* Bottom nav — mobile only */}
-        <MobileNav />
+        <MobileNav role={profile?.role ?? 'admin'} />
       </div>
       <Toaster theme="light" />
     </>
