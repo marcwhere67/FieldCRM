@@ -16,8 +16,8 @@ interface Inputs {
 
 const DEFAULT: Inputs = {
   cleanType: 'regular', frequency: 'oneoff',
-  queenBeds: 0, twinBeds: 0, fullBaths: 1, powderRooms: 0,
-  livingRooms: 1, diningAreas: 1, kitchens: 1, laundries: 1, storeys: 1,
+  queenBeds: 0, twinBeds: 0, fullBaths: 0, powderRooms: 0,
+  livingRooms: 0, diningAreas: 0, kitchens: 0, laundries: 0, storeys: 0,
   linenBeds: 0, ovenClean: false, interiorFridge: false, balcony: false, gstRegistered: false,
 }
 
@@ -101,11 +101,11 @@ function Stepper({ label, value, min = 0, onChange }: { label: string; value: nu
       <span style={{ color: C.fg, fontSize: 13 }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <button onClick={() => onChange(Math.max(min, value - 1))}
-          style={{ width: 28, height: 28, backgroundColor: 'rgba(44,62,80,0.06)', color: C.navy, border: `1px solid ${C.border}`, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500 }}
+          style={{ width: 28, height: 28, backgroundColor: 'rgba(44,62,80,0.06)', color: C.navy, border: `1px solid ${C.border}`, borderRadius: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500 }}
           className="hover:opacity-70 transition-opacity">−</button>
         <span style={{ width: 22, textAlign: 'center', fontSize: 13, fontWeight: 600, color: C.navy, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
         <button onClick={() => onChange(value + 1)}
-          style={{ width: 28, height: 28, backgroundColor: 'rgba(44,62,80,0.06)', color: C.navy, border: `1px solid ${C.border}`, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500 }}
+          style={{ width: 28, height: 28, backgroundColor: 'rgba(44,62,80,0.06)', color: C.navy, border: `1px solid ${C.border}`, borderRadius: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500 }}
           className="hover:opacity-70 transition-opacity">+</button>
       </div>
     </div>
@@ -115,9 +115,9 @@ function Stepper({ label, value, min = 0, onChange }: { label: string; value: nu
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!value)}
-      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', width: '100%', textAlign: 'left', border: `1px solid ${value ? 'rgba(118,165,143,0.4)' : C.border}`, borderRadius: 6, backgroundColor: value ? 'rgba(118,165,143,0.07)' : '#fff', cursor: 'pointer', fontSize: 12, color: value ? '#5d8c76' : C.fg }}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', width: '100%', textAlign: 'left', border: `1px solid ${value ? 'rgba(118,165,143,0.4)' : C.border}`, borderRadius: 0, backgroundColor: value ? 'rgba(118,165,143,0.07)' : '#fff', cursor: 'pointer', fontSize: 12, color: value ? '#5d8c76' : C.fg }}
       className="hover:opacity-90 transition-opacity">
-      <div style={{ width: 14, height: 14, border: value ? '1px solid #76A58F' : `1px solid ${C.muted}`, borderRadius: 3, backgroundColor: value ? C.sage : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{ width: 14, height: 14, border: value ? '1px solid #76A58F' : `1px solid ${C.muted}`, backgroundColor: value ? C.sage : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {value && <CheckCircle style={{ width: 10, height: 10, color: '#fff' }} />}
       </div>
       {label}
@@ -130,7 +130,7 @@ function Segmented<T extends string>({ options, value, onChange, cols }: { optio
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 6 }}>
       {options.map(([val, label]) => (
         <button key={val} onClick={() => onChange(val)}
-          style={{ padding: '8px 4px', fontSize: 11, letterSpacing: '0.03em', borderRadius: 6, border: `1px solid ${value === val ? C.sage : C.border}`, backgroundColor: value === val ? C.sage : '#fff', color: value === val ? '#fff' : C.muted, cursor: 'pointer' }}
+          style={{ padding: '8px 4px', fontSize: 11, letterSpacing: '0.03em', borderRadius: 0, border: `1px solid ${value === val ? C.sage : C.border}`, backgroundColor: value === val ? C.sage : '#fff', color: value === val ? '#fff' : C.muted, cursor: 'pointer' }}
           className="hover:opacity-90 transition-opacity">
           {label}
         </button>
@@ -141,7 +141,7 @@ function Segmented<T extends string>({ options, value, onChange, cols }: { optio
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 18px' }} className="space-y-3">
+    <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: '16px 18px' }} className="space-y-3">
       <p style={{ color: C.muted, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase' }}>{title}</p>
       {children}
     </div>
@@ -185,7 +185,7 @@ export function QuoteCalculator() {
   }
 
   const priceCard = (
-    <div style={{ backgroundColor: '#fff', border: `1px solid rgba(118,165,143,0.35)`, borderTop: `3px solid ${C.sage}`, borderRadius: 10, padding: 20 }}>
+    <div style={{ backgroundColor: '#fff', border: `1px solid rgba(118,165,143,0.35)`, borderTop: `3px solid ${C.sage}`, borderRadius: 0, padding: 20 }}>
       <p style={{ color: C.muted, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 14 }}>Final Quoted Price</p>
       <div>
         <Row label="Job price" value={fmt(r.finalJobPrice)} />
@@ -208,7 +208,7 @@ export function QuoteCalculator() {
         </>
       )}
       <button onClick={createQuoteFromCalc}
-        style={{ marginTop: 16, width: '100%', backgroundColor: C.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '12px 16px', fontSize: 11, letterSpacing: '0.1em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        style={{ marginTop: 16, width: '100%', backgroundColor: C.navy, color: '#fff', border: 'none', borderRadius: 0, padding: '12px 16px', fontSize: 11, letterSpacing: '0.1em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         className="uppercase hover:opacity-90 transition-opacity">
         <FileText style={{ width: 14, height: 14 }} />Create quote from this
       </button>
@@ -226,7 +226,7 @@ export function QuoteCalculator() {
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 36, height: 36, backgroundColor: 'rgba(118,165,143,0.15)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 36, height: 36, backgroundColor: 'rgba(118,165,143,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Calculator style={{ width: 18, height: 18, color: C.sage }} />
           </div>
           <div>
@@ -247,7 +247,7 @@ export function QuoteCalculator() {
         </div>
 
         {tab === 'hourly' && (
-          <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: 24, maxWidth: 480 }} className="space-y-4">
+          <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: 24, maxWidth: 480 }} className="space-y-4">
             <p style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Hourly Rate Reference</p>
             <div className="space-y-1">
               <Row label="Base wage" value="$40.00 / hr" />
@@ -284,6 +284,8 @@ export function QuoteCalculator() {
               </Card>
 
               <Card title="Rooms">
+                <SubLabel>Levels</SubLabel>
+                <Stepper label="Storeys" value={inp.storeys} onChange={v => set('storeys', v)} />
                 <SubLabel>Bedrooms</SubLabel>
                 <Stepper label="Queen bedrooms" value={inp.queenBeds} onChange={v => set('queenBeds', v)} />
                 <Stepper label="Twin / single bedrooms" value={inp.twinBeds} onChange={v => set('twinBeds', v)} />
@@ -296,11 +298,9 @@ export function QuoteCalculator() {
                 <SubLabel>Kitchen & Laundry</SubLabel>
                 <Stepper label="Kitchens" value={inp.kitchens} onChange={v => set('kitchens', v)} />
                 <Stepper label="Laundries" value={inp.laundries} onChange={v => set('laundries', v)} />
-                <SubLabel>Levels</SubLabel>
-                <Stepper label="Storeys" value={inp.storeys} min={1} onChange={v => set('storeys', v)} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
                   <span style={{ color: C.muted, fontSize: 10 }}>Tier:</span>
-                  <span style={{ fontSize: 10, padding: '2px 8px', letterSpacing: '0.1em', textTransform: 'uppercase', borderRadius: 4, backgroundColor: TIER_COLORS[r.tier].bg, color: TIER_COLORS[r.tier].color }}>
+                  <span style={{ fontSize: 10, padding: '2px 8px', letterSpacing: '0.1em', textTransform: 'uppercase', backgroundColor: TIER_COLORS[r.tier].bg, color: TIER_COLORS[r.tier].color }}>
                     {r.tier} — {r.totalBeds} bed{r.totalBeds !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -322,7 +322,7 @@ export function QuoteCalculator() {
 
               {showBreakdown && (
                 <>
-                  <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: 20 }}>
+                  <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                       <Clock style={{ width: 14, height: 14, color: C.muted }} />
                       <p style={{ color: C.navy, fontSize: 12, fontWeight: 500 }}>Time Breakdown</p>
@@ -337,7 +337,7 @@ export function QuoteCalculator() {
                     </div>
                   </div>
 
-                  <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: 20 }}>
+                  <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderRadius: 0, padding: 20 }}>
                     <p style={{ color: C.navy, fontSize: 12, fontWeight: 500, marginBottom: 12 }}>Cost Breakdown</p>
                     <Row label={`Labour (${r.totalHours.toFixed(2)} hrs × $44.80)`} value={fmt(r.labourCost)} />
                     <Row label={`Non-labour (Tier ${r.tier}${r.deep && r.nonLabourMultiplier > 1 ? ` ×${r.nonLabourMultiplier}` : ''})`} value={fmt(r.nonLabourCost)} />
@@ -351,7 +351,7 @@ export function QuoteCalculator() {
               )}
 
               {r.warnings.length > 0 && (
-                <div style={{ backgroundColor: 'rgba(245,158,11,0.07)', border: `1px solid rgba(245,158,11,0.25)`, borderRadius: 10, padding: 16 }}>
+                <div style={{ backgroundColor: 'rgba(245,158,11,0.07)', border: `1px solid rgba(245,158,11,0.25)`, borderRadius: 0, padding: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                     <AlertTriangle style={{ width: 13, height: 13, color: '#b45309' }} />
                     <span style={{ color: '#b45309', fontSize: 12, fontWeight: 500 }}>Warnings</span>
@@ -372,7 +372,7 @@ export function QuoteCalculator() {
             <div style={{ fontFamily: C.serif, color: C.sage, fontSize: 24, fontWeight: 400 }}>{fmt(inp.gstRegistered ? r.grandTotalIncGst : r.grandTotal)}</div>
           </div>
           <button onClick={createQuoteFromCalc}
-            style={{ marginLeft: 'auto', backgroundColor: C.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '11px 16px', fontSize: 11, letterSpacing: '0.08em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ marginLeft: 'auto', backgroundColor: C.navy, color: '#fff', border: 'none', borderRadius: 0, padding: '11px 16px', fontSize: 11, letterSpacing: '0.08em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
             className="uppercase">
             <FileText style={{ width: 13, height: 13 }} />Create quote
           </button>
