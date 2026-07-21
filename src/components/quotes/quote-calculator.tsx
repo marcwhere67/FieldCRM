@@ -132,12 +132,20 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   )
 }
 
-function Segmented<T extends string>({ options, value, onChange, cols }: { options: [T, string][]; value: T; onChange: (v: T) => void; cols: number }) {
+const GRID_COLS: Record<number, string> = {
+  2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4',
+}
+const GRID_COLS_SM: Record<number, string> = {
+  2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-4',
+}
+
+function Segmented<T extends string>({ options, value, onChange, cols, mobileCols }: { options: [T, string][]; value: T; onChange: (v: T) => void; cols: number; mobileCols?: number }) {
+  const mCols = mobileCols ?? Math.min(cols, 2)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 6 }}>
+    <div className={`grid gap-1.5 ${GRID_COLS[mCols]} ${GRID_COLS_SM[cols]}`}>
       {options.map(([val, label]) => (
         <button key={val} onClick={() => onChange(val)}
-          style={{ padding: '8px 4px', fontSize: 11, letterSpacing: '0.03em', borderRadius: 0, border: `1px solid ${value === val ? C.sage : C.border}`, backgroundColor: value === val ? C.sage : '#fff', color: value === val ? '#fff' : C.muted, cursor: 'pointer' }}
+          style={{ padding: '8px 4px', fontSize: 11, letterSpacing: '0.03em', borderRadius: 0, border: `1px solid ${value === val ? C.sage : C.border}`, backgroundColor: value === val ? C.sage : '#fff', color: value === val ? '#fff' : C.muted, cursor: 'pointer', whiteSpace: 'nowrap' }}
           className="hover:opacity-90 transition-opacity">
           {label}
         </button>
@@ -277,10 +285,10 @@ export function QuoteCalculator() {
             {/* Inputs */}
             <div className="space-y-3">
               <Card title="Service">
-                <Segmented cols={3} value={inp.cleanType} onChange={v => set('cleanType', v)}
+                <Segmented cols={3} mobileCols={3} value={inp.cleanType} onChange={v => set('cleanType', v)}
                   options={[['regular', 'Regular'], ['deep', 'Deep'], ['airbnb', 'Airbnb']]} />
                 <SubLabel>Frequency</SubLabel>
-                <Segmented cols={4} value={inp.frequency} onChange={v => set('frequency', v)}
+                <Segmented cols={4} mobileCols={2} value={inp.frequency} onChange={v => set('frequency', v)}
                   options={[['oneoff', 'One-off'], ['weekly', 'Weekly'], ['fortnightly', 'Fortnightly'], ['monthly', 'Monthly']]} />
                 <div style={{ marginTop: 12 }}>
                   <Toggle label="GST registered (+10%)" value={inp.gstRegistered} onChange={v => set('gstRegistered', v)} />
