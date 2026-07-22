@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format'
-import { Briefcase, FileText, Receipt, MessageSquare, StickyNote, Activity, MapPin, Phone, Mail, Building, Folder } from 'lucide-react'
+import { Briefcase, FileText, Receipt, MessageSquare, StickyNote, Activity, MapPin, Phone, Mail, Building, Folder, Send } from 'lucide-react'
 import { ContactDocuments, type ClientDocument } from './contact-documents'
 
 const STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
@@ -62,7 +64,44 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function ContactTabs({ contact, jobs, quotes, invoices, conversations, documents, properties }: Props) {
-  const [activeTab, setActiveTab] = useState('overview')
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(TABS.some(t => t.id === initialTab) ? initialTab! : 'overview')
+
+  const [selectedQuoteIds, setSelectedQuoteIds] = useState<Set<string>>(() => {
+    const preselect = searchParams.get('preselect')
+    return preselect ? new Set(preselect.split(',')) : new Set()
+  })
+  const [sendingQuotes, setSendingQuotes] = useState(false)
+
+  function toggleQuote(id: string) {
+    setSelectedQuoteIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function sendSelectedQuotes() {
+    if (selectedQuoteIds.size < 2) return
+    setSendingQuotes(true)
+    try {
+      const res = await fetch('/api/quotes/send-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteIds: Array.from(selectedQuoteIds) }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.sent) throw new Error(data.error ?? 'Failed to send quotes')
+      toast.success(`${data.count} quotes emailed to ${contact.first_name}`)
+      setSelectedQuoteIds(new Set())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send quotes')
+    } finally {
+      setSendingQuotes(false)
+    }
+  }
 
   return (
     <div style={{ backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.09)', boxShadow: '0 1px 3px rgba(44,62,80,0.05),0 4px 14px rgba(44,62,80,0.04)' }} className="overflow-hidden">
@@ -159,20 +198,50 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
 
         {activeTab === 'quotes' && (
           <div className="space-y-1">
-            <p style={{ color: '#8A9BA6', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>Quotes ({quotes.length})</p>
+            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+              <p style={{ color: '#8A9BA6', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Quotes ({quotes.length})</p>
+              {selectedQuoteIds.size > 0 && (
+                <button
+                  onClick={sendSelectedQuotes}
+                  disabled={selectedQuoteIds.size < 2 || sendingQuotes}
+                  style={{
+                    backgroundColor: selectedQuoteIds.size < 2 ? 'rgba(44,62,80,0.15)' : '#2C3E50',
+                    color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '6px 14px',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    cursor: selectedQuoteIds.size < 2 || sendingQuotes ? 'default' : 'pointer',
+                  }}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {sendingQuotes
+                    ? 'Sending…'
+                    : selectedQuoteIds.size < 2
+                      ? `Select ${2 - selectedQuoteIds.size} more to send together`
+                      : `Send ${selectedQuoteIds.size} quotes in one email`}
+                </button>
+              )}
+            </div>
             {quotes.length === 0
               ? <p style={{ color: '#8A9BA6', fontSize: 13, padding: '2rem 0' }}>No quotes yet</p>
               : quotes.map((q, i) => (
-                  <a key={q.id} href={`/quotes/${q.id}`}
-                    style={{ backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAF8', borderBottom: '1px solid rgba(44,62,80,0.06)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '12px 12px', textDecoration: 'none' }}
+                  <div key={q.id}
+                    style={{ backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAF8', borderBottom: '1px solid rgba(44,62,80,0.06)', display: 'flex', alignItems: 'center', gap: '1rem', padding: '12px 12px' }}
                     className="group hover:bg-[#F0EDE8] transition-colors">
-                    <div className="flex-1">
-                      <p style={{ color: '#1C2A35', fontSize: 13, fontWeight: 500 }}>{q.quote_number}</p>
-                      <p style={{ color: '#8A9BA6', fontSize: 11, marginTop: 1 }}>{formatDate(q.created_at)}</p>
-                    </div>
-                    <span style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50', fontSize: 18 }}>{formatCurrency(q.total)}</span>
-                    <StatusBadge status={q.status} />
-                  </a>
+                    <input
+                      type="checkbox"
+                      checked={selectedQuoteIds.has(q.id)}
+                      onChange={() => toggleQuote(q.id)}
+                      onClick={e => e.stopPropagation()}
+                      style={{ width: 15, height: 15, accentColor: '#2C3E50', cursor: 'pointer', flexShrink: 0 }}
+                    />
+                    <a href={`/quotes/${q.id}`} className="flex-1 min-w-0 flex items-center gap-4" style={{ textDecoration: 'none' }}>
+                      <div className="flex-1">
+                        <p style={{ color: '#1C2A35', fontSize: 13, fontWeight: 500 }}>{q.quote_number}</p>
+                        <p style={{ color: '#8A9BA6', fontSize: 11, marginTop: 1 }}>{formatDate(q.created_at)}</p>
+                      </div>
+                      <span style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50', fontSize: 18 }}>{formatCurrency(q.total)}</span>
+                      <StatusBadge status={q.status} />
+                    </a>
+                  </div>
                 ))
             }
           </div>

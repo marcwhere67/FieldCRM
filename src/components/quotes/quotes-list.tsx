@@ -1,11 +1,12 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { Plus, FileText, ChevronRight } from 'lucide-react'
+import { Plus, FileText, ChevronRight, Send } from 'lucide-react'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   draft:     { bg: 'rgba(44,62,80,0.06)',    color: '#4A5A65', border: 'rgba(44,62,80,0.15)',    dot: '#8A9BA6' },
@@ -41,6 +42,8 @@ export function QuotesList({ quotes, filters, total }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [sending, setSending] = useState(false)
 
   function updateFilter(key: string, value: string | null) {
     const p = new URLSearchParams()
@@ -53,6 +56,40 @@ export function QuotesList({ quotes, filters, total }: Props) {
   function getContact(q: Quote) {
     if (!q.contacts) return null
     return Array.isArray(q.contacts) ? q.contacts[0] : q.contacts
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectedQuotes = quotes.filter(q => selectedIds.has(q.id))
+  const selectedContactIds = new Set(selectedQuotes.map(q => getContact(q)?.id).filter(Boolean))
+  const mixedContacts = selectedContactIds.size > 1
+
+  async function sendSelected() {
+    if (selectedIds.size < 2 || mixedContacts) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/quotes/send-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteIds: Array.from(selectedIds) }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.sent) throw new Error(data.error ?? 'Failed to send quotes')
+      const contact = getContact(selectedQuotes[0])
+      toast.success(`${data.count} quotes emailed to ${contact ? `${contact.first_name} ${contact.last_name}` : 'the contact'}`)
+      setSelectedIds(new Set())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send quotes')
+    } finally {
+      setSending(false)
+    }
   }
 
   const totalValue    = quotes.reduce((s, q) => s + q.total, 0)
@@ -123,6 +160,33 @@ export function QuotesList({ quotes, filters, total }: Props) {
         })}
       </div>
 
+      {/* Bulk-send bar */}
+      {selectedIds.size > 0 && (
+        <div style={{ backgroundColor: '#2C3E50', color: '#fff', border: '1px solid rgba(44,62,80,0.15)' }} className="flex items-center justify-between px-4 py-2.5">
+          <p className="text-[11px]" style={{ letterSpacing: '0.03em' }}>
+            {selectedIds.size} selected
+            {mixedContacts && <span style={{ color: '#f5b942' }}> — must all belong to the same contact to send together</span>}
+          </p>
+          <button
+            onClick={sendSelected}
+            disabled={selectedIds.size < 2 || mixedContacts || sending}
+            style={{
+              backgroundColor: selectedIds.size < 2 || mixedContacts ? 'rgba(255,255,255,0.12)' : '#76A58F',
+              color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '6px 14px',
+              display: 'flex', alignItems: 'center', gap: 6,
+              cursor: selectedIds.size < 2 || mixedContacts || sending ? 'default' : 'pointer',
+            }}
+          >
+            <Send className="w-3.5 h-3.5" />
+            {sending
+              ? 'Sending…'
+              : selectedIds.size < 2
+                ? `Select ${2 - selectedIds.size} more to send together`
+                : `Send ${selectedIds.size} quotes in one email`}
+          </button>
+        </div>
+      )}
+
       {/* List */}
       <div className={`space-y-px ${isPending ? 'opacity-50 pointer-events-none' : ''}`}>
         {quotes.length === 0 ? (
@@ -141,9 +205,8 @@ export function QuotesList({ quotes, filters, total }: Props) {
           const isExpired = quote.valid_until && new Date(quote.valid_until) < new Date() && !['approved', 'converted', 'declined'].includes(quote.status)
 
           return (
-            <Link
+            <div
               key={quote.id}
-              href={`/quotes/${quote.id}`}
               style={{
                 backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAF8',
                 borderLeft: `3px solid ${st.dot}`,
@@ -152,11 +215,17 @@ export function QuotesList({ quotes, filters, total }: Props) {
                 alignItems: 'center',
                 gap: '1.25rem',
                 padding: '14px 16px',
-                textDecoration: 'none',
                 transition: 'background-color 150ms ease',
               }}
               className="group hover:bg-[#F0EDE8]"
             >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(quote.id)}
+                onChange={() => toggleSelected(quote.id)}
+                style={{ width: 15, height: 15, accentColor: '#2C3E50', cursor: 'pointer', flexShrink: 0 }}
+              />
+              <Link href={`/quotes/${quote.id}`} className="flex-1 min-w-0 flex items-center gap-5" style={{ textDecoration: 'none' }}>
               {/* Quote info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
@@ -198,7 +267,8 @@ export function QuotesList({ quotes, filters, total }: Props) {
               </span>
 
               <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#8A9BA6' }} />
-            </Link>
+              </Link>
+            </div>
           )
         })}
       </div>

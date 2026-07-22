@@ -142,6 +142,13 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
           )}
         </div>
         <div className="flex items-center gap-2">
+          {quote.status === 'draft' && contact && (
+            <Link href={`/contacts/${contact.id}?tab=quotes&preselect=${quote.id}`}
+              style={{ color: C.muted, fontSize: 11, letterSpacing: '0.05em' }}
+              className="hidden md:inline-flex items-center uppercase hover:text-[#2C3E50] transition-colors">
+              Send with other quotes
+            </Link>
+          )}
           {quote.status === 'draft' && (
             <button onClick={sendQuote} disabled={isPending}
               style={{ backgroundColor: C.navy, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
