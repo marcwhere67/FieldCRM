@@ -1,7 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
 import { registerPdfFonts, SERIF } from './fonts'
-import { getScope, GENERAL_CONDITIONS } from '../scope-of-work'
+import { getScope, QUOTE_TERMS } from '../scope-of-work'
 import { stripDocYear } from '../format'
 
 registerPdfFonts()
@@ -282,10 +282,24 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
     flex: 1,
   },
-  scopeConditions: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTop: '1pt solid #e2e8f0',
+  termsSection: {
+    marginBottom: 12,
+  },
+  termsHeading: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 10,
+    color: NAVY,
+    marginBottom: 4,
+  },
+  termsParagraph: {
+    fontSize: 9,
+    color: '#475569',
+    lineHeight: 1.5,
+    marginBottom: 4,
+  },
+  termsBullets: {
+    marginTop: 2,
+    marginBottom: 4,
   },
 })
 
@@ -456,18 +470,34 @@ export function QuotePDF({ quote, org, contact }: Props) {
                 <Text style={styles.bulletText}>{b}</Text>
               </View>
             ))}
-
-            <View style={styles.scopeConditions}>
-              <Text style={styles.scopeTitle}>General Service Conditions</Text>
-              {GENERAL_CONDITIONS.map((b, i) => (
-                <View key={`cond-${i}`} style={styles.bullet} wrap={false}>
-                  <Text style={styles.bulletDot}>•</Text>
-                  <Text style={styles.bulletText}>{b}</Text>
-                </View>
-              ))}
-            </View>
           </View>
         )}
+
+        {/* Terms & Conditions — always shown, on its own page */}
+        <View style={styles.scopeSection} break>
+          <Text style={styles.scopeHeading}>Terms &amp; Conditions</Text>
+          {QUOTE_TERMS.map((section, si) => (
+            <View key={`term-${si}`} style={styles.termsSection} wrap={false}>
+              <Text style={styles.termsHeading}>{section.heading}</Text>
+              {section.blocks.map((block, bi) =>
+                'bullets' in block ? (
+                  <View key={`b-${si}-${bi}`} style={styles.termsBullets}>
+                    {block.bullets.map((b, i) => (
+                      <View key={`tb-${si}-${bi}-${i}`} style={styles.bullet}>
+                        <Text style={styles.bulletDot}>•</Text>
+                        <Text style={styles.bulletText}>{b}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text key={`p-${si}-${bi}`} style={styles.termsParagraph}>
+                    {block.text}
+                  </Text>
+                )
+              )}
+            </View>
+          ))}
+        </View>
 
       </Page>
     </Document>

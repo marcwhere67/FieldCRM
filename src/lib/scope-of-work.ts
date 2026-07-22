@@ -93,10 +93,93 @@ export const SCOPE: Record<CleanType, ScopeDefinition> = {
   },
 }
 
-export const GENERAL_CONDITIONS = [
-  'Cleaning is performed within reasonable reach using standard professional equipment.',
-  'Areas blocked by large furniture or excessive clutter may not be cleaned.',
-  'Large or heavy furniture will not be moved.',
+// Quote Terms & Conditions — rendered as a dedicated page at the end of every
+// quote PDF. Each section = a heading plus an ordered list of blocks, where a
+// block is either a paragraph ({ text }) or a bulleted list ({ bullets }).
+// The legacy 3 "General Conditions" bullets are folded into section 5 below.
+export type TermsBlock = { text: string } | { bullets: string[] }
+export interface TermsSection {
+  heading: string
+  blocks: TermsBlock[]
+}
+
+export const QUOTE_TERMS: TermsSection[] = [
+  {
+    heading: '1. Quote Validity',
+    blocks: [
+      { text: 'This quotation is based on the information provided and the agreed scope of works at the time of booking. Pricing assumes the property is in reasonable and well-maintained condition.' },
+      { text: 'If the condition, level of build-up, or scope of work differs significantly from what was described, Salt Air Cleaning reserves the right to revise the quotation prior to proceeding. Any adjustments will be discussed and approved before work continues.' },
+      { text: 'Quotes are valid for 14 days from the date issued.' },
+    ],
+  },
+  {
+    heading: '2. Payment Terms',
+    blocks: [
+      { text: 'For Deep Cleans, End of Lease Cleans, or first-time / one-off clients, a 50% deposit is required to secure the booking date.' },
+      { text: 'The remaining balance is due within 24 hours of service completion unless otherwise agreed. Payments received after 24 hours may incur:' },
+      { bullets: [
+        '$25 late fee, plus',
+        '5% of the total invoice per week overdue',
+      ] },
+      { text: 'Salt Air Cleaning reserves the right to refuse future services until outstanding balances are paid in full.' },
+    ],
+  },
+  {
+    heading: '3. Access & Utilities',
+    blocks: [
+      { text: 'Clients must provide safe and uninterrupted access to the property at the scheduled service time, including electricity and running water.' },
+      { text: 'If access is delayed, unavailable, or unsafe, the full quoted fee remains payable. Additional fees may apply for time lost, extended service duration, or return visits.' },
+    ],
+  },
+  {
+    heading: '4. Cancellations & Rescheduling',
+    blocks: [
+      { text: 'Cancellations or rescheduling must be made at least 48 hours prior to the scheduled service.' },
+      { text: 'If cancellation occurs within 48 hours of the booking, or if access cannot be provided at the scheduled time, 50% of the agreed service fee will be charged.' },
+      { text: 'Rescheduling requests are subject to availability.' },
+    ],
+  },
+  {
+    heading: '5. Service Limitations',
+    blocks: [
+      { text: 'Salt Air Cleaning performs services within the agreed scope only. The following conditions apply:' },
+      { bullets: [
+        'Large or heavy furniture will not be moved',
+        'Cleaning is limited to accessible areas within safe reach; areas blocked by furniture or excessive clutter may not be cleaned',
+        'Services are performed using standard professional cleaning equipment and products',
+      ] },
+    ],
+  },
+  {
+    heading: '6. Waste & Rubbish Disposal',
+    blocks: [
+      { text: "All rubbish and waste generated during the cleaning service will be disposed of on-site using the property's allocated waste and recycling bins." },
+      { text: 'Salt Air Cleaning does not remove rubbish from the property or transport waste off-site. Clients are responsible for ensuring appropriate bins are available and accessible.' },
+      { text: 'If bins are full or unavailable, rubbish will be securely bagged and left within the property or near the designated bin area for client disposal.' },
+    ],
+  },
+  {
+    heading: '7. Quality Assurance',
+    blocks: [
+      { text: 'Salt Air Cleaning is committed to maintaining high presentation standards.' },
+      { text: 'Any concerns must be reported within 24 hours of service completion. Where the issue falls within the agreed scope of work, we will return to rectify the concern.' },
+      { text: 'Refunds are not provided.' },
+    ],
+  },
+  {
+    heading: '8. Liability',
+    blocks: [
+      { text: 'While every care is taken during service delivery, Salt Air Cleaning is not liable for pre-existing damage, wear and tear, faulty fixtures, or unsecured valuables.' },
+      { text: 'Clients are responsible for securing fragile items, valuables, documents, and pets prior to service.' },
+      { text: 'Salt Air Cleaning is not responsible for damage caused by faulty fittings, aged surfaces, or normal wear of materials.' },
+    ],
+  },
+  {
+    heading: '9. Acceptance',
+    blocks: [
+      { text: 'Acceptance of this quotation confirms agreement to the Scope of Work and Quote Terms & Conditions outlined above.' },
+    ],
+  },
 ]
 
 export function isCleanType(v: unknown): v is CleanType {
