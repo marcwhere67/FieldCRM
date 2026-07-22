@@ -10,14 +10,14 @@ type Frequency = 'oneoff' | 'weekly' | 'fortnightly' | 'monthly'
 interface Inputs {
   cleanType: CleanType; frequency: Frequency
   queenBeds: number; twinBeds: number; fullBaths: number; powderRooms: number
-  livingRooms: number; diningAreas: number; kitchens: number; laundries: number; storeys: number
+  livingRooms: number; diningAreas: number; offices: number; kitchens: number; laundries: number; storeys: number
   linenBeds: number; ovenClean: boolean; interiorFridge: boolean; balcony: boolean; vanityCupboards: boolean; gstRegistered: boolean
 }
 
 const DEFAULT: Inputs = {
   cleanType: 'regular', frequency: 'oneoff',
   queenBeds: 0, twinBeds: 0, fullBaths: 0, powderRooms: 0,
-  livingRooms: 0, diningAreas: 0, kitchens: 0, laundries: 0, storeys: 1,
+  livingRooms: 0, diningAreas: 0, offices: 0, kitchens: 0, laundries: 0, storeys: 1,
   linenBeds: 0, ovenClean: false, interiorFridge: false, balcony: false, vanityCupboards: false, gstRegistered: false,
 }
 
@@ -50,7 +50,8 @@ function calcResult(inp: Inputs) {
   if (inp.powderRooms > 0) roomBreakdown.push({ label: `Powder room ×${inp.powderRooms}`, mins: (deep ? 28 : 20) * inp.powderRooms })
   if (inp.livingRooms > 0) roomBreakdown.push({ label: `Living/games room ×${inp.livingRooms}`, mins: (deep ? 28 : 10) * inp.livingRooms })
   if (inp.diningAreas > 0) roomBreakdown.push({ label: `Dining area ×${inp.diningAreas}`, mins: (deep ? 28 : 10) * inp.diningAreas })
-  const hasAnyRoom = inp.queenBeds > 0 || inp.twinBeds > 0 || inp.fullBaths > 0 || inp.powderRooms > 0 || inp.livingRooms > 0 || inp.diningAreas > 0 || inp.kitchens > 0 || inp.laundries > 0
+  if (inp.offices > 0) roomBreakdown.push({ label: `Office ×${inp.offices}`, mins: (deep ? 28 : 10) * inp.offices })
+  const hasAnyRoom = inp.queenBeds > 0 || inp.twinBeds > 0 || inp.fullBaths > 0 || inp.powderRooms > 0 || inp.livingRooms > 0 || inp.diningAreas > 0 || inp.offices > 0 || inp.kitchens > 0 || inp.laundries > 0
   if (hasAnyRoom) roomBreakdown.push({ label: 'Hallways & touch points', mins: deep ? 42 : 30 })
   if (inp.kitchens > 0) roomBreakdown.push({ label: `Kitchen ×${inp.kitchens}`, mins: (deep ? 105 : 45) * inp.kitchens })
   if (inp.laundries > 0) roomBreakdown.push({ label: `Laundry ×${inp.laundries}`, mins: (deep ? 60 : 10) * inp.laundries })
@@ -308,6 +309,7 @@ export function QuoteCalculator() {
                 <SubLabel>Living</SubLabel>
                 <Stepper label="Living / games rooms" value={inp.livingRooms} onChange={v => set('livingRooms', v)} />
                 <Stepper label="Dining areas" value={inp.diningAreas} onChange={v => set('diningAreas', v)} />
+                <Stepper label="Offices" value={inp.offices} onChange={v => set('offices', v)} />
                 <SubLabel>Kitchen & Laundry</SubLabel>
                 <Stepper label="Kitchens" value={inp.kitchens} onChange={v => set('kitchens', v)} />
                 <Stepper label="Laundries" value={inp.laundries} onChange={v => set('laundries', v)} />
