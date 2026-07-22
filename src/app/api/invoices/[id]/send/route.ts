@@ -90,7 +90,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       React.createElement(InvoicePDF, { invoice: invoicePdfData, org, contact }) as React.ReactElement<DocumentProps>,
     )
 
-    const subject = `Invoice ${invoice.invoice_number} from ${org?.name ?? 'us'}`
+    const bizName = org?.name ?? 'us'
+    const firstName = contact?.first_name?.trim()
+    const subject = firstName
+      ? `${firstName}, your invoice from ${bizName} (${invoice.invoice_number})`
+      : `Your invoice from ${bizName} (${invoice.invoice_number})`
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
     const logoUrl = `${siteUrl}/salt-air-logo.png`
 

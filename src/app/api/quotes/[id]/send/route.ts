@@ -67,7 +67,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       React.createElement(QuotePDF, { quote, org, contact }) as React.ReactElement<DocumentProps>,
     )
 
-    const subject = `Quote ${quote.quote_number} from ${org?.name ?? 'us'}`
+    const bizName = org?.name ?? 'us'
+    const firstName = contact?.first_name?.trim()
+    const subject = firstName
+      ? `${firstName}, your quote from ${bizName} (${quote.quote_number})`
+      : `Your quote from ${bizName} (${quote.quote_number})`
     const logoUrl = `${siteUrl}/salt-air-logo.png`
     const htmlBody = `
 <html>

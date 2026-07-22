@@ -1,17 +1,32 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useRef, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatDate, formatDateTime, formatMinutes } from '@/lib/format'
-import { jobPhotoSrc } from '@/lib/photo-url'
+import { jobPhotoSrc, procedurePhotoSrc } from '@/lib/photo-url'
 import { ClockWidget } from '@/components/timeclock/clock-widget'
-import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight } from 'lucide-react'
+import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, Check, CheckCircle, Pin, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight, ClipboardCheck } from 'lucide-react'
+
+const CLEAN_TYPE_OPTIONS = [
+  { value: 'regular', label: 'Regular Clean' },
+  { value: 'deep', label: 'Deep Clean' },
+  { value: 'airbnb', label: 'Airbnb / Turnover' },
+]
+const AREA_LABELS: Record<string, string> = {
+  kitchen: 'Kitchen', bathroom: 'Bathroom', bedroom: 'Bedroom', living: 'Living',
+  laundry: 'Laundry', floors: 'Floors & Finishing', turnover: 'Turnover', general: 'General',
+}
+const AREA_ORDER = ['kitchen', 'bathroom', 'bedroom', 'living', 'laundry', 'floors', 'turnover', 'general']
+
+interface ProcedureStep { id: string; area: string; order_index: number; title: string; description: string | null; is_required: boolean; reference_photo_path: string | null }
+interface ProcedureProgress { id: string; step_id: string; completed: boolean; completed_by: string | null; completed_at: string | null; proof_photo_path: string | null }
+interface Procedure { id: string; clean_type: string; title: string }
 
 const JobSummaryButton = dynamic(() => import('@/components/ai/job-summary-button').then(m => ({ default: m.JobSummaryButton })), { ssr: false })
 const JobNotes = dynamic(() => import('@/components/jobs/job-notes').then(m => ({ default: m.JobNotes })), { ssr: false })
@@ -44,6 +59,7 @@ interface Props {
     photos: { url: string; caption: string | null }[]
     materials_used: { name: string; qty: number; unit_price: number; subtotal: number }[]
     total_hours: number | null
+    clean_type: string | null
     contacts: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }[] | null
     properties: { id: string; label: string | null; address_line1: string; suburb: string; state: string; postcode: string; lat: number | null; lng: number | null; access_notes: string | null }[] | null
     quotes: { id: string; quote_number: string; total: number; status: string }[] | null
@@ -55,7 +71,14 @@ interface Props {
   currentUserId: string
   userRole: string
   myActiveTimesheet?: { id: string; clocked_in_at: string } | null
+  procedure: Procedure | null
+  procedureSteps: ProcedureStep[]
+  procedureProgress: ProcedureProgress[]
+  propertyNotes: PropertyNote[]
+  propertyId: string | null
 }
+
+interface PropertyNote { id: string; step_id: string; note: string }
 
 const C = {
   card: { backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.09)', boxShadow: '0 1px 3px rgba(44,62,80,0.05),0 4px 14px rgba(44,62,80,0.04)' } as React.CSSProperties,
@@ -65,13 +88,48 @@ const C = {
   divider: { borderTop: '1px solid rgba(44,62,80,0.08)' },
 }
 
-export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserId, userRole, myActiveTimesheet }: Props) {
+export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserId, userRole, myActiveTimesheet, procedure, procedureSteps, procedureProgress, propertyNotes, propertyId }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [checklist, setChecklist] = useState<ChecklistItem[]>(job.checklist ?? [])
   const [status, setStatus] = useState(job.status)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [creatingInvoice, setCreatingInvoice] = useState(false)
+  const [progress, setProgress] = useState<ProcedureProgress[]>(procedureProgress ?? [])
+  const [savingCleanType, setSavingCleanType] = useState(false)
+  const [notes, setNotes] = useState<PropertyNote[]>(propertyNotes ?? [])
+  const [editingNote, setEditingNote] = useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const procFileInputs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  async function saveNote(stepId: string) {
+    if (!propertyId) { toast.error('This job has no property — add one first'); return }
+    const text = noteDraft.trim()
+    setSavingNote(true)
+    if (!text) {
+      // clearing an existing note
+      const res = await fetch(`/api/properties/${propertyId}/procedure-notes/${stepId}`, { method: 'DELETE' })
+      setSavingNote(false)
+      if (!res.ok) { toast.error('Failed to remove note'); return }
+      setNotes(prev => prev.filter(n => n.step_id !== stepId))
+      setEditingNote(null); toast.success('Note removed')
+      return
+    }
+    const res = await fetch(`/api/properties/${propertyId}/procedure-notes/${stepId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: text }),
+    })
+    const data = await res.json()
+    setSavingNote(false)
+    if (!res.ok) { toast.error(data.error ?? 'Failed to save note'); return }
+    setNotes(prev => [...prev.filter(n => n.step_id !== stepId), { id: data.id, step_id: stepId, note: text }])
+    setEditingNote(null); toast.success('Note saved for this property')
+  }
+
+  function startEditNote(stepId: string) {
+    setNoteDraft(notes.find(n => n.step_id === stepId)?.note ?? '')
+    setEditingNote(stepId)
+  }
 
   const contact = Array.isArray(job.contacts) ? job.contacts[0] : job.contacts
   const property = Array.isArray(job.properties) ? job.properties[0] : job.properties
@@ -101,12 +159,69 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
   }
 
   async function updateStatus(newStatus: string) {
+    if (newStatus === 'completed') {
+      const requiredSteps = procedureSteps.filter(s => s.is_required)
+      const incomplete = requiredSteps.filter(s => !progress.find(p => p.step_id === s.id)?.completed)
+      if (incomplete.length > 0) {
+        toast.error(`Complete ${incomplete.length} required cleaning procedure step${incomplete.length === 1 ? '' : 's'} before finishing this job`)
+        return
+      }
+    }
     setUpdatingStatus(true); setStatus(newStatus)
     const { error } = await supabase.from('jobs').update({ status: newStatus }).eq('id', job.id)
-    if (error) { toast.error('Failed to update status'); setStatus(job.status) }
+    if (error) { toast.error(error.message.includes('cleaning procedure') ? error.message : 'Failed to update status'); setStatus(job.status) }
     else { toast.success(`Job marked as ${newStatus.replace('_', ' ')}`); router.refresh() }
     setUpdatingStatus(false)
   }
+
+  async function toggleProcedureStep(stepId: string) {
+    const current = progress.find(p => p.step_id === stepId)
+    const nextCompleted = !current?.completed
+    if (nextCompleted && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15)
+    const optimistic: ProcedureProgress = {
+      id: current?.id ?? stepId, step_id: stepId, completed: nextCompleted,
+      completed_by: nextCompleted ? currentUserId : null,
+      completed_at: nextCompleted ? new Date().toISOString() : null,
+      proof_photo_path: current?.proof_photo_path ?? null,
+    }
+    setProgress(prev => [...prev.filter(p => p.step_id !== stepId), optimistic])
+    const res = await fetch(`/api/jobs/${job.id}/procedure-steps/${stepId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completed: nextCompleted }),
+    })
+    if (!res.ok) { toast.error('Failed to update step'); setProgress(procedureProgress) }
+  }
+
+  async function uploadProofPhoto(stepId: string, file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch(`/api/jobs/${job.id}/procedure-steps/${stepId}/photo`, { method: 'POST', body: formData })
+    const data = await res.json()
+    if (!res.ok) { toast.error(data.error ?? 'Upload failed'); return }
+    setProgress(prev => [...prev.filter(p => p.step_id !== stepId), data])
+    toast.success('Proof photo uploaded')
+  }
+
+  async function setCleanType(v: string) {
+    if (!v) return
+    setSavingCleanType(true)
+    const { error } = await supabase.from('jobs').update({ clean_type: v }).eq('id', job.id)
+    setSavingCleanType(false)
+    if (error) { toast.error('Failed to set clean type'); return }
+    toast.success('Cleaning procedure attached'); router.refresh()
+  }
+
+  const requiredStepCount = procedureSteps.filter(s => s.is_required).length
+  const completedRequiredCount = procedureSteps.filter(s => s.is_required && progress.find(p => p.step_id === s.id)?.completed).length
+  const allRequiredDone = requiredStepCount > 0 && completedRequiredCount === requiredStepCount
+  const canComplete = ['in_progress', 'scheduled', 'draft'].includes(status)
+  const proofPhotos = procedureSteps
+    .map(s => ({ step: s, p: progress.find(pr => pr.step_id === s.id) }))
+    .filter(x => x.p?.proof_photo_path)
+  const totalCompletedSteps = procedureSteps.filter(s => progress.find(p => p.step_id === s.id)?.completed).length
+  const showCompletionRecord = !!procedure && (status === 'completed' || status === 'invoiced' || status === 'paid') && totalCompletedSteps > 0
+  const groupedProcedureSteps = AREA_ORDER
+    .map(area => ({ area, steps: procedureSteps.filter(s => s.area === area).sort((a, b) => a.order_index - b.order_index) }))
+    .filter(g => g.steps.length > 0)
 
   async function createInvoice() {
     setCreatingInvoice(true)
@@ -124,6 +239,10 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
 
   return (
     <div className="max-w-5xl space-y-6">
+      <style>{`
+        @keyframes proc-tick-pop { 0% { transform: scale(0.3); opacity: 0 } 60% { transform: scale(1.15) } 100% { transform: scale(1); opacity: 1 } }
+        .proc-tick { animation: proc-tick-pop 200ms cubic-bezier(0.34,1.56,0.64,1) }
+      `}</style>
       {/* Back */}
       <Link href="/jobs" style={{ color: '#8A9BA6' }} className="inline-flex items-center gap-1.5 text-xs hover:text-[#2C3E50] transition-colors">
         <ChevronLeft className="w-3.5 h-3.5" />Back to jobs
@@ -191,6 +310,188 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
+
+          {/* Cleaning Procedure */}
+          {job.clean_type === null ? (
+            ['admin', 'manager'].includes(userRole) && (
+              <div style={C.card} className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <ClipboardCheck className="w-4 h-4" style={{ color: '#8A9BA6' }} />
+                  <p style={C.label}>Cleaning Procedure</p>
+                </div>
+                <p style={C.muted} className="mb-3">No clean type set — attach a standard procedure checklist to this job.</p>
+                <div style={{ maxWidth: 220 }}>
+                  <Select<string> onValueChange={v => setCleanType(v ?? '')} disabled={savingCleanType}>
+                    <SelectTrigger style={{ height: 36, borderRadius: 0, backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.15)', color: '#1C2A35', fontSize: 12 }} className="rounded-none">
+                      <SelectValue placeholder="Select clean type…" />
+                    </SelectTrigger>
+                    <SelectContent style={{ backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.09)' }} className="rounded-none">
+                      {CLEAN_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value} style={{ color: '#1C2A35', fontSize: 12 }}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )
+          ) : !procedure ? (
+            <div style={C.card} className="p-5">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" style={{ color: '#8A9BA6' }} />
+                <p style={C.label}>Cleaning Procedure</p>
+              </div>
+              <p style={C.muted} className="mt-2">No active procedure configured for this clean type yet — set one up in Admin → Procedures.</p>
+            </div>
+          ) : (
+            <div style={C.card} className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <ClipboardCheck className="w-4 h-4" style={{ color: allRequiredDone ? '#76A58F' : '#8A9BA6' }} />
+                  <p style={C.label}>{procedure.title}</p>
+                  {requiredStepCount > 0 && (
+                    allRequiredDone
+                      ? <span style={{ color: '#76A58F', fontSize: 11, fontWeight: 500 }}>✓ Ready to complete</span>
+                      : <span style={{ color: '#4A5A65', fontSize: 11 }}>{completedRequiredCount}/{requiredStepCount} required</span>
+                  )}
+                </div>
+                {requiredStepCount > 0 && (
+                  <div style={{ width: 80, height: 3, backgroundColor: 'rgba(44,62,80,0.1)', borderRadius: 2 }} className="overflow-hidden">
+                    <div style={{ width: `${(completedRequiredCount / requiredStepCount) * 100}%`, height: '100%', backgroundColor: '#76A58F', transition: 'width 350ms cubic-bezier(0.4,0,0.2,1)' }} />
+                  </div>
+                )}
+              </div>
+              {groupedProcedureSteps.length === 0
+                ? <p style={C.muted}>No steps in this procedure yet</p>
+                : groupedProcedureSteps.map(({ area, steps }) => (
+                    <div key={area} className="mb-3">
+                      <p style={{ color: '#8A9BA6', fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>{AREA_LABELS[area]}</p>
+                      <div className="space-y-0.5">
+                        {steps.map(step => {
+                          const p = progress.find(pr => pr.step_id === step.id)
+                          const done = p?.completed ?? false
+                          const note = notes.find(n => n.step_id === step.id)
+                          const isEditing = editingNote === step.id
+                          return (
+                            <div key={step.id} style={{ borderBottom: '1px solid rgba(44,62,80,0.05)' }} className="py-1">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => toggleProcedureStep(step.id)}
+                                  aria-pressed={done}
+                                  className="flex-1 flex items-center gap-3 text-left py-2 pl-1 pr-2 min-h-[48px] active:bg-[#F5F0EB] transition-colors">
+                                  <span
+                                    aria-hidden
+                                    style={{
+                                      width: 28, height: 28, flexShrink: 0, borderRadius: 6,
+                                      border: done ? '2px solid #76A58F' : '2px solid rgba(44,62,80,0.2)',
+                                      backgroundColor: done ? '#76A58F' : 'transparent',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      transition: 'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
+                                    }}>
+                                    {done && <Check className="w-4 h-4 proc-tick" strokeWidth={3} style={{ color: '#fff' }} />}
+                                  </span>
+                                  {step.reference_photo_path && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={procedurePhotoSrc(step.reference_photo_path)} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(44,62,80,0.09)', flexShrink: 0 }} />
+                                  )}
+                                  <span className="flex-1 min-w-0">
+                                    <span className="flex items-center gap-2 flex-wrap">
+                                      <span style={{ color: done ? '#8A9BA6' : '#1C2A35', fontSize: 14, textDecoration: done ? 'line-through' : 'none', transition: 'color 160ms ease' }}>{step.title}</span>
+                                      {!step.is_required && <span style={{ color: '#8A9BA6', fontSize: 9, letterSpacing: '0.06em', border: '1px solid rgba(44,62,80,0.09)', padding: '1px 5px' }} className="uppercase">Optional</span>}
+                                    </span>
+                                    {done && p?.completed_at && (
+                                      <span style={{ color: '#8A9BA6', fontSize: 10, marginTop: 2 }} className="block">{formatDateTime(p.completed_at)}{p.proof_photo_path ? ' · proof attached' : ''}</span>
+                                    )}
+                                  </span>
+                                </button>
+                                <input ref={el => { procFileInputs.current[step.id] = el }} type="file" accept="image/*" hidden
+                                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadProofPhoto(step.id, f); e.target.value = '' }} />
+                                <button onClick={() => procFileInputs.current[step.id]?.click()} title="Add proof photo"
+                                  style={{ color: p?.proof_photo_path ? '#76A58F' : '#8A9BA6' }}
+                                  className="shrink-0 w-11 h-11 flex items-center justify-center hover:text-[#76A58F] active:bg-[#F5F0EB] transition-colors">
+                                  <Camera className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              {/* Per-property pinned note */}
+                              {isEditing ? (
+                                <div className="ml-1 mr-2 mb-2 mt-0.5">
+                                  <textarea
+                                    value={noteDraft}
+                                    onChange={e => setNoteDraft(e.target.value)}
+                                    autoFocus
+                                    rows={2}
+                                    placeholder="Property-specific note (e.g. BBQ key in 3rd drawer)…"
+                                    style={{ width: '100%', border: '1px solid rgba(118,165,143,0.5)', borderRadius: 6, padding: '8px 10px', fontSize: 13, color: '#1C2A35', outline: 'none', resize: 'none', backgroundColor: '#FCFBF9' }} />
+                                  <div className="flex items-center gap-2 mt-1.5">
+                                    <button onClick={() => saveNote(step.id)} disabled={savingNote}
+                                      style={{ backgroundColor: '#76A58F', color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '5px 12px', borderRadius: 4 }}
+                                      className="uppercase disabled:opacity-50">{savingNote ? 'Saving…' : 'Save'}</button>
+                                    <button onClick={() => setEditingNote(null)} disabled={savingNote}
+                                      style={{ color: '#8A9BA6', fontSize: 11, letterSpacing: '0.05em', padding: '5px 8px' }} className="uppercase">Cancel</button>
+                                  </div>
+                                </div>
+                              ) : note ? (
+                                <button onClick={() => startEditNote(step.id)}
+                                  style={{ backgroundColor: 'rgba(118,165,143,0.1)', border: '1px solid rgba(118,165,143,0.25)', borderRadius: 6 }}
+                                  className="ml-1 mr-2 mb-2 mt-0.5 flex items-start gap-2 w-[calc(100%-12px)] text-left px-2.5 py-2 hover:bg-[rgba(118,165,143,0.16)] transition-colors">
+                                  <Pin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: '#76A58F' }} />
+                                  <span style={{ color: '#3E5348', fontSize: 12.5, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{note.note}</span>
+                                </button>
+                              ) : (
+                                <button onClick={() => startEditNote(step.id)}
+                                  style={{ color: '#8A9BA6', fontSize: 11 }}
+                                  className="ml-1 mb-1.5 mt-0.5 inline-flex items-center gap-1 hover:text-[#76A58F] transition-colors">
+                                  <Pin className="w-3 h-3" /> Add property note
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))
+              }
+              {allRequiredDone && canComplete && (
+                <button
+                  onClick={() => updateStatus('completed')}
+                  disabled={updatingStatus}
+                  style={{ backgroundColor: '#76A58F', color: '#fff', letterSpacing: '0.08em' }}
+                  className="w-full mt-3 py-3 text-xs uppercase font-medium transition-opacity hover:opacity-90 disabled:opacity-50">
+                  {updatingStatus ? 'Completing…' : '✓ Complete Job'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Completion Record — dispute-proof photo evidence, internal */}
+          {showCompletionRecord && (
+            <div style={{ ...C.card, borderColor: 'rgba(118,165,143,0.3)' }} className="p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle className="w-4 h-4" style={{ color: '#76A58F' }} />
+                <p style={C.label}>Completion Record</p>
+              </div>
+              <p style={{ color: '#3E5348', fontSize: 12.5 }} className="mb-4">
+                {totalCompletedSteps} step{totalCompletedSteps === 1 ? '' : 's'} completed
+                {proofPhotos.length > 0 ? ` · ${proofPhotos.length} documented with photos` : ' · no proof photos captured'}
+                {procedure && ` · ${procedure.title}`}
+              </p>
+              {proofPhotos.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {proofPhotos.map(({ step, p }) => (
+                    <a key={step.id} href={procedurePhotoSrc(p!.proof_photo_path!)} target="_blank" rel="noreferrer"
+                      className="block group">
+                      <div style={{ aspectRatio: '4/3', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(44,62,80,0.1)' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={procedurePhotoSrc(p!.proof_photo_path!)} alt={step.title}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          className="group-hover:opacity-90 transition-opacity" />
+                      </div>
+                      <p style={{ color: '#4A5A65', fontSize: 11, lineHeight: 1.3 }} className="mt-1.5 line-clamp-2">{step.title}</p>
+                      {p!.completed_at && <p style={{ color: '#8A9BA6', fontSize: 10 }}>{formatDateTime(p!.completed_at)}</p>}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Checklist */}
           <div style={C.card} className="p-5">
@@ -292,7 +593,7 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
             <JobNotes
               jobId={job.id}
               notes={jobNotes}
-              onNoteAdded={(note) => {
+              onNoteAdded={() => {
                 window.location.reload()
               }}
               canEdit={userRole !== 'client'}

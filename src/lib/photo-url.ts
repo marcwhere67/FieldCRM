@@ -8,3 +8,9 @@ export function jobPhotoSrc(url: string): string {
   if (i === -1) return url
   return `/api/storage/job-photos/${url.slice(i + MARKER.length)}`
 }
+
+// Procedure reference/proof photos store the raw storage path (no legacy public-URL
+// format to support), so this just builds the signed-URL gateway route directly.
+export function procedurePhotoSrc(path: string): string {
+  return `/api/storage/job-photos/${path}`
+}

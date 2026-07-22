@@ -57,6 +57,35 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
     .eq('org_id', profile!.org_id)
     .order('created_at', { ascending: false })
 
+  // Cleaning procedure matching this job's clean_type (table may not exist yet
+  // pre-migration — queries just come back null, page still renders)
+  let procedure = null
+  let procedureSteps = [] as { id: string; area: string; order_index: number; title: string; description: string | null; is_required: boolean; reference_photo_path: string | null }[]
+  let procedureProgress = [] as { id: string; step_id: string; completed: boolean; completed_by: string | null; completed_at: string | null; proof_photo_path: string | null }[]
+  let propertyNotes = [] as { id: string; step_id: string; note: string }[]
+  if (job.clean_type) {
+    const { data: proc } = await supabase
+      .from('cleaning_procedures')
+      .select('*')
+      .eq('org_id', profile!.org_id)
+      .eq('clean_type', job.clean_type)
+      .eq('status', 'active')
+      .maybeSingle()
+    procedure = proc ?? null
+    if (procedure) {
+      const [{ data: steps }, { data: progress }, { data: notes }] = await Promise.all([
+        supabase.from('procedure_steps').select('*').eq('procedure_id', procedure.id).eq('status', 'active').order('area').order('order_index'),
+        supabase.from('job_procedure_progress').select('*').eq('job_id', id),
+        job.property_id
+          ? supabase.from('property_procedure_notes').select('id, step_id, note').eq('property_id', job.property_id)
+          : Promise.resolve({ data: [] }),
+      ])
+      procedureSteps = steps ?? []
+      procedureProgress = progress ?? []
+      propertyNotes = notes ?? []
+    }
+  }
+
   return (
     <JobDetail
       job={job}
@@ -66,6 +95,11 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       currentUserId={profile!.id}
       userRole={profile!.role}
       myActiveTimesheet={myActive ?? null}
+      procedure={procedure}
+      procedureSteps={procedureSteps}
+      procedureProgress={procedureProgress}
+      propertyNotes={propertyNotes}
+      propertyId={job.property_id ?? null}
     />
   )
 }

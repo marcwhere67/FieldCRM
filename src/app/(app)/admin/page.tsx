@@ -18,6 +18,7 @@ export default async function AdminPage() {
     { data: contracts },
     { data: notices },
     { data: teamMembers },
+    { data: procedures },
   ] = await Promise.all([
     supabase.from('sops').select('*, users!sops_created_by_fkey(full_name)').order('category').order('title'),
     supabase.from('admin_documents').select('*, users!admin_documents_created_by_fkey(full_name)').order('category').order('title'),
@@ -25,6 +26,8 @@ export default async function AdminPage() {
     supabase.from('employee_contracts').select('*, users!employee_contracts_user_id_fkey(full_name, email, role)').order('created_at', { ascending: false }),
     supabase.from('notices').select('*, users!notices_created_by_fkey(full_name)').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
     supabase.from('users').select('id, full_name, email, role').eq('org_id', profile.org_id).eq('is_active', true).order('full_name'),
+    // procedures table may not exist yet if the migration hasn't been run — data comes back null, not a throw
+    supabase.from('cleaning_procedures').select('*, procedure_steps(*)').order('clean_type'),
   ])
 
   return (
@@ -35,6 +38,7 @@ export default async function AdminPage() {
       contracts={contracts ?? []}
       notices={notices ?? []}
       teamMembers={teamMembers ?? []}
+      procedures={procedures ?? []}
       canManage={['admin', 'manager'].includes(profile.role)}
     />
   )

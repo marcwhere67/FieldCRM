@@ -41,7 +41,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, ini
   const [form, setForm] = useState({
     contact_id: initialContactId ?? '', property_id: '', title: '', description: '',
     job_type: 'one_off', status: 'draft', scheduled_start: '', scheduled_end: '',
-    assigned_to: '', instructions: '',
+    assigned_to: '', instructions: '', clean_type: '',
   })
 
   function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
@@ -74,6 +74,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, ini
       scheduled_end: form.scheduled_end ? new Date(form.scheduled_end).toISOString() : null,
       assigned_users: assignedUsers,
       instructions: form.instructions.trim() || null,
+      clean_type: form.clean_type || null,
     }
 
     const { data, error } = await supabase.from('jobs').insert(payload).select('id').single()
@@ -124,6 +125,15 @@ export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, ini
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <span style={labelSt}>Clean type</span>
+              <select value={form.clean_type} onChange={e => set('clean_type', e.target.value)} style={inp}>
+                <option value="">None — no procedure attached</option>
+                <option value="regular">Regular Clean</option>
+                <option value="deep">Deep Clean</option>
+                <option value="airbnb">Airbnb / Turnover</option>
+              </select>
             </div>
           </Section>
 

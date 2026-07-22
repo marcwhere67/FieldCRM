@@ -37,6 +37,7 @@ interface Quote {
   valid_until: string | null; sent_at: string | null; approved_at: string | null; declined_at: string | null
   notes_client: string | null; notes_internal: string | null; line_items: LineItem[]
   deposit_type: string; deposit_value: number; deposit_amount: number; created_at: string
+  clean_type: string | null
   contacts: Contact[] | Contact | null; properties: Property[] | Property | null
 }
 interface Service { id: string; name: string; description: string | null; unit_price: number; unit: string; tax_rate: number }
@@ -98,6 +99,7 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
       const { data: job, error } = await supabase.from('jobs').insert({
         org_id: orgId, contact_id: contact?.id, property_id: property?.id,
         title: `Job from ${quote.quote_number}`, status: 'draft', quote_id: quote.id,
+        clean_type: quote.clean_type ?? null,
       }).select('id').single()
       if (error || !job) { toast.error('Failed to convert to job'); return }
       if (quote.deposit_type !== 'none' && quote.deposit_amount > 0) {

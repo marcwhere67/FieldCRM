@@ -6,7 +6,8 @@ import { DocumentsTab } from './documents-tab'
 import { ContractsTab } from './contracts-tab'
 import { NoticesTab } from './notices-tab'
 import { ClientDocumentsTab } from './client-documents-tab'
-import { FileText, FolderOpen, Users, Megaphone, Folder } from 'lucide-react'
+import { ProceduresTab } from './procedures-tab'
+import { FileText, FolderOpen, Users, Megaphone, Folder, ClipboardCheck } from 'lucide-react'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -17,6 +18,7 @@ const C = {
 const TABS = [
   { id: 'notices', label: 'Notice Board', icon: Megaphone },
   { id: 'sops', label: 'SOPs', icon: FileText },
+  { id: 'procedures', label: 'Procedures', icon: ClipboardCheck },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'client-documents', label: 'Client Documents', icon: Folder },
   { id: 'contracts', label: 'Contracts', icon: Users },
@@ -28,6 +30,8 @@ interface Contract { id: string; title: string; description: string | null; url:
 interface Notice { id: string; title: string; content: string; pinned: boolean; created_at: string; users: { full_name: string } | null }
 interface ClientDoc { id: string; contact_id: string; category: string; title: string; file_size: number | null; created_at: string; users: { full_name: string } | null; contact: { first_name: string; last_name: string } | null }
 interface TeamMember { id: string; full_name: string; email: string; role: string }
+interface ProcedureStep { id: string; procedure_id: string; area: string; order_index: number; title: string; description: string | null; is_required: boolean; reference_photo_path: string | null; status: string }
+interface Procedure { id: string; clean_type: string; title: string; description: string | null; status: string; procedure_steps: ProcedureStep[] }
 
 interface Props {
   sops: SOP[]
@@ -36,10 +40,11 @@ interface Props {
   contracts: Contract[]
   notices: Notice[]
   teamMembers: TeamMember[]
+  procedures: Procedure[]
   canManage: boolean
 }
 
-export function AdminView({ sops, documents, clientDocuments, contracts, notices, teamMembers, canManage }: Props) {
+export function AdminView({ sops, documents, clientDocuments, contracts, notices, teamMembers, procedures, canManage }: Props) {
   const [activeTab, setActiveTab] = useState('notices')
 
   return (
@@ -72,6 +77,7 @@ export function AdminView({ sops, documents, clientDocuments, contracts, notices
 
         <div>
           {activeTab === 'sops' && <SopsTab initialSops={sops} canManage={canManage} />}
+          {activeTab === 'procedures' && <ProceduresTab initialProcedures={procedures} canManage={canManage} />}
           {activeTab === 'documents' && <DocumentsTab initialDocs={documents} canManage={canManage} />}
           {activeTab === 'client-documents' && <ClientDocumentsTab initialDocs={clientDocuments} canManage={canManage} />}
           {activeTab === 'contracts' && <ContractsTab initialContracts={contracts} teamMembers={teamMembers} canManage={canManage} />}
