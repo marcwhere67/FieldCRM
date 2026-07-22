@@ -7,6 +7,15 @@ export function formatCurrency(amount: number, currency = 'AUD'): string {
   }).format(amount)
 }
 
+// Strip the legacy year segment from a document number for display, e.g.
+// "Q-2026-0001" -> "Q-0001", "INV-2026-031" -> "INV-031". New-format numbers
+// like "Q-0128" (no year) pass through unchanged. Cosmetic only — the stored
+// number is never altered, so existing documents keep their real identifiers.
+export function stripDocYear(docNumber: string | null | undefined): string {
+  if (!docNumber) return ''
+  return docNumber.replace(/^([A-Za-z]+)-(?:19|20)\d{2}-(\d+)$/, '$1-$2')
+}
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 

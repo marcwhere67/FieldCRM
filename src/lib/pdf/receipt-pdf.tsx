@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
 import { registerPdfFonts, SERIF } from './fonts'
+import { stripDocYear } from '../format'
 
 registerPdfFonts()
 
@@ -93,7 +94,7 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining, s
           </View>
           <View style={styles.metaBlock}>
             <Text style={styles.docLabel}>Receipt</Text>
-            <Text style={styles.docTitle}>{payment.receipt_number}</Text>
+            <Text style={styles.docTitle}>{stripDocYear(payment.receipt_number)}</Text>
             <Text style={styles.docMeta}>
               {fmtDate(payment.recorded_at)}
             </Text>
@@ -108,7 +109,7 @@ export function ReceiptPDF({ payment, invoice, org, contact, balanceRemaining, s
 
         <View style={styles.row}>
           <Text>Invoice</Text>
-          <Text>{invoice.invoice_number}</Text>
+          <Text>{stripDocYear(invoice.invoice_number)}</Text>
         </View>
         {serviceDate ? (
           <View style={styles.row}>

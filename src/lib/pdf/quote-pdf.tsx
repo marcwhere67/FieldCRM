@@ -2,6 +2,7 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 import path from 'path'
 import { registerPdfFonts, SERIF } from './fonts'
 import { getScope, GENERAL_CONDITIONS } from '../scope-of-work'
+import { stripDocYear } from '../format'
 
 registerPdfFonts()
 
@@ -370,7 +371,7 @@ export function QuotePDF({ quote, org, contact }: Props) {
           </View>
           <View style={styles.metaBlock}>
             <Text style={styles.docLabel}>Quote</Text>
-            <Text style={styles.docTitle}>{quote.quote_number}</Text>
+            <Text style={styles.docTitle}>{stripDocYear(quote.quote_number)}</Text>
             <Text style={styles.docMeta}>
               Quote date: {formatDate(quote.created_at)}{'\n'}
               {quote.valid_until ? `Expiry date: ${formatDate(quote.valid_until)}` : ''}

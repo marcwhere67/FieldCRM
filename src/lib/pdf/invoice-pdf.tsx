@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
 import { registerPdfFonts, SERIF } from './fonts'
+import { stripDocYear } from '../format'
 
 registerPdfFonts()
 
@@ -332,7 +333,7 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
           <View style={styles.metaBlock}>
             {/* "Tax Invoice" is only valid (and required) when GST is charged; plain "Invoice" otherwise */}
             <Text style={styles.docLabel}>{invoice.tax > 0 ? 'Tax Invoice' : 'Invoice'}</Text>
-            <Text style={styles.docTitle}>{invoice.invoice_number}</Text>
+            <Text style={styles.docTitle}>{stripDocYear(invoice.invoice_number)}</Text>
             <Text style={styles.docMeta}>
               Issued: {formatDate(invoice.created_at)}{'\n'}
               {invoice.service_date ? `Service date: ${formatDate(invoice.service_date)}\n` : ''}
@@ -408,7 +409,7 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
               {org.bank_account_name ? `${org.bank_account_name}\n` : ''}
               {org.bank_bsb ? `BSB: ${org.bank_bsb}    ` : ''}{org.bank_account_number ? `Acc: ${org.bank_account_number}` : ''}
               {org.bank_payid ? `\nPayID: ${org.bank_payid}` : ''}
-              {`\nReference: ${invoice.invoice_number}`}
+              {`\nReference: ${stripDocYear(invoice.invoice_number)}`}
               {org.payment_instructions ? `\n${org.payment_instructions}` : ''}
             </Text>
           </View>
