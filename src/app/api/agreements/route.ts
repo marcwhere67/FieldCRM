@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { captureError } from '@/lib/monitor'
+import { generateRecurringJobs } from '@/lib/recurring'
 
 const FREQUENCIES = ['weekly', 'fortnightly', 'four_weekly', 'monthly']
 const SOURCE = 'api/agreements'
@@ -53,6 +54,18 @@ export async function POST(req: NextRequest) {
       source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id, context: { contact_id, frequency },
     })
     return NextResponse.json({ error: error?.message ?? 'Failed to create agreement' }, { status: 400 })
+  }
+
+  // Generate the upcoming jobs now so they land on the schedule immediately,
+  // rather than waiting for the daily cron. Best-effort — the agreement is
+  // already saved, and the cron will backfill if this fails.
+  try {
+    await generateRecurringJobs(createServiceClient())
+  } catch (err) {
+    await captureError(err, {
+      source: SOURCE, level: 'warning', orgId: profile.org_id, userId: profile.id,
+      context: { stage: 'generate_on_create', agreementId: data.id },
+    })
   }
 
   return NextResponse.json({ id: data.id })
