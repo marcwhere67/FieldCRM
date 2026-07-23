@@ -86,9 +86,10 @@ export async function POST(req: Request) {
     const bizName = org?.name ?? 'us'
     const firstName = contact?.first_name?.trim()
     const subject = firstName
-      ? `${firstName}, your quotes from ${bizName} (${sortedQuotes.length} options)`
-      : `Your quotes from ${bizName} (${sortedQuotes.length} options)`
+      ? `${firstName}, your cleaning quotes from ${bizName}`
+      : `Your cleaning quotes from ${bizName}`
     const logoUrl = `${siteUrl}/salt-air-logo.png`
+    const quotesWord = sortedQuotes.length === 2 ? 'both quotes' : 'the quotes'
 
     const quoteRowsHtml = sortedQuotes.map(q => `
       <tr>
@@ -117,13 +118,17 @@ export async function POST(req: Request) {
   <div style="padding: 24px;">
     <p>Hi ${contact?.first_name || 'there'},</p>
 
-    <p>Thank you for your enquiry with ${org?.name}. Please find ${sortedQuotes.length} quotes for the discussed work attached, and summarised below.</p>
+    <p>Thank you for choosing ${org?.name} — we're looking forward to looking after your home.</p>
+
+    <p>For new regular clients, our protocol starts off with a one-off deep clean before your ongoing service begins. It brings the whole home up to our standard from day one and makes every regular clean afterwards more thorough and more consistent. From there, your recurring visits keep everything in top condition with minimal fuss.</p>
+
+    <p>You'll find ${quotesWord} attached and summarised below — the initial deep clean and your ongoing regular service:</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
       ${quoteRowsHtml}
     </table>
 
-    <p>Each quote is valid for 14 days from when it was issued. Click through on the option you'd like to proceed with. For any questions, feel free to call or reply to this email.</p>
+    <p>Each quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.</p>
 
     <p>Kind regards,</p>
 
@@ -139,11 +144,15 @@ export async function POST(req: Request) {
 
     const textBody = `Hi ${contact?.first_name || 'there'},
 
-Thank you for your enquiry with ${org?.name}. Please find ${sortedQuotes.length} quotes for the discussed work attached, and summarised below.
+Thank you for choosing ${org?.name} — we're looking forward to looking after your home.
+
+For new regular clients, our protocol starts off with a one-off deep clean before your ongoing service begins. It brings the whole home up to our standard from day one and makes every regular clean afterwards more thorough and more consistent. From there, your recurring visits keep everything in top condition with minimal fuss.
+
+You'll find ${quotesWord} attached and summarised below — the initial deep clean and your ongoing regular service:
 
 ${quoteRowsText}
 
-Each quote is valid for 14 days from when it was issued. Click through on the option you'd like to proceed with. For any questions, feel free to call or reply to this email.
+Each quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.
 
 Kind regards,
 
