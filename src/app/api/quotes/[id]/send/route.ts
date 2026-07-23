@@ -6,55 +6,75 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { QuotePDF } from '@/lib/pdf/quote-pdf'
-import { formatCurrency } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
+import {
+  buildQuoteEmail, defaultQuoteMessage, defaultQuoteSubject, type EmailShell,
+} from '@/lib/emails/quote-email'
 
 const SOURCE = 'api/quotes/[id]/send'
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+// Shared loader for both the send (POST) and the draft preview (GET) so the
+// "Review & send" modal and the actual send use identical data + defaults.
+async function loadContext(req: Request, id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
   const { data: profile } = await supabase
-    .from('users')
-    .select('id, org_id, full_name')
-    .eq('supabase_auth_id', user.id)
-    .single()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    .from('users').select('id, org_id, full_name').eq('supabase_auth_id', user.id).single()
+  if (!profile) return { error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) }
 
   const { data: quote } = await supabase
     .from('quotes')
     .select('id, quote_number, org_id, contact_id, status, line_items, subtotal, tax, total, notes_client, valid_until, deposit_amount, clean_type, created_at, contacts!quotes_contact_id_fkey(first_name, last_name, email, address_line1, suburb, state, postcode)')
-    .eq('id', id)
-    .eq('org_id', profile.org_id)
-    .single()
-  if (!quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+    .eq('id', id).eq('org_id', profile.org_id).single()
+  if (!quote) return { error: NextResponse.json({ error: 'Quote not found' }, { status: 404 }) }
 
   const contact = Array.isArray(quote.contacts) ? quote.contacts[0] : quote.contacts
   const contactEmail = contact?.email
-  if (!contactEmail) {
-    return NextResponse.json({ error: 'Contact has no email address' }, { status: 400 })
-  }
+  if (!contactEmail) return { error: NextResponse.json({ error: 'Contact has no email address' }, { status: 400 }) }
 
   const { data: org } = await supabase
-    .from('organisations')
-    .select('name, phone, email, address, abn')
-    .eq('id', profile.org_id)
-    .single()
-
+    .from('organisations').select('name, phone, email, address, abn').eq('id', profile.org_id).single()
   const orgEmail = org?.email
   if (!orgEmail) {
-    return NextResponse.json(
-      { error: 'Organisation email not configured. Set it in Settings > Organisation' },
-      { status: 400 },
-    )
+    return { error: NextResponse.json({ error: 'Organisation email not configured. Set it in Settings > Organisation' }, { status: 400 }) }
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
-  const approvalUrl = `${siteUrl}/quote-approval/${quote.id}`
-  const totalFormatted = formatCurrency(Number(quote.total))
+  const shell: EmailShell = {
+    orgName: org?.name ?? 'us', orgEmail, orgPhone: org?.phone ?? null,
+    senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png`,
+  }
+  return {
+    supabase, profile, quote, contact, org, orgEmail, siteUrl, shell,
+    approvalUrl: `${siteUrl}/quote-approval/${quote.id}`,
+    firstName: contact?.first_name?.trim() as string | undefined,
+    contactEmail,
+  }
+}
+
+// GET → the default editable draft for the "Review & send" modal.
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const ctx = await loadContext(req, id)
+  if ('error' in ctx) return ctx.error
+  return NextResponse.json({
+    to: ctx.contactEmail,
+    subject: defaultQuoteSubject(ctx.firstName, ctx.shell.orgName, ctx.quote.quote_number),
+    message: defaultQuoteMessage(ctx.firstName, ctx.shell.orgName),
+  })
+}
+
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const ctx = await loadContext(req, id)
+  if ('error' in ctx) return ctx.error
+  const { supabase, profile, quote, org, contact, orgEmail, contactEmail, shell, approvalUrl, firstName } = ctx
+
+  const body = await req.json().catch(() => ({})) as { subject?: string; message?: string }
+  const subject = body.subject?.trim() || defaultQuoteSubject(firstName, shell.orgName, quote.quote_number)
+  const message = body.message?.trim() || defaultQuoteMessage(firstName, shell.orgName)
 
   let sent = false
   let warning: string | null = null
@@ -67,69 +87,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       React.createElement(QuotePDF, { quote, org, contact }) as React.ReactElement<DocumentProps>,
     )
 
-    const bizName = org?.name ?? 'us'
-    const firstName = contact?.first_name?.trim()
-    const subject = firstName
-      ? `${firstName}, your quote from ${bizName} (${quote.quote_number})`
-      : `Your quote from ${bizName} (${quote.quote_number})`
-    const logoUrl = `${siteUrl}/salt-air-logo.png`
-    const htmlBody = `
-<html>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
-    <tr>
-      <td>
-        <img src="${logoUrl}" alt="${org?.name}" height="40" style="display: block;" />
-      </td>
-    </tr>
-  </table>
-
-  <div style="padding: 24px;">
-    <p>Hi ${contact?.first_name || 'there'},</p>
-
-    <p>Thank you for your enquiry with ${org?.name}. Please find your quote for the discussed work attached.</p>
-
-    <p><strong>Quote Total: ${totalFormatted}</strong></p>
-
-    <p>
-      <a href="${approvalUrl}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-        View &amp; Approve Quote
-      </a>
-    </p>
-
-    <p>This quote is valid for 14 days. If you'd like to proceed, click the button above. For any questions, feel free to call or reply to this email.</p>
-
-    <p>Kind regards,</p>
-
-    <p>
-      ${profile.full_name}<br>
-      ${org?.name}<br>
-      ${org?.phone ? org.phone + '<br>' : ''}${orgEmail}<br>
-      https://saltaircleaning.com.au
-    </p>
-  </div>
-</body>
-</html>`
-
-    const textBody = `Hi ${contact?.first_name || 'there'},
-
-Thank you for your enquiry with ${org?.name}. Please find your quote for the discussed work attached.
-
-Quote Total: ${totalFormatted}
-
-View & Approve: ${approvalUrl}
-
-This quote is valid for 14 days. If you'd like to proceed, click the link above. For any questions, feel free to call or reply to this email.
-
-Kind regards,
-
-${profile.full_name}
-${org?.name}
-${org?.phone ? org.phone + '\n' : ''}${orgEmail}
-https://saltaircleaning.com.au`
-
-    const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
-    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, [
+    const { html, text } = buildQuoteEmail({ message, shell, total: Number(quote.total), approvalUrl })
+    const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
+    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, [
       { filename: `${quote.quote_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
     ])
     sent = true
@@ -147,9 +107,7 @@ https://saltaircleaning.com.au`
   }
 
   const { error } = await supabase
-    .from('quotes')
-    .update({ status: 'sent', sent_at: new Date().toISOString() })
-    .eq('id', id)
+    .from('quotes').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', id)
 
   if (error) {
     await captureError(error, {

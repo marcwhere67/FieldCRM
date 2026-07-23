@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { Plus, FileText, ChevronRight, Send } from 'lucide-react'
+import { Plus, FileText, ChevronRight, Send, Pencil } from 'lucide-react'
+import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   draft:     { bg: 'rgba(44,62,80,0.06)',    color: '#4A5A65', border: 'rgba(44,62,80,0.15)',    dot: '#8A9BA6' },
@@ -44,6 +45,8 @@ export function QuotesList({ quotes, filters, total }: Props) {
   const [isPending, startTransition] = useTransition()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
+  const [loadingDraft, setLoadingDraft] = useState(false)
 
   function updateFilter(key: string, value: string | null) {
     const p = new URLSearchParams()
@@ -71,24 +74,45 @@ export function QuotesList({ quotes, filters, total }: Props) {
   const selectedContactIds = new Set(selectedQuotes.map(q => getContact(q)?.id).filter(Boolean))
   const mixedContacts = selectedContactIds.size > 1
 
-  async function sendSelected() {
+  async function sendSelected(override?: { subject: string; message: string }) {
     if (selectedIds.size < 2 || mixedContacts) return
     setSending(true)
     try {
       const res = await fetch('/api/quotes/send-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quoteIds: Array.from(selectedIds) }),
+        body: JSON.stringify({ quoteIds: Array.from(selectedIds), ...override }),
       })
       const data = await res.json()
       if (!res.ok || !data.sent) throw new Error(data.error ?? 'Failed to send quotes')
       const contact = getContact(selectedQuotes[0])
       toast.success(`${data.count} quotes emailed to ${contact ? `${contact.first_name} ${contact.last_name}` : 'the contact'}`)
       setSelectedIds(new Set())
+      setEmailDraft(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send quotes')
     } finally {
       setSending(false)
+    }
+  }
+
+  // Fetch the default batch draft (no send) and open the editor.
+  async function openBatchReview() {
+    if (selectedIds.size < 2 || mixedContacts) return
+    setLoadingDraft(true)
+    try {
+      const res = await fetch('/api/quotes/send-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteIds: Array.from(selectedIds), preview: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Could not load the email')
+      setEmailDraft(data)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not load the email')
+    } finally {
+      setLoadingDraft(false)
     }
   }
 
@@ -167,24 +191,49 @@ export function QuotesList({ quotes, filters, total }: Props) {
             {selectedIds.size} selected
             {mixedContacts && <span style={{ color: '#f5b942' }}> — must all belong to the same contact to send together</span>}
           </p>
-          <button
-            onClick={sendSelected}
-            disabled={selectedIds.size < 2 || mixedContacts || sending}
-            style={{
-              backgroundColor: selectedIds.size < 2 || mixedContacts ? 'rgba(255,255,255,0.12)' : '#76A58F',
-              color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '6px 14px',
-              display: 'flex', alignItems: 'center', gap: 6,
-              cursor: selectedIds.size < 2 || mixedContacts || sending ? 'default' : 'pointer',
-            }}
-          >
-            <Send className="w-3.5 h-3.5" />
-            {sending
-              ? 'Sending…'
-              : selectedIds.size < 2
-                ? `Select ${2 - selectedIds.size} more to send together`
-                : `Send ${selectedIds.size} quotes in one email`}
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedIds.size >= 2 && !mixedContacts && (
+              <button
+                onClick={openBatchReview}
+                disabled={sending || loadingDraft}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 11,
+                  letterSpacing: '0.05em', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6,
+                  cursor: sending || loadingDraft ? 'default' : 'pointer',
+                }}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                {loadingDraft ? 'Loading…' : 'Review & send'}
+              </button>
+            )}
+            <button
+              onClick={() => sendSelected()}
+              disabled={selectedIds.size < 2 || mixedContacts || sending}
+              style={{
+                backgroundColor: selectedIds.size < 2 || mixedContacts ? 'rgba(255,255,255,0.12)' : '#76A58F',
+                color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '6px 14px',
+                display: 'flex', alignItems: 'center', gap: 6,
+                cursor: selectedIds.size < 2 || mixedContacts || sending ? 'default' : 'pointer',
+              }}
+            >
+              <Send className="w-3.5 h-3.5" />
+              {sending
+                ? 'Sending…'
+                : selectedIds.size < 2
+                  ? `Select ${2 - selectedIds.size} more to send together`
+                  : `Send ${selectedIds.size} quotes in one email`}
+            </button>
+          </div>
         </div>
+      )}
+
+      {emailDraft && (
+        <SendEmailModal
+          draft={emailDraft}
+          sending={sending}
+          onSend={(subject, message) => sendSelected({ subject, message })}
+          onClose={() => setEmailDraft(null)}
+        />
       )}
 
       {/* List */}

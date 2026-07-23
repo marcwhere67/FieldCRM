@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
-import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText, Download } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText, Download, Pencil } from 'lucide-react'
+import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
+import { defaultReceiptMessage } from '@/lib/emails/invoice-email'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
@@ -68,15 +70,42 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
     send_receipt: !!contact?.email,
   })
   const setPay = (k: string, v: string | boolean) => setPayForm(f => ({ ...f, [k]: v }))
+  // Editable receipt message. null = untouched → track the amount live.
+  const [receiptMsg, setReceiptMsg] = useState<string | null>(null)
+  const defaultReceiptMsg = defaultReceiptMessage({
+    firstName: contact?.first_name?.trim(),
+    paidLine: formatCurrency(Number(payForm.amount) || 0),
+    invoiceNumber: invoice.invoice_number,
+  })
+  const receiptValue = receiptMsg ?? defaultReceiptMsg
 
-  async function markSent() {
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
+  const [loadingDraft, setLoadingDraft] = useState(false)
+
+  function markSent(override?: { subject: string; message: string }) {
     if (!contact?.email) { toast.error('Contact has no email address'); return }
     startTransition(async () => {
-      const res = await fetch(`/api/invoices/${invoice.id}/send`, { method: 'POST' })
+      const res = await fetch(`/api/invoices/${invoice.id}/send`, {
+        method: 'POST',
+        ...(override && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(override) }),
+      })
       const data = await res.json().catch(() => null)
       if (!res.ok) { toast.error(data?.error ?? 'Failed to send invoice'); return }
-      toast.success(`Invoice emailed to ${contact.email}`); router.refresh()
+      toast.success(`Invoice emailed to ${contact.email}`); setEmailDraft(null); router.refresh()
     })
+  }
+
+  async function openReview() {
+    if (!contact?.email) { toast.error('Contact has no email address'); return }
+    setLoadingDraft(true)
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/send`)
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Could not load the email'); return }
+      setEmailDraft(data)
+    } finally {
+      setLoadingDraft(false)
+    }
   }
 
   async function recordPayment() {
@@ -84,7 +113,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
     startTransition(async () => {
       const res = await fetch(`/api/invoices/${invoice.id}/payment`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payForm),
+        body: JSON.stringify({ ...payForm, receipt_message: payForm.send_receipt ? receiptValue : undefined }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) { toast.error(data?.error ?? 'Failed to record payment'); return }
@@ -146,7 +175,14 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
 
         <div className="flex items-center gap-2 flex-wrap">
           {canSend && (
-            <button onClick={markSent} disabled={isPending}
+            <button onClick={openReview} disabled={isPending || loadingDraft}
+              style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+              <Pencil className="w-3.5 h-3.5" />{loadingDraft ? 'Loading…' : 'Review & send'}
+            </button>
+          )}
+          {canSend && (
+            <button onClick={() => markSent()} disabled={isPending}
               style={{ backgroundColor: '#2563eb', color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
               className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
               <Send className="w-3.5 h-3.5" />{isPending ? 'Sending…' : 'Send invoice'}
@@ -388,6 +424,14 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
                       Email receipt to {contact.email}
                     </label>
                   )}
+                  {contact?.email && payForm.send_receipt && (
+                    <div>
+                      <label style={lbl}>Receipt message</label>
+                      <textarea value={receiptValue} onChange={e => setReceiptMsg(e.target.value)} rows={5}
+                        style={{ ...inp, height: 'auto', padding: '8px 10px', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }} />
+                      <p style={{ color: C.muted, fontSize: 10, marginTop: 4 }}>Your logo, the paid/balance line and sign-off are added automatically. The receipt PDF will be attached.</p>
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -404,6 +448,15 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
             </div>
           </div>
         </div>
+      )}
+
+      {emailDraft && (
+        <SendEmailModal
+          draft={emailDraft}
+          sending={isPending}
+          onSend={(subject, message) => markSent({ subject, message })}
+          onClose={() => setEmailDraft(null)}
+        />
       )}
     </div>
   )

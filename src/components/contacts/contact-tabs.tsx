@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format'
-import { Briefcase, FileText, Receipt, MessageSquare, StickyNote, Activity, MapPin, Phone, Mail, Building, Folder, Send } from 'lucide-react'
+import { Briefcase, FileText, Receipt, MessageSquare, StickyNote, Activity, MapPin, Phone, Mail, Building, Folder, Send, Pencil } from 'lucide-react'
 import { ContactDocuments, type ClientDocument } from './contact-documents'
+import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
 
 const STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
   draft:       { bg: 'rgba(44,62,80,0.06)',    color: '#4A5A65', border: 'rgba(44,62,80,0.15)' },
@@ -73,6 +74,8 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
     return preselect ? new Set(preselect.split(',')) : new Set()
   })
   const [sendingQuotes, setSendingQuotes] = useState(false)
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
+  const [loadingDraft, setLoadingDraft] = useState(false)
 
   function toggleQuote(id: string) {
     setSelectedQuoteIds(prev => {
@@ -83,23 +86,43 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
     })
   }
 
-  async function sendSelectedQuotes() {
+  async function sendSelectedQuotes(override?: { subject: string; message: string }) {
     if (selectedQuoteIds.size < 2) return
     setSendingQuotes(true)
     try {
       const res = await fetch('/api/quotes/send-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quoteIds: Array.from(selectedQuoteIds) }),
+        body: JSON.stringify({ quoteIds: Array.from(selectedQuoteIds), ...override }),
       })
       const data = await res.json()
       if (!res.ok || !data.sent) throw new Error(data.error ?? 'Failed to send quotes')
       toast.success(`${data.count} quotes emailed to ${contact.first_name}`)
       setSelectedQuoteIds(new Set())
+      setEmailDraft(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send quotes')
     } finally {
       setSendingQuotes(false)
+    }
+  }
+
+  async function openBatchReview() {
+    if (selectedQuoteIds.size < 2) return
+    setLoadingDraft(true)
+    try {
+      const res = await fetch('/api/quotes/send-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteIds: Array.from(selectedQuoteIds), preview: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Could not load the email')
+      setEmailDraft(data)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not load the email')
+    } finally {
+      setLoadingDraft(false)
     }
   }
 
@@ -201,23 +224,40 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
             <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
               <p style={{ color: '#8A9BA6', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Quotes ({quotes.length})</p>
               {selectedQuoteIds.size > 0 && (
-                <button
-                  onClick={sendSelectedQuotes}
-                  disabled={selectedQuoteIds.size < 2 || sendingQuotes}
-                  style={{
-                    backgroundColor: selectedQuoteIds.size < 2 ? 'rgba(44,62,80,0.15)' : '#2C3E50',
-                    color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '6px 14px',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    cursor: selectedQuoteIds.size < 2 || sendingQuotes ? 'default' : 'pointer',
-                  }}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  {sendingQuotes
-                    ? 'Sending…'
-                    : selectedQuoteIds.size < 2
-                      ? `Select ${2 - selectedQuoteIds.size} more to send together`
-                      : `Send ${selectedQuoteIds.size} quotes in one email`}
-                </button>
+                <div className="flex items-center gap-2">
+                  {selectedQuoteIds.size >= 2 && (
+                    <button
+                      onClick={openBatchReview}
+                      disabled={sendingQuotes || loadingDraft}
+                      style={{
+                        backgroundColor: '#fff', border: '1px solid rgba(44,62,80,0.15)', color: '#4A5A65',
+                        fontSize: 11, letterSpacing: '0.05em', padding: '6px 12px',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        cursor: sendingQuotes || loadingDraft ? 'default' : 'pointer',
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      {loadingDraft ? 'Loading…' : 'Review & send'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => sendSelectedQuotes()}
+                    disabled={selectedQuoteIds.size < 2 || sendingQuotes}
+                    style={{
+                      backgroundColor: selectedQuoteIds.size < 2 ? 'rgba(44,62,80,0.15)' : '#2C3E50',
+                      color: '#fff', fontSize: 11, letterSpacing: '0.05em', padding: '6px 14px',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      cursor: selectedQuoteIds.size < 2 || sendingQuotes ? 'default' : 'pointer',
+                    }}
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {sendingQuotes
+                      ? 'Sending…'
+                      : selectedQuoteIds.size < 2
+                        ? `Select ${2 - selectedQuoteIds.size} more to send together`
+                        : `Send ${selectedQuoteIds.size} quotes in one email`}
+                  </button>
+                </div>
               )}
             </div>
             {quotes.length === 0
@@ -311,6 +351,15 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
           </div>
         )}
       </div>
+
+      {emailDraft && (
+        <SendEmailModal
+          draft={emailDraft}
+          sending={sendingQuotes}
+          onSend={(subject, message) => sendSelectedQuotes({ subject, message })}
+          onClose={() => setEmailDraft(null)}
+        />
+      )}
     </div>
   )
 }

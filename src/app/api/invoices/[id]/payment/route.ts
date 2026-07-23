@@ -8,6 +8,9 @@ import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
+import {
+  buildReceiptEmail, defaultReceiptMessage, defaultReceiptSubject, type EmailShell,
+} from '@/lib/emails/invoice-email'
 
 const SOURCE = 'api/invoices/[id]/payment'
 
@@ -31,6 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const reference = body.reference ? String(body.reference).slice(0, 200) : null
   const note = body.note ? String(body.note).slice(0, 500) : null
   const sendReceipt = body.send_receipt !== false
+  const receiptMessage = typeof body.receipt_message === 'string' ? body.receipt_message.trim() : ''
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: 'Enter a payment amount greater than zero' }, { status: 400 })
@@ -121,50 +125,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const fromHeader = org?.name && orgEmail ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : (orgEmail ?? '')
       if (!orgEmail) throw new Error('Organisation email not configured')
 
-      const subject = `Receipt ${payment.receipt_number} from ${org?.name ?? 'us'}`
+      const subject = defaultReceiptSubject(org?.name ?? 'us', payment.receipt_number)
       const paidLine = formatCurrency(Number(payment.amount))
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
-      const logoUrl = `${siteUrl}/salt-air-logo.png`
-      const html = `
-<html>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
-    <tr>
-      <td>
-        <img src="${logoUrl}" alt="${org?.name}" height="40" style="display: block;" />
-      </td>
-    </tr>
-  </table>
-
-  <div style="padding: 24px;">
-    <p>Hi ${contact.first_name || 'there'},</p>
-
-    <p>Thank you — we've received your payment of <strong>${paidLine}</strong> for invoice ${invoice.invoice_number}. Your receipt (${payment.receipt_number}) is attached.</p>
-
-    ${balanceRemaining > 0 ? `<p>Remaining balance: <strong>${formatCurrency(balanceRemaining)}</strong>.</p>` : '<p>This invoice is now paid in full.</p>'}
-
-    <p>Kind regards,</p>
-
-    <p>
-      ${profile.full_name}<br>
-      ${org?.name}<br>
-      ${org?.phone ? org.phone + '<br>' : ''}${orgEmail}<br>
-      https://saltaircleaning.com.au
-    </p>
-  </div>
-</body>
-</html>`
-      const text = `Hi ${contact.first_name || 'there'},
-
-Thank you — we've received your payment of ${paidLine} for invoice ${invoice.invoice_number}. Your receipt (${payment.receipt_number}) is attached.
-${balanceRemaining > 0 ? `Remaining balance: ${formatCurrency(balanceRemaining)}.` : 'This invoice is now paid in full.'}
-
-Kind regards,
-
-${profile.full_name}
-${org?.name}
-${org?.phone ? org.phone + '\n' : ''}${orgEmail}
-https://saltaircleaning.com.au`
+      const shell: EmailShell = {
+        orgName: org?.name ?? 'us', orgEmail, orgPhone: org?.phone ?? null,
+        senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png`,
+      }
+      const message = receiptMessage || defaultReceiptMessage({
+        firstName: contact.first_name?.trim(), paidLine, invoiceNumber: invoice.invoice_number,
+      })
+      const balanceHtml = balanceRemaining > 0
+        ? `<p>Remaining balance: <strong>${formatCurrency(balanceRemaining)}</strong>.</p>`
+        : '<p>This invoice is now paid in full.</p>'
+      const balanceText = balanceRemaining > 0
+        ? `Remaining balance: ${formatCurrency(balanceRemaining)}.`
+        : 'This invoice is now paid in full.'
+      const { html, text } = buildReceiptEmail({ message, shell, balanceHtml, balanceText })
 
       await sendEmailViaGmail(accessToken, fromHeader, contact.email, subject, html, text, [
         { filename: `${payment.receipt_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },

@@ -6,8 +6,10 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
 import { QuotePDF } from '@/lib/pdf/quote-pdf'
-import { formatCurrency } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
+import {
+  buildBatchEmail, defaultBatchMessage, defaultBatchSubject, type EmailShell,
+} from '@/lib/emails/quote-email'
 
 const SOURCE = 'api/quotes/send-batch'
 
@@ -69,6 +71,27 @@ export async function POST(req: Request) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
   const sortedQuotes = [...quotes].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  const firstName = contact?.first_name?.trim()
+  const shell: EmailShell = {
+    orgName: org?.name ?? 'us', orgEmail, orgPhone: org?.phone ?? null,
+    senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png`,
+  }
+  const quoteSummaries = sortedQuotes.map(q => ({ id: q.id, quote_number: q.quote_number, total: Number(q.total) }))
+
+  // Preview mode → return the default editable draft for the "Review & send" modal.
+  if (body?.preview) {
+    return NextResponse.json({
+      to: contactEmail,
+      subject: defaultBatchSubject(firstName, shell.orgName),
+      message: defaultBatchMessage(firstName, shell.orgName),
+      quotes: quoteSummaries,
+    })
+  }
+
+  const subject = typeof body?.subject === 'string' && body.subject.trim()
+    ? body.subject.trim() : defaultBatchSubject(firstName, shell.orgName)
+  const message = typeof body?.message === 'string' && body.message.trim()
+    ? body.message.trim() : defaultBatchMessage(firstName, shell.orgName)
 
   let sent = false
   let warning: string | null = null
@@ -83,86 +106,9 @@ export async function POST(req: Request) {
       return { filename: `${quote.quote_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' }
     }))
 
-    const bizName = org?.name ?? 'us'
-    const firstName = contact?.first_name?.trim()
-    const subject = firstName
-      ? `${firstName}, your cleaning quotes from ${bizName}`
-      : `Your cleaning quotes from ${bizName}`
-    const logoUrl = `${siteUrl}/salt-air-logo.png`
-    const quotesWord = sortedQuotes.length === 2 ? 'both quotes' : 'the quotes'
-
-    const quoteRowsHtml = sortedQuotes.map(q => `
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${q.quote_number}</td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(Number(q.total))}</td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">
-          <a href="${siteUrl}/quote-approval/${q.id}" style="color: #2C3E50; font-weight: bold;">View &amp; Approve</a>
-        </td>
-      </tr>`).join('')
-
-    const quoteRowsText = sortedQuotes.map(q =>
-      `${q.quote_number} — ${formatCurrency(Number(q.total))} — View & Approve: ${siteUrl}/quote-approval/${q.id}`,
-    ).join('\n')
-
-    const htmlBody = `
-<html>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
-    <tr>
-      <td>
-        <img src="${logoUrl}" alt="${org?.name}" height="40" style="display: block;" />
-      </td>
-    </tr>
-  </table>
-
-  <div style="padding: 24px;">
-    <p>Hi ${contact?.first_name || 'there'},</p>
-
-    <p>Thank you for choosing ${org?.name} — we're looking forward to looking after your home.</p>
-
-    <p>For new regular clients, our protocol starts off with a one-off deep clean before your ongoing service begins. It brings the whole home up to our standard from day one and makes every regular clean afterwards more thorough and more consistent. From there, your recurring visits keep everything in top condition with minimal fuss.</p>
-
-    <p>You'll find ${quotesWord} attached and summarised below — the initial deep clean and your ongoing regular service:</p>
-
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
-      ${quoteRowsHtml}
-    </table>
-
-    <p>Each quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.</p>
-
-    <p>Kind regards,</p>
-
-    <p>
-      ${profile.full_name}<br>
-      ${org?.name}<br>
-      ${org?.phone ? org.phone + '<br>' : ''}${orgEmail}<br>
-      https://saltaircleaning.com.au
-    </p>
-  </div>
-</body>
-</html>`
-
-    const textBody = `Hi ${contact?.first_name || 'there'},
-
-Thank you for choosing ${org?.name} — we're looking forward to looking after your home.
-
-For new regular clients, our protocol starts off with a one-off deep clean before your ongoing service begins. It brings the whole home up to our standard from day one and makes every regular clean afterwards more thorough and more consistent. From there, your recurring visits keep everything in top condition with minimal fuss.
-
-You'll find ${quotesWord} attached and summarised below — the initial deep clean and your ongoing regular service:
-
-${quoteRowsText}
-
-Each quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.
-
-Kind regards,
-
-${profile.full_name}
-${org?.name}
-${org?.phone ? org.phone + '\n' : ''}${orgEmail}
-https://saltaircleaning.com.au`
-
-    const fromHeader = org?.name ? `"${org.name.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
-    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, htmlBody, textBody, attachments)
+    const { html, text } = buildBatchEmail({ message, shell, quotes: quoteSummaries, siteUrl })
+    const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
+    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, attachments)
     sent = true
   } catch (err) {
     await captureError(err, {

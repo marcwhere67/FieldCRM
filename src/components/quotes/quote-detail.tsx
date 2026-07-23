@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { QuoteBuilder } from '@/components/quotes/quote-builder'
 import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
-import { ArrowLeft, Send, CheckCircle, Copy, Trash2, Edit2, ExternalLink, MoreHorizontal, Download } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle, Copy, Trash2, Edit2, ExternalLink, MoreHorizontal, Download, Pencil } from 'lucide-react'
+import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
@@ -59,15 +60,36 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
   const approvalUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/quote-approval/${quote.id}`
   const st = STATUS_STYLE[quote.status] ?? STATUS_STYLE.draft
 
-  async function sendQuote() {
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
+  const [loadingDraft, setLoadingDraft] = useState(false)
+
+  function sendQuote(override?: { subject: string; message: string }) {
     if (!contact?.email) { toast.error('Contact has no email address'); return }
     startTransition(async () => {
-      const res = await fetch(`/api/quotes/${quote.id}/send`, { method: 'POST' })
+      const res = await fetch(`/api/quotes/${quote.id}/send`, {
+        method: 'POST',
+        ...(override && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(override) }),
+      })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Failed to send quote'); return }
       toast.success(`Quote emailed to ${contact.email}`)
+      setEmailDraft(null)
       router.refresh()
     })
+  }
+
+  // Fetch the default draft, then open the editor so it can be tweaked before sending.
+  async function openReview() {
+    if (!contact?.email) { toast.error('Contact has no email address'); return }
+    setLoadingDraft(true)
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}/send`)
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Could not load the email'); return }
+      setEmailDraft(data)
+    } finally {
+      setLoadingDraft(false)
+    }
   }
 
   async function deleteQuote() {
@@ -150,7 +172,14 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
             </Link>
           )}
           {quote.status === 'draft' && (
-            <button onClick={sendQuote} disabled={isPending}
+            <button onClick={openReview} disabled={isPending || loadingDraft}
+              style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+              <Pencil className="w-3.5 h-3.5" />{loadingDraft ? 'Loading…' : 'Review & send'}
+            </button>
+          )}
+          {quote.status === 'draft' && (
+            <button onClick={() => sendQuote()} disabled={isPending}
               style={{ backgroundColor: C.navy, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
               className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
               <Send className="w-3.5 h-3.5" />Send & notify
@@ -345,6 +374,15 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
           </div>
         )}
       </div>
+
+      {emailDraft && (
+        <SendEmailModal
+          draft={emailDraft}
+          sending={isPending}
+          onSend={(subject, message) => sendQuote({ subject, message })}
+          onClose={() => setEmailDraft(null)}
+        />
+      )}
     </div>
   )
 }
