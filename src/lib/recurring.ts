@@ -91,6 +91,7 @@ interface Agreement {
   title: string; frequency: Frequency; anchor_date: string; start_time: string
   duration_minutes: number; end_date: string | null; line_items: unknown
   assigned_users: string[] | null; instructions: string | null; last_generated_date: string | null
+  first_visit_date: string | null
 }
 
 // Generate scheduled jobs for every active agreement, rolling `horizonDays`
@@ -105,11 +106,32 @@ export async function generateRecurringJobs(supabase: SupabaseClient, horizonDay
 
   let created = 0
 
+  // Insert one recurring job for `date` (Melbourne wall-clock). Returns true on success.
+  async function insertJob(a: Agreement, date: string): Promise<boolean> {
+    const startISO = melbourneToUtcISO(date, a.start_time)
+    const endISO = new Date(new Date(startISO).getTime() + (a.duration_minutes || 120) * 60000).toISOString()
+    const { error } = await supabase.from('jobs').insert({
+      org_id: a.org_id,
+      contact_id: a.contact_id,
+      property_id: a.property_id,
+      job_number: '', // assigned by BEFORE INSERT trigger (Track A)
+      title: a.title,
+      job_type: 'recurring',
+      service_agreement_id: a.id,
+      status: 'scheduled',
+      scheduled_start: startISO,
+      scheduled_end: endISO,
+      assigned_users: a.assigned_users ?? [],
+      instructions: a.instructions,
+      line_items: a.line_items ?? [],
+    })
+    return !error
+  }
+
   for (const a of (agreements ?? []) as Agreement[]) {
     // Include the anchor itself on first run by starting the day before it.
     const fromExclusive = a.last_generated_date ?? fmt(new Date(parse(a.anchor_date).getTime() - 86400000))
     const dates = occurrencesBetween(a.anchor_date, a.frequency, fromExclusive, horizonStr, a.end_date)
-    if (dates.length === 0) continue
 
     // Idempotency guard: which occurrences already have a job?
     const { data: existing } = await supabase
@@ -118,30 +140,23 @@ export async function generateRecurringJobs(supabase: SupabaseClient, horizonDay
       .gte('scheduled_start', melbourneToUtcISO(todayStr, '00:00'))
     const existingDates = new Set((existing ?? []).map(j => melbourneDateOnly(j.scheduled_start as string)))
 
+    // Optional one-off first visit on a different day than the ongoing cadence
+    // (e.g. first clean on a Tuesday, then the regular Thursday schedule). Added
+    // additively; the cursor below is unaffected so the cadence rolls normally.
+    if (a.first_visit_date && a.first_visit_date >= todayStr && a.first_visit_date <= horizonStr && !existingDates.has(a.first_visit_date)) {
+      if (await insertJob(a, a.first_visit_date)) {
+        created++
+        existingDates.add(a.first_visit_date)
+      }
+    }
+
+    if (dates.length === 0) continue
+
     let lastGen = a.last_generated_date
     for (const date of dates) {
       lastGen = date
       if (existingDates.has(date)) continue
-
-      const startISO = melbourneToUtcISO(date, a.start_time)
-      const endISO = new Date(new Date(startISO).getTime() + (a.duration_minutes || 120) * 60000).toISOString()
-
-      const { error } = await supabase.from('jobs').insert({
-        org_id: a.org_id,
-        contact_id: a.contact_id,
-        property_id: a.property_id,
-        job_number: '', // assigned by BEFORE INSERT trigger (Track A)
-        title: a.title,
-        job_type: 'recurring',
-        service_agreement_id: a.id,
-        status: 'scheduled',
-        scheduled_start: startISO,
-        scheduled_end: endISO,
-        assigned_users: a.assigned_users ?? [],
-        instructions: a.instructions,
-        line_items: a.line_items ?? [],
-      })
-      if (!error) created++
+      if (await insertJob(a, date)) created++
     }
 
     if (lastGen && lastGen !== a.last_generated_date) {

@@ -12,7 +12,7 @@ export default async function AgreementDetailPage({ params }: { params: Promise<
   const { data: agreement } = await supabase
     .from('service_agreements')
     .select(`
-      id, title, frequency, anchor_date, start_time, duration_minutes, end_date, active,
+      id, title, frequency, anchor_date, first_visit_date, start_time, duration_minutes, end_date, active,
       line_items, instructions, assigned_users, last_generated_date, property_id,
       contacts!service_agreements_contact_id_fkey(id, first_name, last_name),
       properties!service_agreements_property_id_fkey(id, label, address_line1, suburb)

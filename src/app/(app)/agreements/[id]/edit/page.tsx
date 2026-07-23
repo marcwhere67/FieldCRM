@@ -12,7 +12,7 @@ export default async function EditAgreementPage({ params }: { params: Promise<{ 
 
   const [{ data: agreement }, { data: contacts }, { data: properties }, { data: team }] = await Promise.all([
     supabase.from('service_agreements')
-      .select('id, contact_id, property_id, title, frequency, anchor_date, start_time, duration_minutes, end_date, instructions, assigned_users, line_items')
+      .select('id, contact_id, property_id, title, frequency, anchor_date, first_visit_date, start_time, duration_minutes, end_date, instructions, assigned_users, line_items')
       .eq('id', id).eq('org_id', profile.org_id).single(),
     supabase.from('contacts').select('id, first_name, last_name, company_name').eq('org_id', profile.org_id).order('first_name').limit(500),
     supabase.from('properties').select('id, label, address_line1, suburb, contact_id').eq('org_id', profile.org_id).limit(1000),

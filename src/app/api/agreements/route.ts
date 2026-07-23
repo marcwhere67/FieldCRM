@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     title,
     frequency,
     anchor_date,
+    first_visit_date: /^\d{4}-\d{2}-\d{2}$/.test(body.first_visit_date) ? String(body.first_visit_date) : null,
     start_time: /^\d{2}:\d{2}/.test(body.start_time) ? String(body.start_time).slice(0, 5) : '09:00',
     duration_minutes: Number.isFinite(Number(body.duration_minutes)) ? Math.max(15, Number(body.duration_minutes)) : 120,
     end_date: /^\d{4}-\d{2}-\d{2}$/.test(body.end_date) ? String(body.end_date) : null,

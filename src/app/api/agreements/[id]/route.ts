@@ -29,6 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (typeof body.title === 'string' && body.title.trim()) patch.title = body.title.trim()
   if (FREQUENCIES.includes(body.frequency)) patch.frequency = body.frequency
   if (/^\d{4}-\d{2}-\d{2}$/.test(body.anchor_date)) patch.anchor_date = body.anchor_date
+  if (body.first_visit_date === null || /^\d{4}-\d{2}-\d{2}$/.test(body.first_visit_date)) patch.first_visit_date = body.first_visit_date || null
   if (/^\d{2}:\d{2}/.test(body.start_time)) patch.start_time = String(body.start_time).slice(0, 5)
   if (Number.isFinite(Number(body.duration_minutes))) patch.duration_minutes = Math.max(15, Number(body.duration_minutes))
   if (body.end_date === null || /^\d{4}-\d{2}-\d{2}$/.test(body.end_date)) patch.end_date = body.end_date || null

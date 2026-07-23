@@ -179,10 +179,29 @@ export function QuoteCalculator() {
 
   function createQuoteFromCalc() {
     const beds = inp.queenBeds + inp.twinBeds
+    // Enumerate every selected room/area so nothing gets dropped from the quote.
+    const rooms = [
+      beds > 0 ? `${beds} bedroom${beds > 1 ? 's' : ''}` : '',
+      inp.fullBaths > 0 ? `${inp.fullBaths} bathroom${inp.fullBaths > 1 ? 's' : ''}` : '',
+      inp.powderRooms > 0 ? `${inp.powderRooms} powder room${inp.powderRooms > 1 ? 's' : ''}` : '',
+      inp.kitchens > 0 ? `${inp.kitchens} kitchen${inp.kitchens > 1 ? 's' : ''}` : '',
+      inp.livingRooms > 0 ? `${inp.livingRooms} living/games room${inp.livingRooms > 1 ? 's' : ''}` : '',
+      inp.diningAreas > 0 ? `${inp.diningAreas} dining area${inp.diningAreas > 1 ? 's' : ''}` : '',
+      inp.offices > 0 ? `${inp.offices} office${inp.offices > 1 ? 's' : ''}` : '',
+      inp.laundries > 0 ? `${inp.laundries} laundry${inp.laundries > 1 ? 'ies' : ''}` : '',
+    ].filter(Boolean)
+    // Add-ons the calculator prices separately.
+    const addOns = [
+      inp.linenBeds > 0 ? `linen service (${inp.linenBeds} bed)` : '',
+      inp.ovenClean ? 'oven clean' : '',
+      inp.interiorFridge ? 'interior fridge' : '',
+      inp.balcony ? 'balcony' : '',
+      inp.vanityCupboards ? 'vanity cupboards' : '',
+    ].filter(Boolean)
     const parts = [
       CLEAN_LABELS[inp.cleanType],
-      beds > 0 ? `${beds} bed` : '',
-      inp.fullBaths > 0 ? `${inp.fullBaths} bath` : '',
+      rooms.length ? rooms.join(', ') : '',
+      addOns.length ? `+ ${addOns.join(', ')}` : '',
       inp.frequency !== 'oneoff' ? FREQ_LABELS[inp.frequency] : '',
     ].filter(Boolean)
     const params = new URLSearchParams({

@@ -324,10 +324,12 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
           <View>
             <Text style={styles.sectionLabel}>Bill to</Text>
             <Text style={styles.billTo}>
-              {contact.first_name} {contact.last_name}{'\n'}
-              {contact.email}
-              {contact.address_line1 ? `\n${contact.address_line1}` : ''}
-              {contact.suburb ? `\n${contact.suburb}${contact.state ? ` ${contact.state}` : ''}${contact.postcode ? ` ${contact.postcode}` : ''}` : ''}
+              {[
+                `${contact.first_name} ${contact.last_name}`.trim(),
+                contact.address_line1 || '',
+                contact.suburb ? `${contact.suburb}${contact.state ? ` ${contact.state}` : ''}${contact.postcode ? ` ${contact.postcode}` : ''}` : '',
+                contact.email || '',
+              ].filter(Boolean).join('\n')}
             </Text>
           </View>
           <View style={styles.metaBlock}>

@@ -21,7 +21,7 @@ type One<T> = T | T[] | null
 function one<T>(v: One<T>): T | null { return Array.isArray(v) ? (v[0] ?? null) : v }
 
 interface Agreement {
-  id: string; title: string; frequency: string; anchor_date: string; start_time: string
+  id: string; title: string; frequency: string; anchor_date: string; first_visit_date: string | null; start_time: string
   duration_minutes: number; end_date: string | null; active: boolean; line_items: unknown
   instructions: string | null; last_generated_date: string | null; property_id: string | null
   contacts: One<{ id: string; first_name: string; last_name: string }>
@@ -111,7 +111,8 @@ export function AgreementDetail({ agreement, jobs, isManager }: { agreement: Agr
         {[
           ['Property', property ? (property.label || property.address_line1) + (property.suburb ? `, ${property.suburb}` : '') : 'Not set'],
           ['Duration', `${agreement.duration_minutes} min`],
-          ['Starts', formatDate(agreement.anchor_date)],
+          ['Regular schedule starts', formatDate(agreement.anchor_date)],
+          ...(agreement.first_visit_date ? [['First visit', formatDate(agreement.first_visit_date)] as [string, string]] : []),
           ['Ends', agreement.end_date ? formatDate(agreement.end_date) : 'No end (ongoing)'],
         ].map(([k, v]) => (
           <div key={k}>

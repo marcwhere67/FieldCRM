@@ -30,6 +30,7 @@ interface Line { description: string; quantity: number; unit_price: number; tax_
 export interface ExistingAgreement {
   id: string; contact_id: string; property_id: string | null; title: string; frequency: Frequency
   anchor_date: string; start_time: string; duration_minutes: number; end_date: string | null
+  first_visit_date?: string | null
   instructions: string | null; assigned_users: string[] | null; line_items: Line[] | null
 }
 
@@ -44,6 +45,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
   const [title, setTitle] = useState(existing?.title ?? '')
   const [frequency, setFrequency] = useState<Frequency>(existing?.frequency ?? 'fortnightly')
   const [anchorDate, setAnchorDate] = useState(existing?.anchor_date ?? melbourneDateOnly())
+  const [firstVisitDate, setFirstVisitDate] = useState(existing?.first_visit_date ?? '')
   const [startTime, setStartTime] = useState((existing?.start_time ?? '09:00').slice(0, 5))
   const [duration, setDuration] = useState(existing?.duration_minutes ?? 120)
   const [endDate, setEndDate] = useState(existing?.end_date ?? '')
@@ -59,8 +61,13 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
     if (!anchorDate) return []
     const dayBefore = melbourneDateOnly(new Date(new Date(anchorDate + 'T00:00:00Z').getTime() - 86400000))
     const horizon = melbourneDateOnly(new Date(new Date(anchorDate + 'T00:00:00Z').getTime() + 120 * 86400000))
-    return occurrencesBetween(anchorDate, frequency, dayBefore, horizon, endDate || null).slice(0, 4)
-  }, [anchorDate, frequency, endDate])
+    const cadence = occurrencesBetween(anchorDate, frequency, dayBefore, horizon, endDate || null)
+    // Prepend the optional one-off first visit so the preview matches generation.
+    const withFirst = firstVisitDate && !cadence.includes(firstVisitDate)
+      ? [firstVisitDate, ...cadence].sort()
+      : cadence
+    return withFirst.slice(0, 5)
+  }, [anchorDate, frequency, endDate, firstVisitDate])
 
   function updateLine(i: number, field: 'description' | 'quantity' | 'unit_price', value: string) {
     setLines(prev => prev.map((l, idx) => {
@@ -80,7 +87,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
         method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title, contact_id: contactId, property_id: propertyId || null, frequency,
-          anchor_date: anchorDate, start_time: startTime, duration_minutes: duration,
+          anchor_date: anchorDate, first_visit_date: firstVisitDate || null, start_time: startTime, duration_minutes: duration,
           end_date: endDate || null, instructions: instructions || null,
           assigned_users: assignees,
           line_items: lines.filter(l => l.description.trim() || l.unit_price > 0),
@@ -142,8 +149,14 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
           </select>
         </div>
         <div>
-          <span style={label}>First date *</span>
+          <span style={label}>Regular schedule starts *</span>
           <input type="date" value={anchorDate} onChange={e => setAnchorDate(e.target.value)} style={inp} />
+          <span style={{ color: C.muted, fontSize: 10, marginTop: 3, display: 'block' }}>The day the recurring visits follow (e.g. every Thursday).</span>
+        </div>
+        <div>
+          <span style={label}>First visit — if different (optional)</span>
+          <input type="date" value={firstVisitDate} onChange={e => setFirstVisitDate(e.target.value)} style={inp} />
+          <span style={{ color: C.muted, fontSize: 10, marginTop: 3, display: 'block' }}>Only if the very first clean is on a different day (e.g. a Tuesday) than the regular schedule.</span>
         </div>
         <div>
           <span style={label}>Start time</span>
