@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { computeTotals, lineSubtotal, depositAmount as calcDeposit } from '@/lib/money'
-import { Plus, Trash2, ChevronLeft, Send, Save } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, Send, Save, Pencil } from 'lucide-react'
+import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
 import Link from 'next/link'
 import { AiQuoteAssist } from '@/components/ai/ai-quote-assist'
 
@@ -48,6 +49,8 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
+  const [reviewQuoteId, setReviewQuoteId] = useState<string | null>(null)
   const existingContact = existingQuote?.contacts
     ? (Array.isArray(existingQuote.contacts) ? existingQuote.contacts[0] : existingQuote.contacts) : null
   const [contactId, setContactId] = useState(existingQuote?.contact_id ?? existingContact?.id ?? '')
@@ -83,12 +86,12 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
 
   function removeLine(index: number) { setLineItems(prev => prev.filter((_, i) => i !== index)) }
 
-  async function saveQuote(action: 'draft' | 'sent') {
+  async function saveQuote(action: 'draft' | 'sent' | 'review') {
     if (!contactId) { toast.error('Please select a client'); return }
     if (lineItems.length === 0) { toast.error('Add at least one line item'); return }
 
     // Sending emails the quote — the client must have an email address.
-    if (action === 'sent') {
+    if (action === 'sent' || action === 'review') {
       const c = contacts.find(x => x.id === contactId)
       if (!c?.email) { toast.error('This client has no email address — add one, or save as draft'); return }
     }
@@ -116,6 +119,17 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
       return
     }
 
+    if (action === 'review') {
+      // Draft is saved; load the default email and open the editor before sending.
+      const res = await fetch(`/api/quotes/${quoteId}/send`)
+      const draft = await res.json().catch(() => null)
+      setSaving(false)
+      if (!res.ok) { toast.error(draft?.error ?? 'Saved as draft — could not load the email'); router.push(`/quotes/${quoteId}`); return }
+      setReviewQuoteId(quoteId!)
+      setEmailDraft(draft)
+      return
+    }
+
     // action === 'sent' — actually email the quote (PDF attached) via the send route
     const res = await fetch(`/api/quotes/${quoteId}/send`, { method: 'POST' })
     const data = await res.json().catch(() => null)
@@ -126,6 +140,22 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
       toast.success('Quote sent')
     }
     router.push(`/quotes/${quoteId}`)
+  }
+
+  // Send the reviewed/edited email for the already-saved draft.
+  async function sendReviewedQuote(subject: string, message: string) {
+    if (!reviewQuoteId) return
+    setSaving(true)
+    const res = await fetch(`/api/quotes/${reviewQuoteId}/send`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, message }),
+    })
+    const data = await res.json().catch(() => null)
+    setSaving(false)
+    if (!res.ok) toast.error(data?.error ? `Saved as draft — sending failed: ${data.error}` : 'Saved as draft, but sending failed')
+    else toast.success('Quote sent')
+    setEmailDraft(null)
+    router.push(`/quotes/${reviewQuoteId}`)
   }
 
   const catalogueItems: CatalogueItem[] = [...services.map(s => ({ ...s, type: 'service' as const })), ...products.filter(p => !services.some(s => s.name === p.name))]
@@ -157,6 +187,11 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', border: `1px solid ${C.border}`, color: C.muted, background: '#fff', cursor: 'pointer' }}
             className="uppercase hover:opacity-70 transition-opacity">
             <Save style={{ width: 12, height: 12 }} />Save draft
+          </button>
+          <button onClick={() => saveQuote('review')} disabled={saving}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', border: `1px solid ${C.border}`, color: '#4A5A65', background: '#fff', cursor: 'pointer' }}
+            className="uppercase hover:opacity-70 transition-opacity">
+            <Pencil style={{ width: 12, height: 12 }} />Review & send
           </button>
           <button onClick={() => saveQuote('sent')} disabled={saving}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', backgroundColor: C.navy, color: '#fff', border: 'none', cursor: 'pointer' }}
@@ -374,6 +409,11 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
                 className="uppercase hover:opacity-90 transition-opacity">
                 <Send style={{ width: 12, height: 12 }} />Send quote
               </button>
+              <button onClick={() => saveQuote('review')} disabled={saving}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', fontSize: 11, letterSpacing: '0.08em', border: `1px solid ${C.border}`, color: '#4A5A65', background: '#fff', cursor: 'pointer' }}
+                className="uppercase hover:opacity-70 transition-opacity">
+                <Pencil style={{ width: 12, height: 12 }} />Review & send
+              </button>
               <button onClick={() => saveQuote('draft')} disabled={saving}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', fontSize: 11, letterSpacing: '0.08em', border: `1px solid ${C.border}`, color: C.muted, background: '#fff', cursor: 'pointer' }}
                 className="uppercase hover:opacity-70 transition-opacity">
@@ -383,6 +423,15 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
           </div>
         </div>
       </div>
+
+      {emailDraft && (
+        <SendEmailModal
+          draft={emailDraft}
+          sending={saving}
+          onSend={sendReviewedQuote}
+          onClose={() => setEmailDraft(null)}
+        />
+      )}
     </div>
   )
 }
