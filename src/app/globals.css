@@ -171,6 +171,11 @@
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
   }
+  /* Stop the whole page rubber-banding on mobile — scrolling happens inside the
+     app's <main> container, not the body. */
+  html, body {
+    overscroll-behavior: none;
+  }
   h1, h2, h3 {
     font-family: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
     font-weight: 400;

@@ -23,8 +23,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom stays enabled so users can zoom in/out to see a whole screen.
   themeColor: "#76A58F",
 };
 

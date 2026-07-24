@@ -59,7 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      <div className="flex h-screen bg-[#F5F0EB]">
+      <div className="flex h-screen h-[100dvh] bg-[#F5F0EB]">
         {/* Sidebar — desktop only */}
         <div className="hidden md:flex">
           <Sidebar role={profile?.role ?? 'admin'} />
@@ -69,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             userName={profile?.full_name ?? user.email ?? 'User'}
             userRole={profile?.role ?? 'admin'}
           />
-          <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6">
+          <main className="flex-1 overflow-y-auto overscroll-contain p-4 pb-24 md:p-6">
             {children}
           </main>
         </div>
