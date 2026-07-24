@@ -44,7 +44,7 @@ interface Contact {
   first_name: string; last_name: string; email: string | null; phone: string | null
   company_name: string | null; address_line1: string | null; suburb: string | null
   state: string | null; postcode: string | null; source: string | null; notes: string | null
-  created_at: string; custom_fields: Record<string, unknown>
+  created_at: string; custom_fields: Record<string, unknown>; do_not_contact: boolean | null
 }
 
 interface Props {
@@ -170,6 +170,39 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
                   </div>
                 ))}
               </dl>
+
+              {(() => {
+                const cf = contact.custom_fields ?? {}
+                const prefs = [
+                  { label: 'Preferred method', value: cf.preferred_contact },
+                  { label: 'Best days',        value: cf.preferred_days },
+                  { label: 'Best time',        value: cf.preferred_time },
+                ].filter(p => typeof p.value === 'string' && p.value)
+                const consented = contact.do_not_contact === false
+                return (prefs.length > 0 || contact.do_not_contact != null) && (
+                  <div className="pt-4">
+                    <p style={{ color: '#8A9BA6', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>Contact Preferences</p>
+                    <dl className="space-y-3">
+                      {prefs.map(({ label, value }) => (
+                        <div key={label} className="flex items-start gap-3" style={{ borderBottom: '1px solid rgba(44,62,80,0.06)', paddingBottom: 10 }}>
+                          <Activity className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: '#8A9BA6' }} />
+                          <div>
+                            <dt style={{ color: '#8A9BA6', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 1 }}>{label}</dt>
+                            <dd style={{ color: '#1C2A35', fontSize: 13 }}>{value as string}</dd>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex items-start gap-3">
+                        <Activity className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: '#8A9BA6' }} />
+                        <div>
+                          <dt style={{ color: '#8A9BA6', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 1 }}>Marketing</dt>
+                          <dd style={{ color: consented ? '#3f6b57' : '#b45309', fontSize: 13 }}>{consented ? 'Opted in' : 'Do not contact'}</dd>
+                        </div>
+                      </div>
+                    </dl>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="space-y-4">

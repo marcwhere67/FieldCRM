@@ -49,6 +49,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
   // contact fields, so they're folded into custom_fields/notes only.
   const frequency = cap(raw.frequency ?? raw.frequency_other, 100)
   const propertyType = cap(raw.property_type ?? raw.property_type_other, 100)
+
+  // Contact preferences from the website form's "Contact Preferences" block.
+  const preferredContact = cap(raw.preferred_contact, 40)
+  const preferredDays = cap(raw.preferred_days, 40)
+  const preferredTime = cap(raw.preferred_time, 40)
+  // Marketing consent is opt-in: the checkbox only appears in the payload when
+  // ticked (value 'yes'). No consent => do_not_contact = true (AU Spam Act).
+  const marketingConsent = raw.marketing_consent === 'yes' || raw.marketing_consent === true
+
   const rooms = ['bedrooms', 'bathrooms', 'kitchen', 'powder_rooms', 'laundry', 'office']
     .map(k => [k, raw[k]])
     .filter(([, v]) => v && Number(v) > 0)
@@ -89,7 +98,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
     status: 'lead',
     source: 'website',
     pipeline_stage_id: stage?.id ?? null,
-    custom_fields: { ...(serviceType && { service_type: serviceType }), ...(frequency && { frequency }) },
+    custom_fields: {
+      ...(serviceType && { service_type: serviceType }),
+      ...(frequency && { frequency }),
+      ...(preferredContact && { preferred_contact: preferredContact }),
+      ...(preferredDays && { preferred_days: preferredDays }),
+      ...(preferredTime && { preferred_time: preferredTime }),
+    },
+    // Opt-in marketing consent drives the AU Spam Act flag used by
+    // campaigns/[id]/send + automation-engine + the /unsubscribe flow.
+    do_not_contact: !marketingConsent,
     notes: notesParts.join('\n') || null,
   })
 

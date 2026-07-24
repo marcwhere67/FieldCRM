@@ -50,7 +50,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex flex-col justify-between w-80 shrink-0 p-10" style={{ backgroundColor: '#2C3E50' }}>
         <div>
           <div className="bg-white px-4 py-3 inline-block">
-            <img src="/salt-air-logo.png" alt="Salt Air Cleaning" className="h-12 w-auto" />
+            <img src="/salt-air-logo-web.png" alt="Salt Air Cleaning" className="h-16 w-auto" />
           </div>
           <p style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.2em' }} className="text-[9px] uppercase mt-3">FieldCRM</p>
         </div>
@@ -70,7 +70,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden text-center">
-            <img src="/salt-air-logo.svg" alt="Salt Air Cleaning" className="h-20 w-auto mx-auto" />
+            <img src="/salt-air-logo-web.png" alt="Salt Air Cleaning" className="h-24 w-auto mx-auto" />
           </div>
 
           <div>
