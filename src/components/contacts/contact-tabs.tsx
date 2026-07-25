@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format'
@@ -68,6 +68,10 @@ export function ContactTabs({ contact, jobs, quotes, invoices, conversations, do
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(TABS.some(t => t.id === initialTab) ? initialTab! : 'overview')
+
+  useEffect(() => {
+    if (initialTab && TABS.some(t => t.id === initialTab)) setActiveTab(initialTab)
+  }, [initialTab])
 
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<Set<string>>(() => {
     const preselect = searchParams.get('preselect')

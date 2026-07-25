@@ -161,13 +161,14 @@ export function ContactHeader({ contact, pipelineStages, teamMembers }: Props) {
         {/* Action buttons */}
         <div style={{ borderTop: '1px solid rgba(44,62,80,0.08)', marginTop: 16, paddingTop: 16 }} className="flex flex-wrap gap-2">
           {[
-            { label: 'Send message', icon: MessageSquare, primary: true },
-            { label: 'New quote',    icon: FileText,      primary: false },
-            { label: 'Book job',     icon: Briefcase,     primary: false },
-            { label: 'Add note',     icon: StickyNote,    primary: false },
-          ].map(({ label, icon: Icon, primary }) => (
+            { label: 'Send message', icon: MessageSquare, primary: true,  onClick: () => router.push(`/inbox?contact_id=${contact.id}`) },
+            { label: 'New quote',    icon: FileText,      primary: false, onClick: () => router.push(`/quotes/new?contact_id=${contact.id}`) },
+            { label: 'Book job',     icon: Briefcase,     primary: false, onClick: () => router.push(`/jobs/new?contact_id=${contact.id}`) },
+            { label: 'Add note',     icon: StickyNote,    primary: false, onClick: () => router.push(`/contacts/${contact.id}?tab=notes`) },
+          ].map(({ label, icon: Icon, primary, onClick }) => (
             <button
               key={label}
+              onClick={onClick}
               style={primary
                 ? { backgroundColor: '#2C3E50', color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }
                 : { backgroundColor: '#fff', color: '#4A5A65', border: '1px solid rgba(44,62,80,0.15)', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }
