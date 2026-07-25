@@ -79,7 +79,11 @@ export function CampaignsList({ initialCampaigns, pipelineStages, canManage }: P
       const res = await fetch(`/api/campaigns/${campaign.id}/send`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success(`Sent to ${data.recipient_count} contacts`)
+      toast.success(
+        data.failed_count
+          ? `Sent to ${data.recipient_count} contacts (${data.failed_count} failed)`
+          : `Sent to ${data.recipient_count} contacts`
+      )
       setCampaigns(prev => prev.map(c => c.id === campaign.id ? data.campaign : c))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Send failed')
@@ -211,8 +215,8 @@ export function CampaignsList({ initialCampaigns, pipelineStages, canManage }: P
                                   className="hover:opacity-70 transition-opacity">
                                   <Edit2 style={{ width: 12, height: 12 }} />
                                 </button>
-                                <button title="Send now" onClick={() => handleSend(c)} disabled={sending === c.id}
-                                  style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, color: C.muted, background: '#fff', cursor: sending === c.id ? 'default' : 'pointer' }}
+                                <button title={c.type !== 'email' ? 'SMS campaigns are not wired up yet' : 'Send now'} onClick={() => handleSend(c)} disabled={sending === c.id || c.type !== 'email'}
+                                  style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, color: C.muted, background: '#fff', cursor: (sending === c.id || c.type !== 'email') ? 'default' : 'pointer', opacity: c.type !== 'email' ? 0.4 : 1 }}
                                   className="hover:opacity-70 transition-opacity">
                                   {sending === c.id
                                     ? <span style={{ width: 12, height: 12, display: 'block', border: `2px solid ${C.muted}`, borderTopColor: 'transparent', borderRadius: '50%' }} className="animate-spin" />

@@ -53,7 +53,11 @@ export function CampaignDetail({ campaign: initial, pipelineStages, canManage }:
       const res = await fetch(`/api/campaigns/${campaign.id}/send`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success(`Sent to ${data.recipient_count} contacts`)
+      toast.success(
+        data.failed_count
+          ? `Sent to ${data.recipient_count} contacts (${data.failed_count} failed)`
+          : `Sent to ${data.recipient_count} contacts`
+      )
       setCampaign(data.campaign)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Send failed')
@@ -109,8 +113,9 @@ export function CampaignDetail({ campaign: initial, pipelineStages, canManage }:
                   className="uppercase hover:opacity-70 transition-opacity">
                   <Edit2 style={{ width: 12, height: 12 }} />Edit
                 </button>
-                <button onClick={handleSend} disabled={sending}
-                  style={{ backgroundColor: C.navy, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', border: 'none', cursor: sending ? 'default' : 'pointer', opacity: sending ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+                <button onClick={handleSend} disabled={sending || campaign.type !== 'email'}
+                  title={campaign.type !== 'email' ? 'SMS campaigns are not wired up yet' : undefined}
+                  style={{ backgroundColor: C.navy, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', border: 'none', cursor: (sending || campaign.type !== 'email') ? 'default' : 'pointer', opacity: (sending || campaign.type !== 'email') ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
                   className="uppercase">
                   <Send style={{ width: 12, height: 12 }} />
                   {sending ? 'Sending…' : 'Send Now'}
