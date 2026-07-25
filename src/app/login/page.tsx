@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, setRememberMe } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
@@ -15,11 +16,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
+  const [rememberMe, setRememberMeState] = useState(true)
   const supabase = createClient()
 
   async function handleEmailLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
+    setRememberMe(rememberMe)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       toast.error(error.message)
@@ -118,6 +121,16 @@ export default function LoginPage() {
                         className="rounded-none h-10 text-sm"
                         style={{ border: '1px solid rgba(44,62,80,0.2)', backgroundColor: '#F5F0EB', color: '#1C2A35' }}
                       />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="remember-me"
+                        checked={rememberMe}
+                        onCheckedChange={(checked) => setRememberMeState(checked === true)}
+                      />
+                      <Label htmlFor="remember-me" style={{ color: '#4A5A65' }} className="text-sm font-normal cursor-pointer">
+                        Stay signed in
+                      </Label>
                     </div>
                     <Button
                       type="submit"

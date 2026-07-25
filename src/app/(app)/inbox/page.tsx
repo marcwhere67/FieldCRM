@@ -2,7 +2,12 @@ import { redirect } from 'next/navigation'
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { InboxView } from '@/components/inbox/inbox-view'
 
-export default async function InboxPage() {
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ contact_id?: string }>
+}) {
+  const params = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -24,6 +29,7 @@ export default async function InboxPage() {
       orgId={profile!.org_id}
       currentUserId={profile!.id}
       currentUserName={profile!.full_name}
+      initialContactId={params.contact_id}
     />
   )
 }

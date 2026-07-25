@@ -464,7 +464,13 @@ export function ContactsTable({ contacts, teamMembers, campaigns, userRole, filt
                               key={item}
                               style={{ color: '#1C2A35', fontSize: '13px' }}
                               className="cursor-pointer hover:bg-[#F5F0EB]"
-                              onClick={item === 'View record' ? () => router.push(`/contacts/${contact.id}`) : undefined}
+                              onClick={
+                                item === 'View record' ? () => router.push(`/contacts/${contact.id}`)
+                                : item === 'Book job' ? () => router.push(`/jobs/new?contact_id=${contact.id}`)
+                                : item === 'New quote' ? () => router.push(`/quotes/new?contact_id=${contact.id}`)
+                                : item === 'Send message' ? () => router.push(`/inbox?contact_id=${contact.id}`)
+                                : undefined
+                              }
                             >
                               {item}
                             </DropdownMenuItem>

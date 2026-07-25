@@ -10,6 +10,7 @@ interface Contact {
 
 interface Props {
   orgId: string
+  initialContactId?: string
   onClose: () => void
   onCreated: (conv: any) => void
 }
@@ -32,7 +33,7 @@ const AVATAR_COLORS = [
   { bg: 'rgba(37,99,235,0.08)',   color: '#2563eb' },
 ]
 
-export function NewConversationModal({ orgId, onClose, onCreated }: Props) {
+export function NewConversationModal({ orgId, initialContactId, onClose, onCreated }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Contact | null>(null)
@@ -42,8 +43,15 @@ export function NewConversationModal({ orgId, onClose, onCreated }: Props) {
   useEffect(() => {
     fetch('/api/inbox/contacts')
       .then(r => r.json())
-      .then(d => setContacts(d.contacts ?? []))
-  }, [])
+      .then(d => {
+        const list: Contact[] = d.contacts ?? []
+        setContacts(list)
+        if (initialContactId) {
+          const match = list.find(c => c.id === initialContactId)
+          if (match) setSelected(match)
+        }
+      })
+  }, [initialContactId])
 
   const filtered = contacts.filter(c => {
     const name = `${c.first_name} ${c.last_name}`.toLowerCase()

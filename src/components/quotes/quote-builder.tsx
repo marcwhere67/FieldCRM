@@ -22,6 +22,7 @@ interface Props {
   mode: 'new' | 'edit'
   initialLineItems?: LineItem[]
   initialCleanType?: string
+  initialContactId?: string
   quote?: {
     id: string; quote_number: string; contact_id?: string; line_items: LineItem[]
     notes_client: string | null; notes_internal: string | null; valid_until: string | null
@@ -45,7 +46,7 @@ const inp: React.CSSProperties = {
 
 const labelSt: React.CSSProperties = { color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }
 
-export function QuoteBuilder({ contacts, services, products = [], org, orgId, mode, quote: existingQuote, initialLineItems, initialCleanType, onCancel }: Props) {
+export function QuoteBuilder({ contacts, services, products = [], org, orgId, mode, quote: existingQuote, initialLineItems, initialCleanType, initialContactId, onCancel }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
@@ -53,7 +54,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const [reviewQuoteId, setReviewQuoteId] = useState<string | null>(null)
   const existingContact = existingQuote?.contacts
     ? (Array.isArray(existingQuote.contacts) ? existingQuote.contacts[0] : existingQuote.contacts) : null
-  const [contactId, setContactId] = useState(existingQuote?.contact_id ?? existingContact?.id ?? '')
+  const [contactId, setContactId] = useState(existingQuote?.contact_id ?? existingContact?.id ?? initialContactId ?? '')
   const [lineItems, setLineItems] = useState<LineItem[]>(existingQuote?.line_items ?? initialLineItems ?? [])
   const [notes, setNotes] = useState(existingQuote?.notes_client ?? '')
   const [internalNotes, setInternalNotes] = useState(existingQuote?.notes_internal ?? '')

@@ -21,7 +21,7 @@ const AVATAR_COLORS = [
 
 interface Contact { id: string; first_name: string; last_name: string; phone: string | null; email: string | null }
 interface Conversation { id: string; channel: string; status: string; last_message_at: string | null; unread_count: number; created_at: string; contacts: Contact | Contact[] | null }
-interface Props { conversations: Conversation[]; orgId: string; currentUserId: string; currentUserName: string }
+interface Props { conversations: Conversation[]; orgId: string; currentUserId: string; currentUserName: string; initialContactId?: string }
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime(); const mins = Math.floor(diff / 60000)
@@ -30,11 +30,11 @@ function timeAgo(iso: string) {
   return `${Math.floor(hrs / 24)}d`
 }
 
-export function InboxView({ conversations: initial, orgId, currentUserId, currentUserName }: Props) {
+export function InboxView({ conversations: initial, orgId, currentUserId, currentUserName, initialContactId }: Props) {
   const [conversations, setConversations] = useState(initial)
   const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null)
   const [search, setSearch] = useState('')
-  const [showNew, setShowNew] = useState(false)
+  const [showNew, setShowNew] = useState(!!initialContactId)
   const [tab, setTab] = useState<'messages' | 'email'>('messages')
 
   const filtered = conversations.filter(c => {
@@ -155,7 +155,7 @@ export function InboxView({ conversations: initial, orgId, currentUserId, curren
       </>}
       </div>
 
-      {showNew && <NewConversationModal orgId={orgId} onClose={() => setShowNew(false)} onCreated={onNewConversation} />}
+      {showNew && <NewConversationModal orgId={orgId} initialContactId={initialContactId} onClose={() => setShowNew(false)} onCreated={onNewConversation} />}
     </div>
   )
 }

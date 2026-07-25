@@ -5,7 +5,7 @@ import { QuoteBuilder } from '@/components/quotes/quote-builder'
 export default async function NewQuotePage({
   searchParams,
 }: {
-  searchParams: Promise<{ amount?: string; description?: string; gst?: string; clean_type?: string }>
+  searchParams: Promise<{ amount?: string; description?: string; gst?: string; clean_type?: string; contact_id?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
@@ -43,6 +43,7 @@ export default async function NewQuotePage({
       mode="new"
       initialLineItems={initialLineItems}
       initialCleanType={['regular', 'deep', 'airbnb'].includes(params.clean_type ?? '') ? params.clean_type : undefined}
+      initialContactId={params.contact_id}
     />
   )
 }
