@@ -61,6 +61,9 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
   const st = STATUS_STYLE[displayStatus] ?? STATUS_STYLE.draft
 
   const [showPayment, setShowPayment] = useState(false)
+  // Idempotency key: minted once when the modal opens, reused on every retry so
+  // a double-tap or retry-after-timeout can't record the payment twice.
+  const [payRequestId, setPayRequestId] = useState<string | null>(null)
   const [payForm, setPayForm] = useState({
     amount: balanceDue.toFixed(2),
     payment_date: now,
@@ -113,7 +116,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
     startTransition(async () => {
       const res = await fetch(`/api/invoices/${invoice.id}/payment`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payForm, receipt_message: payForm.send_receipt ? receiptValue : undefined }),
+        body: JSON.stringify({ ...payForm, client_request_id: payRequestId, receipt_message: payForm.send_receipt ? receiptValue : undefined }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) { toast.error(data?.error ?? 'Failed to record payment'); return }
@@ -189,7 +192,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
             </button>
           )}
           {canMarkPaid && (
-            <button onClick={() => { setPayForm(f => ({ ...f, amount: balanceDue.toFixed(2) })); setShowPayment(true) }} disabled={isPending}
+            <button onClick={() => { setPayForm(f => ({ ...f, amount: balanceDue.toFixed(2) })); setPayRequestId(crypto.randomUUID()); setShowPayment(true) }} disabled={isPending}
               style={{ backgroundColor: C.sage, color: '#fff', padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em' }}
               className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
               <CheckCircle className="w-3.5 h-3.5" />Record payment

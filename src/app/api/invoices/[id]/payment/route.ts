@@ -13,6 +13,7 @@ import {
 } from '@/lib/emails/invoice-email'
 
 const SOURCE = 'api/invoices/[id]/payment'
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -35,6 +36,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const note = body.note ? String(body.note).slice(0, 500) : null
   const sendReceipt = body.send_receipt !== false
   const receiptMessage = typeof body.receipt_message === 'string' ? body.receipt_message.trim() : ''
+  // Idempotency key minted by the client when the payment modal opens and
+  // reused on every retry, so a double-tap or a retried-after-timeout request
+  // records the payment (and emails the receipt) exactly once.
+  const clientRequestId = typeof body.client_request_id === 'string' && UUID_RE.test(body.client_request_id)
+    ? body.client_request_id
+    : null
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: 'Enter a payment amount greater than zero' }, { status: 400 })
@@ -47,6 +54,35 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .eq('org_id', profile.org_id)
     .single()
   if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+  const inv = invoice
+
+  // Idempotent replay: this exact request already recorded a payment. Return
+  // the prior result without inserting again or re-sending the receipt.
+  async function alreadyRecorded(receiptNumber: string | null) {
+    const { data: allPayments } = await supabase
+      .from('payments').select('amount').eq('invoice_id', inv.id)
+    const totalPaid = (allPayments ?? []).reduce((s, p) => s + Number(p.amount), 0)
+    const amountOwed = Number(inv.total) - Number(inv.deposit_credit ?? 0)
+    const balanceRemaining = Math.max(0, Math.round((amountOwed - totalPaid) * 100) / 100)
+    return NextResponse.json({
+      ok: true,
+      receipt_number: receiptNumber,
+      status: totalPaid >= amountOwed - 0.005 ? 'paid' : 'partial',
+      balance_remaining: balanceRemaining,
+      receipt_warning: null,
+      idempotent_replay: true,
+    })
+  }
+
+  if (clientRequestId) {
+    const { data: prior } = await supabase
+      .from('payments')
+      .select('receipt_number')
+      .eq('invoice_id', inv.id)
+      .eq('client_request_id', clientRequestId)
+      .maybeSingle()
+    if (prior) return alreadyRecorded(prior.receipt_number)
+  }
 
   // Record the payment (receipt_number assigned by DB trigger)
   const { data: payment, error: payErr } = await supabase
@@ -61,11 +97,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       notes: note,
       recorded_at: new Date(`${paymentDate}T12:00:00`).toISOString(),
       recorded_by: profile.id,
+      client_request_id: clientRequestId,
     })
     .select('id, receipt_number, amount, method, recorded_at, reference')
     .single()
 
   if (payErr || !payment) {
+    // Unique-index violation on client_request_id => a concurrent request beat
+    // us to it. Treat as an idempotent replay, not an error.
+    if (payErr?.code === '23505' && clientRequestId) {
+      const { data: prior } = await supabase
+        .from('payments')
+        .select('receipt_number')
+        .eq('invoice_id', inv.id)
+        .eq('client_request_id', clientRequestId)
+        .maybeSingle()
+      if (prior) return alreadyRecorded(prior.receipt_number)
+    }
     await captureError(payErr ?? new Error('Payment insert returned no row'), {
       source: SOURCE, level: 'critical', orgId: profile.org_id, userId: profile.id,
       context: { invoiceId: invoice.id, amount, method },
