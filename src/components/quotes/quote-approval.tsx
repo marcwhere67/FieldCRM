@@ -133,7 +133,8 @@ export function QuoteApproval({ quote, org }: Props) {
 
           <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
             <div style={{ marginLeft: 'auto', width: '100%', maxWidth: 224 }} className="space-y-2">
-              {[['Subtotal', formatCurrency(quote.subtotal)], ['GST (10%)', formatCurrency(quote.tax)]].map(([l, v]) => (
+              {/* GST only shown when actually charged — see invoice-pdf.tsx */}
+              {[['Subtotal', formatCurrency(quote.subtotal)], ...(quote.tax > 0 ? [['GST (10%)', formatCurrency(quote.tax)]] : [])].map(([l, v]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.muted }}><span>{l}</span><span>{v}</span></div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>

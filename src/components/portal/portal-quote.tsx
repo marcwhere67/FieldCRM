@@ -113,7 +113,8 @@ export function PortalQuote({ quote, orgName }: Props) {
             ))}
           </div>
           <div style={{ borderTop: `1px solid ${C.border}`, padding: '14px 16px' }} className="space-y-2">
-            {[['Subtotal', formatCurrency(quote.subtotal)], ['GST (10%)', formatCurrency(quote.tax)]].map(([l, v]) => (
+            {/* GST only shown when actually charged — see invoice-pdf.tsx */}
+            {[['Subtotal', formatCurrency(quote.subtotal)], ...(quote.tax > 0 ? [['GST (10%)', formatCurrency(quote.tax)]] : [])].map(([l, v]) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: C.muted }}><span>{l}</span><span>{v}</span></div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4 }}>

@@ -204,7 +204,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
             <Plus style={{ width: 13, height: 13 }} /> Add line
           </button>
           <div style={{ textAlign: 'right' }}>
-            <span style={{ color: C.muted, fontSize: 11, marginRight: 10 }}>incl. {formatCurrency(tax)} GST</span>
+            {tax > 0 && <span style={{ color: C.muted, fontSize: 11, marginRight: 10 }}>incl. {formatCurrency(tax)} GST</span>}
             <span style={{ fontFamily: C.serif, color: C.navy, fontSize: 20 }}>{formatCurrency(total)}</span>
             <span style={{ color: C.muted, fontSize: 11 }}> / visit</span>
           </div>

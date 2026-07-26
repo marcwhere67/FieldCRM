@@ -307,7 +307,9 @@ export function QuotesList({ quotes, filters, total }: Props) {
                 <p style={{ fontFamily: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)", color: '#2C3E50', fontSize: '20px', lineHeight: 1 }}>
                   {formatCurrency(quote.total)}
                 </p>
-                <p style={{ color: '#8A9BA6', fontSize: '10px', marginTop: 2 }}>incl. {formatCurrency(quote.tax)} GST</p>
+                {quote.tax > 0 && (
+                  <p style={{ color: '#8A9BA6', fontSize: '10px', marginTop: 2 }}>incl. {formatCurrency(quote.tax)} GST</p>
+                )}
               </div>
 
               {/* Status */}

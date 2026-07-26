@@ -327,10 +327,12 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
               <span style={{ color: '#4A5A65' }}>Subtotal</span>
               <span style={{ color: '#4A5A65' }}>{formatCurrency(quote.subtotal)}</span>
             </div>
-            <div className="flex justify-between" style={{ fontSize: 13 }}>
-              <span style={{ color: '#4A5A65' }}>GST (10%)</span>
-              <span style={{ color: '#4A5A65' }}>{formatCurrency(quote.tax)}</span>
-            </div>
+            {quote.tax > 0 && (
+              <div className="flex justify-between" style={{ fontSize: 13 }}>
+                <span style={{ color: '#4A5A65' }}>GST (10%)</span>
+                <span style={{ color: '#4A5A65' }}>{formatCurrency(quote.tax)}</span>
+              </div>
+            )}
             <div className="flex justify-between" style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4 }}>
               <span style={{ fontFamily: C.serif, color: C.navy, fontSize: 17 }}>Total</span>
               <span style={{ fontFamily: C.serif, color: C.navy, fontSize: 17 }}>{formatCurrency(quote.total)}</span>
