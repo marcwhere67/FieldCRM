@@ -292,31 +292,23 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
 
         {/* Line items */}
         <div style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }}>
-          <table className="w-full" style={{ fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                <th style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 400, textAlign: 'left', paddingBottom: 10 }}>Description</th>
-                <th style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 400, textAlign: 'right', paddingBottom: 10, width: 60 }}>Qty</th>
-                <th style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 400, textAlign: 'right', paddingBottom: 10, width: 110 }}>Unit price</th>
-                <th style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 400, textAlign: 'right', paddingBottom: 10, width: 110 }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(invoice.line_items ?? []).map((item, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${C.subtle}` }}>
-                  <td style={{ color: '#4A5A65', padding: '10px 0' }}>{item.description}</td>
-                  <td style={{ color: '#4A5A65', padding: '10px 0', textAlign: 'right' }}>{item.quantity}</td>
-                  <td style={{ color: '#4A5A65', padding: '10px 0', textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
-                  <td style={{ fontFamily: C.serif, color: C.navy, fontSize: 15, padding: '10px 0', textAlign: 'right' }}>{formatCurrency(item.subtotal)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 10, borderBottom: `1px solid ${C.border}`, color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            <span>Description</span><span>Amount</span>
+          </div>
+          {(invoice.line_items ?? []).map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '10px 0', borderBottom: `1px solid ${C.subtle}` }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: '#4A5A65', fontSize: 13, lineHeight: 1.45 }}>{item.description}</p>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>{item.quantity} × {formatCurrency(item.unit_price)}</p>
+              </div>
+              <p style={{ fontFamily: C.serif, color: C.navy, fontSize: 15, whiteSpace: 'nowrap' }}>{formatCurrency(item.subtotal)}</p>
+            </div>
+          ))}
         </div>
 
         {/* Totals */}
         <div style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }}>
-          <div style={{ marginLeft: 'auto', width: 256 }} className="space-y-2">
+          <div style={{ marginLeft: 'auto', width: '100%', maxWidth: 256 }} className="space-y-2">
             <div className="flex justify-between" style={{ fontSize: 13 }}>
               <span style={{ color: '#4A5A65' }}>Subtotal</span>
               <span style={{ color: '#4A5A65' }}>{formatCurrency(invoice.subtotal)}</span>

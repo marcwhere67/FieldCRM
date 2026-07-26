@@ -96,7 +96,7 @@ export function QuoteApproval({ quote, org }: Props) {
           </div>
 
           {(contact || property) && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ gap: 24, padding: '20px 24px', borderBottom: `1px solid ${C.border}` }} className="grid grid-cols-1 sm:grid-cols-2">
               {contact && (
                 <div>
                   <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Prepared for</p>
@@ -115,29 +115,24 @@ export function QuoteApproval({ quote, org }: Props) {
           )}
 
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {['Description','Qty','Price','Total'].map((h, i) => (
-                    <th key={h} style={{ padding: '6px 0', textAlign: i === 0 ? 'left' : 'right', fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: C.muted, fontWeight: 400 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(quote.line_items ?? []).map((item, i) => (
-                  <tr key={item.id ?? i} style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAF8' }}>
-                    <td style={{ padding: '10px 0', color: C.fg, fontSize: 13 }}>{item.description}</td>
-                    <td style={{ padding: '10px 0', color: C.muted, fontSize: 13, textAlign: 'right' }}>{item.quantity}</td>
-                    <td style={{ padding: '10px 0', color: C.muted, fontSize: 13, textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
-                    <td style={{ padding: '10px 0', color: C.navy, fontSize: 13, textAlign: 'right', fontWeight: 500 }}>{formatCurrency(item.subtotal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: `1px solid ${C.border}`, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: C.muted }}>
+              <span>Description</span><span>Amount</span>
+            </div>
+            {(quote.line_items ?? []).map((item, i) => (
+              <div key={item.id ?? i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: C.fg, fontSize: 13, lineHeight: 1.45 }}>{item.description}</p>
+                  <p style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
+                    {item.quantity} × {formatCurrency(item.unit_price)}
+                  </p>
+                </div>
+                <p style={{ color: C.navy, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>{formatCurrency(item.subtotal)}</p>
+              </div>
+            ))}
           </div>
 
           <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ marginLeft: 'auto', width: 224 }} className="space-y-2">
+            <div style={{ marginLeft: 'auto', width: '100%', maxWidth: 224 }} className="space-y-2">
               {[['Subtotal', formatCurrency(quote.subtotal)], ['GST (10%)', formatCurrency(quote.tax)]].map(([l, v]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.muted }}><span>{l}</span><span>{v}</span></div>
               ))}
