@@ -13,7 +13,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  let supabaseResponse = NextResponse.next({ request })
+  // Expose the request path to server components. The (app) layout reads this
+  // header to enforce the field-role page allowlist. Cloned from the incoming
+  // headers and overwritten every request, so a client-supplied x-pathname
+  // can't be used to spoof the guard.
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', request.nextUrl.pathname)
+
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +32,7 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )

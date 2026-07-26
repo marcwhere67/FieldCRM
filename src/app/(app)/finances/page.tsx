@@ -12,6 +12,8 @@ export default async function FinancesPage() {
   const profile = await getAppProfile(user!.id)
 
   if (!profile) redirect('/login')
+  // Money page: managers and admins only. Field techs are redirected home.
+  if (!['admin', 'manager'].includes(profile.role)) redirect('/dashboard')
 
   const [
     { data: invoices },

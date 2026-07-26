@@ -8,6 +8,8 @@ export default async function TeamPage() {
 
   const profile = await getAppProfile(user!.id)
   if (!profile) return redirect('/login')
+  // Team page exposes hourly rates + HR records: managers and admins only.
+  if (!['admin', 'manager'].includes(profile.role)) redirect('/dashboard')
 
   const [{ data: members }, { data: leaveRequests }] = await Promise.all([
     supabase

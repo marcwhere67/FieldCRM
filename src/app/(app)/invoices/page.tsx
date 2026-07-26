@@ -14,6 +14,8 @@ export default async function InvoicesPage({
 
   const profile = await getAppProfile(user!.id)
   if (!profile) return redirect('/login')
+  // Money page: managers and admins only. Field techs are redirected home.
+  if (!['admin', 'manager'].includes(profile.role)) redirect('/dashboard')
 
   let query = supabase
     .from('invoices')

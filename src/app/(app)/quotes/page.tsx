@@ -13,6 +13,8 @@ export default async function QuotesPage({
 
   const profile = await getAppProfile(user!.id)
   if (!profile) return redirect('/login')
+  // Money page: managers and admins only. Field techs are redirected home.
+  if (!['admin', 'manager'].includes(profile.role)) redirect('/dashboard')
 
   let query = supabase
     .from('quotes')
