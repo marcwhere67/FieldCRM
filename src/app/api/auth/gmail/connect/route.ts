@@ -5,6 +5,10 @@ const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
+  // Reads the account's configured signature so outgoing client mail matches
+  // what staff send by hand. Adding a scope requires re-consent — use the
+  // "Reconnect" button in Settings → Profile → Integrations.
+  'https://www.googleapis.com/auth/gmail.settings.basic',
   'https://www.googleapis.com/auth/userinfo.email',
 ]
 

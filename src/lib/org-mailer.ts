@@ -12,6 +12,9 @@ export async function sendAsOrg(
   subject: string,
   htmlBody: string,
   textBody?: string,
+  // Client-facing mail carries the sender's Gmail signature; internal
+  // notifications to the business inbox don't need it.
+  appendSignature = false,
 ): Promise<boolean> {
   try {
     const { data: org } = await supabase
@@ -26,7 +29,7 @@ export async function sendAsOrg(
     if (!token) return false
 
     const from = `"${org.name?.replace(/"/g, '') ?? 'FieldCRM'}" <${org.email}>`
-    await sendEmailViaGmail(token, from, to, subject, htmlBody, textBody)
+    await sendEmailViaGmail(token, from, to, subject, htmlBody, textBody, undefined, appendSignature)
     return true
   } catch {
     return false

@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
     const { html, text } = buildBatchEmail({ message, shell, quotes: quoteSummaries, siteUrl })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
-    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, attachments)
+    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, attachments, true)
     sent = true
   } catch (err) {
     await captureError(err, {

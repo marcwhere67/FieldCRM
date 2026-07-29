@@ -118,7 +118,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, [
       { filename: `${invoice.invoice_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
-    ])
+    ], true)
     sent = true
   } catch (err) {
     await captureError(err, {

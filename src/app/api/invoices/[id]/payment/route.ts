@@ -193,7 +193,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       await sendEmailViaGmail(accessToken, fromHeader, contact.email, subject, html, text, [
         { filename: `${payment.receipt_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
-      ])
+      ], true)
     } catch (err) {
       await captureError(err, {
         source: SOURCE, level: 'warning', orgId: profile.org_id, userId: profile.id,

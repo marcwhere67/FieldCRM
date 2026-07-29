@@ -86,7 +86,7 @@ async function notify(
 
   // 1. Internal notification — tell the business straight away.
   if (org.email) {
-    const subject = `Quote ${verb}: ${q.quote_number} — ${customerName} (${amount})`
+    const subject = `Quote ${verb}: ${q.quote_number} - ${customerName} (${amount})`
     const details = [
       `Quote: ${q.quote_number}`,
       `Customer: ${customerName}`,
@@ -132,6 +132,6 @@ If anything changes in the meantime, or you have any questions, simply reply to 
 Kind regards,
 ${bizName}`
 
-    await sendAsOrg(admin, q.org_id, contact.email, subject, html, text)
+    await sendAsOrg(admin, q.org_id, contact.email, subject, html, text, true)
   }
 }

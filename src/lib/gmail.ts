@@ -178,6 +178,49 @@ export interface EmailAttachment {
   mimeType: string
 }
 
+// MIME headers must be pure ASCII (RFC 5322). Anything else — an em dash, a
+// curly apostrophe, a customer named "Renée" — has to be wrapped as an RFC 2047
+// encoded-word or the recipient sees mojibake. ASCII passes through untouched
+// so ordinary subjects stay human-readable in transit.
+export function encodeHeader(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (!/[^\x00-\x7F]/.test(value)) return value
+  return `=?UTF-8?B?${Buffer.from(value, 'utf8').toString('base64')}?=`
+}
+
+// A From/To header is `"Display Name" <addr@host>` — only the display name may
+// be encoded; the address must stay literal.
+export function encodeAddressHeader(value: string): string {
+  const match = value.match(/^\s*"?(.*?)"?\s*<([^>]+)>\s*$/)
+  if (!match) return encodeHeader(value)
+  const [, name, addr] = match
+  if (!name) return `<${addr}>`
+  // eslint-disable-next-line no-control-regex
+  return /[^\x00-\x7F]/.test(name) ? `${encodeHeader(name)} <${addr}>` : `"${name}" <${addr}>`
+}
+
+// Fetches the sender's configured Gmail signature (HTML). Gmail only appends
+// signatures when composing in the web UI — API sends get nothing — so we fetch
+// and append it ourselves. Returns null if the gmail.settings.basic scope
+// hasn't been granted yet, so callers degrade gracefully until reconnect.
+export async function getGmailSignature(accessToken: string, fromEmail?: string): Promise<string | null> {
+  try {
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const list: { sendAsEmail?: string; signature?: string; isDefault?: boolean }[] = data.sendAs ?? []
+    const match =
+      (fromEmail && list.find(s => s.sendAsEmail?.toLowerCase() === fromEmail.toLowerCase() && s.signature)) ||
+      list.find(s => s.isDefault && s.signature) ||
+      list.find(s => s.signature)
+    return match?.signature?.trim() || null
+  } catch {
+    return null
+  }
+}
+
 export async function sendEmailViaGmail(
   accessToken: string,
   from: string,
@@ -186,8 +229,24 @@ export async function sendEmailViaGmail(
   htmlBody: string,
   textBody?: string,
   attachments?: EmailAttachment[],
+  appendSignature = false,
 ) {
-  const textContent = textBody || htmlBody.replace(/<[^>]*>/g, '')
+  let html = htmlBody
+  let text = textBody || htmlBody.replace(/<[^>]*>/g, '')
+
+  // Append the sender's Gmail signature on client-facing mail. Silently skipped
+  // if the settings scope hasn't been granted (see getGmailSignature).
+  if (appendSignature) {
+    const fromEmail = from.match(/<([^>]+)>/)?.[1] ?? from
+    const signature = await getGmailSignature(accessToken, fromEmail)
+    if (signature) {
+      html += `<br><br>${signature}`
+      text += `\n\n${signature.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').trim()}`
+    }
+  }
+
+  const textContent = text
+  const htmlContent = html
   const rand = () => Math.random().toString(36).slice(2, 11)
   const altBoundary = 'alt_' + rand()
 
@@ -197,15 +256,15 @@ export async function sendEmailViaGmail(
 
 --${altBoundary}
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 
 ${textContent}
 
 --${altBoundary}
 Content-Type: text/html; charset="UTF-8"
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 
-${htmlBody}
+${htmlContent}
 
 --${altBoundary}--`
 
@@ -223,9 +282,9 @@ Content-Disposition: attachment; filename="${a.filename}"
 ${b64}`
     }).join('\n')
 
-    mimeMessage = `From: ${from}
-To: ${to}
-Subject: ${subject}
+    mimeMessage = `From: ${encodeAddressHeader(from)}
+To: ${encodeAddressHeader(to)}
+Subject: ${encodeHeader(subject)}
 MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="${mixedBoundary}"
 
@@ -235,9 +294,9 @@ ${altPart}
 ${attachmentParts}
 --${mixedBoundary}--`
   } else {
-    mimeMessage = `From: ${from}
-To: ${to}
-Subject: ${subject}
+    mimeMessage = `From: ${encodeAddressHeader(from)}
+To: ${encodeAddressHeader(to)}
+Subject: ${encodeHeader(subject)}
 MIME-Version: 1.0
 ${altPart}`
   }
