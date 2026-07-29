@@ -16,8 +16,9 @@ const REGULAR_BULLETS = [
   'Kitchen bench tops, splashbacks and surfaces cleaned',
   'Sink and cooktop cleaned',
   'Exterior of appliances wiped',
-  'Bathrooms: toilet, shower, sinks and visible surfaces cleaned',
-  'Bedrooms and living areas tidied and cleaned',
+  'Kitchen and bathroom cupboard exteriors and kickboards wiped',
+  'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
+  'Bedrooms and living areas dusted and surfaces cleaned',
   'Floors vacuumed and mopped throughout accessible areas',
   'Skirting boards dusted',
 ]
@@ -29,18 +30,24 @@ const DEEP_BULLETS = [
   'Kitchen bench tops, splashbacks and surfaces cleaned',
   'Sink and cooktop cleaned',
   'Exterior of appliances wiped',
+  'Kitchen and bathroom cupboard exteriors and kickboards wiped',
+  'Kitchen cupboards cleaned internally (excluding food storage cupboards), where contents can be easily and safely removed and put back',
   'Interior microwave cleaning',
-  'Interior cupboards cleaned (non-food cupboards only)',
+  'Range hood filter cleaned using standard cleaning products (results may vary depending on level of grease build-up)',
+  'Interior and exterior of kitchen and bathroom bins cleaned (does not include removal of embedded stains or odours from prolonged heavy use)',
   // Bathrooms
-  'Bathrooms: toilet, shower, sinks and visible surfaces cleaned',
-  'Bathrooms given additional detailed cleaning including grout attention where required',
+  'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
+  'Bathrooms given additional detailed cleaning, including grout scrubbing and tap fittings',
   // Bedrooms & living
-  'Bedrooms and living areas tidied and cleaned',
+  'Bedrooms and living areas dusted and surfaces cleaned',
   // Floors & finishing
   'Floors vacuumed and mopped throughout accessible areas',
   'Skirting boards thoroughly cleaned',
   'Window tracks cleaned where accessible',
-  'Additional detailed attention to high and hard-to-reach areas',
+  'Light switches, door handles and door frames wiped down',
+  'Spot-cleaning of visible marks on walls, where marks can be removed without excessive scrubbing (does not include full wall washing, textured/heavily soiled walls, or marks requiring repainting)',
+  'Accessible air conditioning filters removed, cleaned and put back (does not include filters requiring tools to access, servicing, or units showing signs of fault)',
+  'Additional detailed attention to reachable high areas (e.g. ceiling fans, light fittings, exhaust fan covers) using standard equipment, up to a two-step ladder height',
 ]
 
 // Airbnb / Short-Stay Turnover — one list, ordered by area, with the handover/turnover
@@ -50,23 +57,41 @@ const AIRBNB_BULLETS = [
   'Kitchen bench tops, splashbacks and surfaces cleaned',
   'Sink and cooktop cleaned',
   'Exterior of appliances wiped',
-  'Interior check of cupboards and appliances',
-  'Washing dishes and returning them to cupboards where required',
+  'Kitchen and bathroom cupboard exteriors and kickboards wiped',
+  'Interior check of cupboards and appliances for cleanliness and guest-left items',
+  'Dishes left by guests washed and returned to cupboards (excessive volumes may incur additional time/cost)',
+  'Kitchen and bathroom bins emptied, re-lined, and interior and exterior wiped down where required',
   // Bathrooms
-  'Bathrooms: toilet, shower, sinks and visible surfaces cleaned',
+  'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
   // Bedrooms & living
-  'Bedrooms and living areas tidied and cleaned',
-  'Linen changed and beds remade',
+  'Bedrooms and living areas dusted and surfaces cleaned',
+  'Linen changed and beds remade with provided linen',
+  'High-touch points cleaned (door handles, light switches)',
   // Floors & finishing
   'Floors vacuumed and mopped throughout accessible areas',
   'Skirting boards dusted',
   // Turnover / handover
-  'Full property reset and staging for the next guest',
-  'Restocking of provided guest amenities',
-  'BBQ maintenance between guest stays',
-  'Quick post-stay condition check',
-  'Photo documentation where required',
-  'Reporting of visible guest damages or issues',
+  'Property reset to standard presentation (surfaces cleared, furniture and objects returned to their standard position within the cleaner’s reasonable ability to move them, general tidiness restored)',
+  'Restocking of guest amenities using supplies provided by the client (does not include purchasing or sourcing amenities)',
+  'BBQ exterior wiped down and grill plate cleaned where accessible (does not include full degreasing or servicing)',
+  'Quick post-stay condition check of the property',
+  'After-photos taken of the cleaned property to provide proof of completed work and confirm the property is ready for guest arrival. Photos are sent to the client via message after the clean is complete.',
+  'Reporting of visible guest damages or issues to the client',
+]
+
+// Add-ons — informational only (no pricing shown), the SAME list appears under
+// every clean type. Clients see what's available and can ask about adding them.
+export const ADD_ONS: string[] = [
+  'Interior fridge cleaning — interior wiped and cleaned (contents removed by client prior to service)',
+  'Interior oven cleaning — interior cleaned using standard products (results may vary depending on build-up; does not include disassembly of oven door or cleaning between door glass panels)',
+  'Interior window cleaning (glass only) — does not include tracks, frames, screens or curtains/blinds',
+  'Exterior window cleaning (ground floor / accessible only) — does not include upper storey or ladder access beyond two-step height',
+  'Balcony/outdoor area clean — surfaces and outdoor furniture wiped down (does not include pressure washing or mould/mildew treatment)',
+  'Garage clean/sweep — floor swept and surfaces wiped where accessible (does not include removal of stored items or oil/grease stains)',
+  'Wall washing (full walls) — does not include textured/heavily soiled walls or marks requiring repainting',
+  'Linen changing — bed linen changed and beds remade using client-provided linen',
+  'Floor tile grout scrubbing (bathroom, kitchen, laundry) — results may vary depending on staining; does not include grout sealing, re-grouting, or heavy discolouration treatment',
+  'Pressure washing (driveways, decks, exterior areas) — quoted separately on inspection',
 ]
 
 export interface ScopeDefinition {

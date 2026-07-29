@@ -1,7 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import path from 'path'
 import { registerPdfFonts, SERIF } from './fonts'
-import { getScope, QUOTE_TERMS } from '../scope-of-work'
+import { getScope, QUOTE_TERMS, ADD_ONS } from '../scope-of-work'
 import { stripDocYear } from '../format'
 
 registerPdfFonts()
@@ -468,6 +468,15 @@ export function QuotePDF({ quote, org, contact }: Props) {
             <Text style={styles.scopeSubLabel}>Includes:</Text>
             {scope.includes.map((b, i) => (
               <View key={`inc-${i}`} style={styles.bullet} wrap={false}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Text style={styles.bulletText}>{b}</Text>
+              </View>
+            ))}
+
+            {/* Add-ons — informational only, same list under every clean type */}
+            <Text style={styles.scopeSubLabel}>Optional Add-ons (available on request):</Text>
+            {ADD_ONS.map((b, i) => (
+              <View key={`addon-${i}`} style={styles.bullet} wrap={false}>
                 <Text style={styles.bulletDot}>•</Text>
                 <Text style={styles.bulletText}>{b}</Text>
               </View>
