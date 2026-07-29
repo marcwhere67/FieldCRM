@@ -224,6 +224,24 @@ const styles = StyleSheet.create({
     color: '#78350f',
     lineHeight: 1.6,
   },
+  termsSection: {
+    marginTop: 24,
+    paddingTop: 12,
+    borderTop: '1pt solid #e2e8f0',
+  },
+  termsLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  termsText: {
+    fontSize: 8.5,
+    color: '#64748b',
+    lineHeight: 1.6,
+  },
   footer: {
     position: 'absolute',
     bottom: 32,
@@ -435,6 +453,14 @@ export function InvoicePDF({ invoice, org, contact }: Props) {
             <Text style={styles.notesText}>{invoice.notes_client}</Text>
           </View>
         )}
+
+        {/* Payment terms — shown on every invoice */}
+        <View style={styles.termsSection}>
+          <Text style={styles.termsLabel}>Payment Terms</Text>
+          <Text style={styles.termsText}>
+            Payment is due by the date shown above. Payments received more than 48 hours after the due date may incur: a $25 late fee, plus 5% of the total invoice per week overdue.
+          </Text>
+        </View>
 
       </Page>
     </Document>
