@@ -57,7 +57,7 @@ export function QuoteApproval({ quote, org }: Props) {
         {status === 'approved' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', backgroundColor: 'rgba(118,165,143,0.1)', border: `1px solid rgba(118,165,143,0.3)` }}>
             <CheckCircle style={{ width: 16, height: 16, color: C.sage, flexShrink: 0 }} />
-            <p style={{ color: '#5d8c76', fontSize: 13 }}>Quote approved — we'll be in touch to arrange your service.</p>
+            <p style={{ color: '#5d8c76', fontSize: 13 }}>Quote accepted — thank you. We&rsquo;ll be in touch within 2 business days to arrange your service. A confirmation email is on its way.</p>
           </div>
         )}
         {status === 'declined' && (
