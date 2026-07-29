@@ -199,23 +199,27 @@ export function encodeAddressHeader(value: string): string {
   return /[^\x00-\x7F]/.test(name) ? `${encodeHeader(name)} <${addr}>` : `"${name}" <${addr}>`
 }
 
-// Fetches the sender's configured Gmail signature (HTML). Gmail only appends
-// signatures when composing in the web UI — API sends get nothing — so we fetch
-// and append it ourselves. Returns null if the gmail.settings.basic scope
-// hasn't been granted yet, so callers degrade gracefully until reconnect.
-export async function getGmailSignature(accessToken: string, fromEmail?: string): Promise<string | null> {
+// Fetches the signature belonging to the SENDING STAFF MEMBER. Gmail only
+// appends signatures when composing in the web UI — API sends get nothing — so
+// we fetch it ourselves.
+//
+// Deliberately reads only the account's own (isPrimary) address, never a shared
+// alias like hello@: mail is sent From the business address, but that alias can
+// carry a different colleague's signature, so matching on it would sign Marc's
+// quotes as Tegan. Better no signature (the caller falls back to a plain
+// sign-off) than the wrong person's.
+//
+// Returns null if the gmail.settings.basic scope hasn't been granted yet, so
+// callers degrade gracefully until the user reconnects Gmail.
+export async function getGmailSignature(accessToken: string): Promise<string | null> {
   try {
     const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs', {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
     if (!res.ok) return null
     const data = await res.json()
-    const list: { sendAsEmail?: string; signature?: string; isDefault?: boolean }[] = data.sendAs ?? []
-    const match =
-      (fromEmail && list.find(s => s.sendAsEmail?.toLowerCase() === fromEmail.toLowerCase() && s.signature)) ||
-      list.find(s => s.isDefault && s.signature) ||
-      list.find(s => s.signature)
-    return match?.signature?.trim() || null
+    const list: { sendAsEmail?: string; signature?: string; isPrimary?: boolean }[] = data.sendAs ?? []
+    return list.find(s => s.isPrimary)?.signature?.trim() || null
   } catch {
     return null
   }
@@ -229,24 +233,12 @@ export async function sendEmailViaGmail(
   htmlBody: string,
   textBody?: string,
   attachments?: EmailAttachment[],
-  appendSignature = false,
 ) {
-  let html = htmlBody
-  let text = textBody || htmlBody.replace(/<[^>]*>/g, '')
-
-  // Append the sender's Gmail signature on client-facing mail. Silently skipped
-  // if the settings scope hasn't been granted (see getGmailSignature).
-  if (appendSignature) {
-    const fromEmail = from.match(/<([^>]+)>/)?.[1] ?? from
-    const signature = await getGmailSignature(accessToken, fromEmail)
-    if (signature) {
-      html += `<br><br>${signature}`
-      text += `\n\n${signature.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').trim()}`
-    }
-  }
-
-  const textContent = text
-  const htmlContent = html
+  // The staff member's Gmail signature is composed INTO the email body (see
+  // EmailShell.signatureHtml) rather than appended here — appending after
+  // </html> produced a malformed document and a visible gap.
+  const textContent = textBody || htmlBody.replace(/<[^>]*>/g, '')
+  const htmlContent = htmlBody
   const rand = () => Math.random().toString(36).slice(2, 11)
   const altBoundary = 'alt_' + rand()
 

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
-import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
 import { QuotePDF } from '@/lib/pdf/quote-pdf'
 import { captureError } from '@/lib/monitor'
 import {
@@ -106,9 +106,10 @@ export async function POST(req: Request) {
       return { filename: `${quote.quote_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' }
     }))
 
+    shell.signatureHtml = await getGmailSignature(accessToken)
     const { html, text } = buildBatchEmail({ message, shell, quotes: quoteSummaries, siteUrl })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
-    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, attachments, true)
+    await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, attachments)
     sent = true
   } catch (err) {
     await captureError(err, {

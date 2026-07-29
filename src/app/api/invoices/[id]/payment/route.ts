@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
-import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
@@ -189,11 +189,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const balanceText = balanceRemaining > 0
         ? `Remaining balance: ${formatCurrency(balanceRemaining)}.`
         : 'This invoice is now paid in full.'
+      shell.signatureHtml = await getGmailSignature(accessToken)
       const { html, text } = buildReceiptEmail({ message, shell, balanceHtml, balanceText })
 
       await sendEmailViaGmail(accessToken, fromHeader, contact.email, subject, html, text, [
         { filename: `${payment.receipt_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
-      ], true)
+      ])
     } catch (err) {
       await captureError(err, {
         source: SOURCE, level: 'warning', orgId: profile.org_id, userId: profile.id,

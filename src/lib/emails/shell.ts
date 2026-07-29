@@ -11,6 +11,10 @@ export interface EmailShell {
   orgPhone: string | null
   senderName: string
   logoUrl: string
+  // The sending staff member's own Gmail signature, when available. It REPLACES
+  // the generic sign-off below — otherwise the client sees two sign-offs.
+  // Null when Gmail isn't connected or the settings scope isn't granted.
+  signatureHtml?: string | null
 }
 
 export function esc(s: string): string {
@@ -29,11 +33,22 @@ function headerHtml(shell: EmailShell): string {
 }
 
 export function signoffHtml(shell: EmailShell): string {
+  if (shell.signatureHtml) return shell.signatureHtml
   return `<p>Kind regards,</p>
     <p>${esc(shell.senderName)}<br>${esc(shell.orgName)}<br>${shell.orgPhone ? esc(shell.orgPhone) + '<br>' : ''}${esc(shell.orgEmail)}<br>${WEBSITE}</p>`
 }
 
 export function signoffText(shell: EmailShell): string {
+  if (shell.signatureHtml) {
+    return shell.signatureHtml
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|tr|table)>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
   return `Kind regards,\n\n${shell.senderName}\n${shell.orgName}\n${shell.orgPhone ? shell.orgPhone + '\n' : ''}${shell.orgEmail}\n${WEBSITE}`
 }
 

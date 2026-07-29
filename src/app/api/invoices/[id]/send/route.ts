@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
-import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
 import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
 import { formatDate, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
@@ -114,11 +114,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       React.createElement(InvoicePDF, { invoice: invoicePdfData, org, contact }) as React.ReactElement<DocumentProps>,
     )
 
+    shell.signatureHtml = await getGmailSignature(accessToken)
     const { html, text } = buildInvoiceEmail({ message, shell, balanceDue, dueText, bankHtml, bankText })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, [
       { filename: `${invoice.invoice_number}.pdf`, content: Buffer.from(pdfBuffer), mimeType: 'application/pdf' },
-    ], true)
+    ])
     sent = true
   } catch (err) {
     await captureError(err, {

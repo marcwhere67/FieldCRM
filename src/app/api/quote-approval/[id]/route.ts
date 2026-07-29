@@ -132,6 +132,6 @@ If anything changes in the meantime, or you have any questions, simply reply to 
 Kind regards,
 ${bizName}`
 
-    await sendAsOrg(admin, q.org_id, contact.email, subject, html, text, true)
+    await sendAsOrg(admin, q.org_id, contact.email, subject, html, text)
   }
 }
