@@ -25,10 +25,11 @@ export function buildQuoteEmail(opts: { message: string; shell: EmailShell; tota
   const { message, shell, total, approvalUrl } = opts
   const totalFmt = formatCurrency(total)
   const cta = `<p><strong>Quote Total: ${totalFmt}</strong></p>
-    <p><a href="${approvalUrl}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View &amp; Approve Quote</a></p>`
+    <p><a href="${approvalUrl}" style="display: inline-block; background-color: #2C3E50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View &amp; Approve Quote</a></p>
+    <p style="font-size: 13px; color: #64748b;">Before accepting, please take a moment to review the quote details and our Terms &amp; Conditions, included with the attached PDF and shown on the approval page above.</p>`
   const closing = `<p>This quote is valid for 14 days. If you'd like to proceed, click the button above. For any questions, feel free to call or reply to this email.</p>`
   const html = shellHtml(shell, `${paragraphsHtml(message)}\n    ${cta}\n    ${closing}`)
-  const text = `${message.trim()}\n\nQuote Total: ${totalFmt}\n\nView & Approve: ${approvalUrl}\n\nThis quote is valid for 14 days. If you'd like to proceed, click the link above. For any questions, feel free to call or reply to this email.\n\n${signoffText(shell)}`
+  const text = `${message.trim()}\n\nQuote Total: ${totalFmt}\n\nView & Approve: ${approvalUrl}\n\nBefore accepting, please take a moment to review the quote details and our Terms & Conditions, included with the attached PDF and shown on the approval page above.\n\nThis quote is valid for 14 days. If you'd like to proceed, click the link above. For any questions, feel free to call or reply to this email.\n\n${signoffText(shell)}`
   return { html, text }
 }
 
@@ -63,9 +64,10 @@ export function buildBatchEmail(opts: {
   const table = `<table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
       ${rowsHtml}
     </table>`
+  const tcNote = `<p style="font-size: 13px; color: #64748b;">Before accepting, please take a moment to review each quote and our Terms &amp; Conditions, included with the attached PDFs and shown on the approval pages.</p>`
   const closing = `<p>Each quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.</p>`
 
-  const html = shellHtml(shell, `${paragraphsHtml(message)}\n    ${summaryLine}\n    ${table}\n    ${closing}`)
-  const text = `${message.trim()}\n\nYou'll find ${quotesWord} attached and summarised below — the initial deep clean and your ongoing regular service:\n\n${rowsText}\n\nEach quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.\n\n${signoffText(shell)}`
+  const html = shellHtml(shell, `${paragraphsHtml(message)}\n    ${summaryLine}\n    ${table}\n    ${tcNote}\n    ${closing}`)
+  const text = `${message.trim()}\n\nYou'll find ${quotesWord} attached and summarised below — the initial deep clean and your ongoing regular service:\n\n${rowsText}\n\nBefore accepting, please take a moment to review each quote and our Terms & Conditions, included with the attached PDFs and shown on the approval pages.\n\nEach quote is valid for 14 days from when it was issued. Just click through to approve, and we'll take care of the rest. If you have any questions or would like to adjust anything, simply reply to this email or give us a call.\n\n${signoffText(shell)}`
   return { html, text }
 }
