@@ -60,6 +60,7 @@ interface Props {
     materials_used: { name: string; qty: number; unit_price: number; subtotal: number }[]
     total_hours: number | null
     clean_type: string | null
+    service_agreement_id: string | null
     contacts: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }[] | null
     properties: { id: string; label: string | null; address_line1: string; suburb: string; state: string; postcode: string; lat: number | null; lng: number | null; access_notes: string | null }[] | null
     quotes: { id: string; quote_number: string; total: number; status: string }[] | null
@@ -170,7 +171,22 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
     setUpdatingStatus(true); setStatus(newStatus)
     const { error } = await supabase.from('jobs').update({ status: newStatus }).eq('id', job.id)
     if (error) { toast.error(error.message.includes('cleaning procedure') ? error.message : 'Failed to update status'); setStatus(job.status) }
-    else { toast.success(`Job marked as ${newStatus.replace('_', ' ')}`); router.refresh() }
+    else {
+      toast.success(`Job marked as ${newStatus.replace('_', ' ')}`)
+      // Regulars on a Service Agreement invoice themselves automatically on completion — no manual Create Invoice / Send.
+      if (newStatus === 'completed' && job.service_agreement_id && !invoice) {
+        setStatus('invoiced')
+        fetch(`/api/jobs/${job.id}/complete-and-invoice`, { method: 'POST' })
+          .then(res => res.json()).catch(() => null)
+          .then((data) => {
+            if (data?.sent) toast.success('Invoice created and emailed automatically')
+            else if (data?.id) toast.warning(data.warning ?? 'Invoice created but email could not be sent — send it manually from the invoice')
+            router.refresh()
+          })
+      } else {
+        router.refresh()
+      }
+    }
     setUpdatingStatus(false)
   }
 
