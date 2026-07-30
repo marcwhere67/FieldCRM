@@ -127,6 +127,15 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
     })
   }
 
+  function resendReceipt(paymentId: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/payments/${paymentId}/send`, { method: 'POST' })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) { toast.error(data?.error ?? 'Failed to resend receipt'); return }
+      toast.success(contact?.email ? `Receipt resent to ${contact.email}` : 'Receipt resent')
+    })
+  }
+
   async function voidInvoice() {
     if (!confirm('Void this invoice? This cannot be undone.')) return
     startTransition(async () => {
@@ -212,6 +221,11 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
               <MoreHorizontal className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }} className="rounded-none w-44">
+              {invoice.status !== 'draft' && invoice.status !== 'void' && contact?.email && (
+                <DropdownMenuItem style={{ color: '#4A5A65', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={openReview}>
+                  <Send className="w-3.5 h-3.5 mr-2" />Resend email
+                </DropdownMenuItem>
+              )}
               {canVoid && (
                 <DropdownMenuItem style={{ color: '#b45309', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={voidInvoice}>
                   <FileText className="w-3.5 h-3.5 mr-2" />Void invoice
@@ -361,13 +375,22 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
               <span style={{ color: '#4A5A65', fontSize: 12 }}>{p.recorded_at ? formatDate(p.recorded_at) : '—'}</span>
               <span style={{ color: C.muted, fontSize: 12 }} className="capitalize">{p.method.replace(/_/g, ' ')}</span>
               {p.reference && <span style={{ color: C.muted, fontSize: 12 }}>Ref: {p.reference}</span>}
-              {p.receipt_number && (
-                <a href={`/api/payments/${p.id}/pdf`} download
-                  style={{ marginLeft: 'auto', border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '5px 12px', fontSize: 10, letterSpacing: '0.08em', textDecoration: 'none' }}
-                  className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">
-                  <Download className="w-3 h-3" />{p.receipt_number}
-                </a>
-              )}
+              <div style={{ marginLeft: 'auto' }} className="flex items-center gap-2">
+                {contact?.email && (
+                  <button onClick={() => resendReceipt(p.id)} disabled={isPending}
+                    style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '5px 12px', fontSize: 10, letterSpacing: '0.08em' }}
+                    className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity disabled:opacity-40">
+                    <Send className="w-3 h-3" />Resend
+                  </button>
+                )}
+                {p.receipt_number && (
+                  <a href={`/api/payments/${p.id}/pdf`} download
+                    style={{ border: `1px solid ${C.border}`, color: '#4A5A65', backgroundColor: '#fff', padding: '5px 12px', fontSize: 10, letterSpacing: '0.08em', textDecoration: 'none' }}
+                    className="inline-flex items-center gap-1.5 uppercase hover:opacity-80 transition-opacity">
+                    <Download className="w-3 h-3" />{p.receipt_number}
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>

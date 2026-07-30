@@ -218,6 +218,11 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
               <MoreHorizontal className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }} className="rounded-none w-40">
+              {quote.status !== 'draft' && contact?.email && (
+                <DropdownMenuItem style={{ color: C.fg, fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={openReview}>
+                  <Send className="w-3.5 h-3.5 mr-2" />Resend email
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem style={{ color: C.fg, fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={() => setEditing(true)}>
                 <Edit2 className="w-3.5 h-3.5 mr-2" />Edit quote
               </DropdownMenuItem>

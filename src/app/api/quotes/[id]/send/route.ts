@@ -107,8 +107,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ sent: false, error: warning ?? 'Email could not be sent' }, { status: 502 })
   }
 
+  // First send promotes draft → sent; a resend keeps the current status
+  // (e.g. approved/declined) and only refreshes sent_at.
+  const nextStatus = quote.status === 'draft' ? 'sent' : quote.status
   const { error } = await supabase
-    .from('quotes').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', id)
+    .from('quotes').update({ status: nextStatus, sent_at: new Date().toISOString() }).eq('id', id)
 
   if (error) {
     await captureError(error, {

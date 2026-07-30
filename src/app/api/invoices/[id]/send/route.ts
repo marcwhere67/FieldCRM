@@ -133,8 +133,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ sent: false, error: warning ?? 'Email could not be sent' }, { status: 502 })
   }
 
+  // First send promotes draft → sent; a resend keeps the current status
+  // (e.g. partial/paid/overdue) and only refreshes sent_at.
+  const nextStatus = invoice.status === 'draft' ? 'sent' : invoice.status
   const { error } = await supabase
-    .from('invoices').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', id)
+    .from('invoices').update({ status: nextStatus, sent_at: new Date().toISOString() }).eq('id', id)
 
   if (error) {
     await captureError(error, {
