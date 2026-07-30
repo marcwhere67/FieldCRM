@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatCurrency, formatDate, formatDateTime, formatMinutes } from '@/lib/format'
 import { jobPhotoSrc, procedurePhotoSrc } from '@/lib/photo-url'
 import { ClockWidget } from '@/components/timeclock/clock-widget'
-import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, Check, CheckCircle, Pin, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight, ClipboardCheck } from 'lucide-react'
+import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, Check, CheckCircle, Pin, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight, ClipboardCheck, CalendarPlus } from 'lucide-react'
 
 const CLEAN_TYPE_OPTIONS = [
   { value: 'regular', label: 'Regular Clean' },
@@ -237,6 +237,36 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
     router.push(`/invoices/${data.id}`)
   }
 
+  function downloadCalendarInvite() {
+    if (!job.scheduled_start) return
+    const start = new Date(job.scheduled_start)
+    const end = job.scheduled_end ? new Date(job.scheduled_end) : new Date(start.getTime() + 60 * 60 * 1000)
+    const toIcsDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const address = property ? [property.label ?? property.address_line1, property.suburb, property.state, property.postcode].filter(Boolean).join(', ') : ''
+    const descriptionLines = [job.description, contact ? `Contact: ${contact.first_name} ${contact.last_name}${contact.phone ? ` (${contact.phone})` : ''}` : null]
+      .filter(Boolean).join('\\n')
+    const escapeIcs = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FieldCRM//Job//EN',
+      'BEGIN:VEVENT',
+      `UID:job-${job.id}@fieldcrm`,
+      `DTSTAMP:${toIcsDate(new Date())}`,
+      `DTSTART:${toIcsDate(start)}`,
+      `DTEND:${toIcsDate(end)}`,
+      `SUMMARY:${escapeIcs(job.title)}`,
+      ...(address ? [`LOCATION:${escapeIcs(address)}`] : []),
+      ...(descriptionLines ? [`DESCRIPTION:${escapeIcs(descriptionLines)}`] : []),
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n')
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${job.job_number}.ics`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="max-w-5xl space-y-6">
       <style>{`
@@ -263,6 +293,11 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
             {job.description && <p style={C.muted} className="mt-1.5">{job.description}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {job.scheduled_start && (
+              <button onClick={downloadCalendarInvite} style={{ color: '#2C3E50', border: '1px solid rgba(44,62,80,0.15)' }} className="w-8 h-8 flex items-center justify-center hover:bg-[#F5F0EB] transition-colors" title="Add to calendar">
+                <CalendarPlus className="w-4 h-4" />
+              </button>
+            )}
             <JobSummaryButton jobId={job.id} />
             {['admin', 'manager'].includes(userRole) && (
               <button onClick={deleteJob} style={{ color: '#dc2626' }} className="w-8 h-8 flex items-center justify-center hover:bg-red-50 transition-colors" title="Delete">

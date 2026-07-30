@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronDown } from 'lucide-react'
+import { QUOTE_TERMS } from '@/lib/scope-of-work'
 
 interface LineItem { id: string; description: string; quantity: number; unit_price: number; subtotal: number; tax_rate: number }
 interface Quote {
@@ -24,6 +25,7 @@ const C = {
 export function QuoteApproval({ quote, org }: Props) {
   const [status, setStatus] = useState(quote.status)
   const [loading, setLoading] = useState<'approve' | 'decline' | null>(null)
+  const [termsOpen, setTermsOpen] = useState(false)
 
   const contact  = Array.isArray(quote.contacts) ? quote.contacts[0] : quote.contacts
   const property = Array.isArray(quote.properties)
@@ -161,6 +163,35 @@ export function QuoteApproval({ quote, org }: Props) {
               <p style={{ color: '#4A5A65', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{quote.notes_client}</p>
             </div>
           )}
+
+          <div style={{ borderBottom: `1px solid ${C.border}` }}>
+            <button
+              type="button"
+              onClick={() => setTermsOpen((o) => !o)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <span style={{ color: C.navy, fontSize: 12, fontWeight: 500, letterSpacing: '0.04em' }}>Terms &amp; Conditions</span>
+              <ChevronDown style={{ width: 14, height: 14, color: C.muted, transform: termsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+            </button>
+            {termsOpen && (
+              <div style={{ padding: '0 24px 20px' }} className="space-y-4">
+                {QUOTE_TERMS.map((section) => (
+                  <div key={section.heading}>
+                    <p style={{ color: C.navy, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{section.heading}</p>
+                    {section.blocks.map((block, bi) =>
+                      'text' in block ? (
+                        <p key={bi} style={{ color: '#4A5A65', fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}>{block.text}</p>
+                      ) : (
+                        <ul key={bi} style={{ margin: '0 0 6px', paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.6 }}>
+                          {block.bullets.map((b, li) => <li key={li}>{b}</li>)}
+                        </ul>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {!isTerminal && !isExpired && (
             <div style={{ display: 'flex', gap: 10, padding: '20px 24px' }}>
