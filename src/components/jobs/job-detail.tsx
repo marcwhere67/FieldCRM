@@ -8,10 +8,11 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatCurrency, formatDate, formatDateTime, formatMinutes } from '@/lib/format'
+import { formatCurrency, formatDate, formatDateTime, formatTime, formatMinutes } from '@/lib/format'
+import { ScheduleJobModal } from '@/components/schedule/schedule-job-modal'
 import { jobPhotoSrc, procedurePhotoSrc } from '@/lib/photo-url'
 import { ClockWidget } from '@/components/timeclock/clock-widget'
-import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, Check, CheckCircle, Pin, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight, ClipboardCheck, CalendarPlus } from 'lucide-react'
+import { ChevronLeft, MapPin, Phone, Mail, Clock, Camera, CheckSquare, Square, Check, CheckCircle, Pin, FileText, Receipt, ExternalLink, Timer, Trash2, ChevronRight, ClipboardCheck, CalendarPlus, CalendarClock } from 'lucide-react'
 
 const CLEAN_TYPE_OPTIONS = [
   { value: 'regular', label: 'Regular Clean' },
@@ -102,6 +103,7 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
   const [editingNote, setEditingNote] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
   const procFileInputs = useRef<Record<string, HTMLInputElement | null>>({})
 
   async function saveNote(stepId: string) {
@@ -742,10 +744,20 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
 
           {/* Schedule */}
           <div style={C.card} className="p-4">
-            <p style={C.label} className="mb-3">Schedule</p>
+            <div className="flex items-center justify-between mb-3">
+              <p style={C.label}>Schedule</p>
+              <button onClick={() => setScheduling(true)}
+                style={{ color: '#76A58F', fontSize: 9, letterSpacing: '0.12em' }}
+                className="uppercase hover:opacity-70 inline-flex items-center gap-1">
+                <CalendarClock className="w-3 h-3" />{job.scheduled_start ? 'Change' : 'Set date'}
+              </button>
+            </div>
+            {!job.scheduled_start && (
+              <p style={{ ...C.muted, marginBottom: 8 }}>Not scheduled — won&apos;t appear on the calendar yet.</p>
+            )}
             <div className="space-y-2">
               {[
-                { label: 'Scheduled', value: job.scheduled_start ? formatDate(job.scheduled_start) : null },
+                { label: 'Scheduled', value: job.scheduled_start ? `${formatDate(job.scheduled_start)}, ${formatTime(job.scheduled_start)}` : null },
                 { label: 'Started',   value: job.actual_start ? formatDateTime(job.actual_start) : null },
                 { label: 'Finished',  value: job.actual_end ? formatDateTime(job.actual_end) : null },
               ].filter(r => r.value).map(r => (
@@ -836,6 +848,13 @@ export function JobDetail({ job, teamMembers, timesheets, jobNotes, currentUserI
           </div>
         </div>
       </div>
+
+      {scheduling && (
+        <ScheduleJobModal
+          job={{ id: job.id, title: job.title, status, scheduled_start: job.scheduled_start, scheduled_end: job.scheduled_end }}
+          onClose={() => setScheduling(false)}
+        />
+      )}
     </div>
   )
 }

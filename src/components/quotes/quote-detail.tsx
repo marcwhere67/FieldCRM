@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { QuoteBuilder } from '@/components/quotes/quote-builder'
 import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
+import { melbourneToUtcISO } from '@/lib/recurring'
 import { toast } from 'sonner'
 import { ArrowLeft, Send, CheckCircle, Copy, Trash2, Edit2, ExternalLink, MoreHorizontal, Download, Pencil } from 'lucide-react'
 import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
@@ -19,6 +20,9 @@ const C = {
   fg: '#1C2A35', muted: '#8A9BA6', subtle: 'rgba(44,62,80,0.08)',
   border: 'rgba(44,62,80,0.09)', serif: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)",
 }
+
+const schedInput: React.CSSProperties = { backgroundColor: '#fff', border: '1px solid rgba(118,165,143,0.35)', color: C.fg, fontSize: 13, height: 34, padding: '0 10px', outline: 'none' }
+const schedLabel: React.CSSProperties = { color: '#3f6b57', fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 5, display: 'block' }
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   draft:     { bg: 'rgba(44,62,80,0.06)',    color: '#4A5A65', border: 'rgba(44,62,80,0.15)' },
@@ -62,6 +66,9 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
 
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
   const [loadingDraft, setLoadingDraft] = useState(false)
+  const [schedDate, setSchedDate] = useState('')
+  const [schedTime, setSchedTime] = useState('09:00')
+  const [schedDuration, setSchedDuration] = useState(120)
 
   function sendQuote(override?: { subject: string; message: string }) {
     if (!contact?.email) { toast.error('Contact has no email address'); return }
@@ -118,10 +125,20 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
 
   async function convertToJob() {
     startTransition(async () => {
+      // A date here is optional — without one the job lands in the Schedule
+      // page's "needs scheduling" tray instead of on the calendar.
+      const startISO = schedDate ? melbourneToUtcISO(schedDate, schedTime || '09:00') : null
+      const endISO = startISO
+        ? new Date(new Date(startISO).getTime() + (schedDuration || 120) * 60000).toISOString()
+        : null
+
       const { data: job, error } = await supabase.from('jobs').insert({
         org_id: orgId, contact_id: contact?.id, property_id: property?.id,
-        title: `Job from ${quote.quote_number}`, status: 'draft', quote_id: quote.id,
+        title: `Job from ${quote.quote_number}`,
+        status: startISO ? 'scheduled' : 'draft',
+        quote_id: quote.id,
         clean_type: quote.clean_type ?? null,
+        scheduled_start: startISO, scheduled_end: endISO,
       }).select('id').single()
       if (error || !job) { toast.error('Failed to convert to job'); return }
       if (quote.deposit_type !== 'none' && quote.deposit_amount > 0) {
@@ -134,7 +151,11 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
         })
       }
       await supabase.from('quotes').update({ status: 'converted' }).eq('id', quote.id)
-      toast.success(quote.deposit_amount > 0 ? 'Converted to job — deposit invoice created' : 'Converted to job')
+      toast.success(
+        startISO
+          ? `Job scheduled for ${formatDate(startISO)}${quote.deposit_amount > 0 ? ' — deposit invoice created' : ''}`
+          : quote.deposit_amount > 0 ? 'Converted to job — deposit invoice created' : 'Converted to job',
+      )
       router.push(`/jobs/${job.id}`)
     })
   }
@@ -240,18 +261,39 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
 
       {/* Approved → ready to schedule prompt */}
       {quote.status === 'approved' && (
-        <div style={{ backgroundColor: 'rgba(118,165,143,0.10)', border: '1px solid rgba(118,165,143,0.28)', padding: '14px 20px' }} className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div style={{ backgroundColor: 'rgba(118,165,143,0.10)', border: '1px solid rgba(118,165,143,0.28)', padding: '14px 20px' }}>
+          <div className="flex items-center gap-2 mb-3">
             <CheckCircle className="w-4 h-4" style={{ color: '#5d8c76' }} />
             <span style={{ color: '#3f6b57', fontSize: 13 }}>
               Approved by the client{quote.deposit_amount > 0 ? ` — a ${formatCurrency(quote.deposit_amount)} deposit invoice will be created` : ''}. Ready to schedule.
             </span>
           </div>
-          <button onClick={convertToJob} disabled={isPending}
-            style={{ backgroundColor: C.navy, color: '#fff', border: 'none', padding: '9px 16px', fontSize: 11, letterSpacing: '0.08em', flexShrink: 0 }}
-            className="inline-flex items-center gap-1.5 uppercase hover:opacity-90 transition-opacity disabled:opacity-40">
-            <CheckCircle className="w-3.5 h-3.5" />{isPending ? 'Creating…' : 'Create the job'}
-          </button>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div>
+              <span style={schedLabel}>Date</span>
+              <input type="date" value={schedDate} min={melbourneDateOnly()} onChange={e => setSchedDate(e.target.value)}
+                style={{ ...schedInput, width: 150 }} />
+            </div>
+            <div>
+              <span style={schedLabel}>Start</span>
+              <input type="time" value={schedTime} onChange={e => setSchedTime(e.target.value)}
+                style={{ ...schedInput, width: 110 }} />
+            </div>
+            <div>
+              <span style={schedLabel}>Duration (min)</span>
+              <input type="number" min={15} step={15} value={schedDuration}
+                onChange={e => setSchedDuration(Number(e.target.value) || 120)} style={{ ...schedInput, width: 110 }} />
+            </div>
+            <button onClick={convertToJob} disabled={isPending}
+              style={{ backgroundColor: C.navy, color: '#fff', border: 'none', height: 34, padding: '0 16px', fontSize: 11, letterSpacing: '0.08em', flexShrink: 0 }}
+              className="inline-flex items-center gap-1.5 uppercase hover:opacity-90 transition-opacity disabled:opacity-40">
+              <CheckCircle className="w-3.5 h-3.5" />
+              {isPending ? 'Creating…' : schedDate ? 'Create & schedule' : 'Create the job'}
+            </button>
+            <span style={{ color: '#3f6b57', fontSize: 11, opacity: 0.75, paddingBottom: 9 }}>
+              {schedDate ? 'Goes straight onto the calendar.' : 'No date? It lands in “needs scheduling” on the Schedule page.'}
+            </span>
+          </div>
         </div>
       )}
 
