@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { CheckCircle, XCircle, Clock, AlertCircle, ChevronDown } from 'lucide-react'
-import { QUOTE_TERMS } from '@/lib/scope-of-work'
+import { QUOTE_TERMS, getScope } from '@/lib/scope-of-work'
 
 interface LineItem { id: string; description: string; quantity: number; unit_price: number; subtotal: number; tax_rate: number }
 interface Quote {
   id: string; quote_number: string; status: string; subtotal: number; tax: number; total: number
   valid_until: string | null; notes_client: string | null; line_items: LineItem[]
+  clean_type?: string | null
   deposit_type?: string; deposit_value?: number; deposit_amount?: number
   contacts: { first_name: string; last_name: string; email: string | null } | { first_name: string; last_name: string; email: string | null }[] | null
   properties: { label: string | null; address_line1: string | null; suburb: string | null; state: string | null; postcode: string | null } | null | unknown[]
@@ -26,6 +27,8 @@ export function QuoteApproval({ quote, org }: Props) {
   const [status, setStatus] = useState(quote.status)
   const [loading, setLoading] = useState<'approve' | 'decline' | null>(null)
   const [termsOpen, setTermsOpen] = useState(false)
+  const [scopeOpen, setScopeOpen] = useState(true)
+  const scope = getScope(quote.clean_type)
 
   const contact  = Array.isArray(quote.contacts) ? quote.contacts[0] : quote.contacts
   const property = Array.isArray(quote.properties)
@@ -161,6 +164,31 @@ export function QuoteApproval({ quote, org }: Props) {
             <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
               <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Notes</p>
               <p style={{ color: '#4A5A65', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{quote.notes_client}</p>
+            </div>
+          )}
+
+          {/* Scope of Work — same content as the attached PDF, driven by the
+              quote's clean type. Expanded by default (unlike Terms &
+              Conditions below) since this is what the customer is actually
+              buying, not legal boilerplate. */}
+          {scope && (
+            <div style={{ borderBottom: `1px solid ${C.border}` }}>
+              <button
+                type="button"
+                onClick={() => setScopeOpen((o) => !o)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <span style={{ color: C.navy, fontSize: 12, fontWeight: 500, letterSpacing: '0.04em' }}>Scope of Work — {scope.title}</span>
+                <ChevronDown style={{ width: 14, height: 14, color: C.muted, transform: scopeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              </button>
+              {scopeOpen && (
+                <div style={{ padding: '0 24px 20px' }}>
+                  <p style={{ color: '#4A5A65', fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}>{scope.intro}</p>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.7 }}>
+                    {scope.includes.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 

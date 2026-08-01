@@ -4,6 +4,38 @@ Assumptions made under ambiguity, per SPEC.md §1. Newest first.
 
 ---
 
+## D-012 — Scope of Work added to the public quote-approval page
+**Date:** 2026-08-02
+
+While wiring End of Lease through "wherever clean types appear," found that
+the public `/quote-approval/[id]` page never rendered Scope of Work at all —
+for ANY clean type, not just the new one. The customer only ever saw it if
+they opened the PDF attached to the email; the web approval page itself
+(line items, notes, Terms & Conditions, Approve/Decline) skipped it entirely.
+
+**Decision:** added a Scope of Work section to the approval page, using the
+exact same `getScope()` call the PDF already uses — so it can never drift
+from what's in the PDF. Styled to match the existing Terms & Conditions
+collapsible section on the same page, but **expanded by default** (T&Cs stays
+collapsed) since scope is what the customer is actually buying, not legal
+boilerplate. Section is omitted entirely when `clean_type` is null/"None",
+matching the PDF's behaviour.
+
+**Consequence — this fixes the same gap for Regular/Deep/Airbnb too**, not
+just End of Lease; not scope creep, since it's the identical underlying
+mechanism the user was pointing at.
+
+**Verified live** by creating a throwaway $0 draft quote (addressed to the
+user's own contact record, never sent — no customer was emailed) and viewing
+its public approval page directly: Scope of Work renders correctly for Deep
+Clean, matching the PDF content exactly. Attempting to save the SAME draft
+with `clean_type: 'end_of_lease'` correctly hit Postgres error `23514`
+(`quotes_clean_type_check` violation) — proof the old 3-value constraint is
+still live and will accept `end_of_lease` the moment the migration from D-011
+is applied, with no further code changes needed.
+
+---
+
 ## D-011 — Added End of Lease as a 4th clean type
 **Date:** 2026-08-02
 
