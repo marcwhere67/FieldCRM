@@ -6,10 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { computeTotals, lineSubtotal, depositAmount as calcDeposit } from '@/lib/money'
-import { Plus, Trash2, ChevronLeft, Send, Save, Pencil } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, Send, Save, Pencil, DoorOpen } from 'lucide-react'
 import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
 import Link from 'next/link'
 import { AiQuoteAssist } from '@/components/ai/ai-quote-assist'
+import { RoomPickerModal } from './room-picker-modal'
 
 interface LineItem { service_id?: string; description: string; quantity: number; unit_price: number; tax_rate: number; subtotal: number }
 interface CatalogueItem { id: string; name: string; description: string | null; unit_price: number; unit: string; tax_rate?: number; type?: 'service' | 'product'; category?: string | null }
@@ -52,6 +53,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const [saving, setSaving] = useState(false)
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
   const [reviewQuoteId, setReviewQuoteId] = useState<string | null>(null)
+  const [showRoomPicker, setShowRoomPicker] = useState(false)
   const existingContact = existingQuote?.contacts
     ? (Array.isArray(existingQuote.contacts) ? existingQuote.contacts[0] : existingQuote.contacts) : null
   const [contactId, setContactId] = useState(existingQuote?.contact_id ?? existingContact?.id ?? initialContactId ?? '')
@@ -75,6 +77,11 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   }
 
   function addBlankLine() { setLineItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0, tax_rate: 0, subtotal: 0 }]) }
+
+  // From the room picker: one combined line item, description only — price stays manual.
+  function addRoomsLine(description: string) {
+    setLineItems(prev => [...prev, { description, quantity: 1, unit_price: 0, tax_rate: 0, subtotal: 0 }])
+  }
 
   function updateLine(index: number, field: keyof LineItem, value: string | number) {
     setLineItems(prev => prev.map((item, i) => {
@@ -271,11 +278,19 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
               </div>
             )}
 
-            <button onClick={addBlankLine}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.sage, fontSize: 12, background: 'none', border: 'none', cursor: 'pointer' }}
-              className="hover:opacity-70 transition-opacity">
-              <Plus style={{ width: 13, height: 13 }} />Add custom line item
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <button onClick={() => setShowRoomPicker(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.sage, fontSize: 12, background: 'none', border: 'none', cursor: 'pointer' }}
+                className="hover:opacity-70 transition-opacity">
+                <DoorOpen style={{ width: 13, height: 13 }} />Add rooms
+              </button>
+              <span style={{ color: C.border, fontSize: 12 }}>·</span>
+              <button onClick={addBlankLine}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.sage, fontSize: 12, background: 'none', border: 'none', cursor: 'pointer' }}
+                className="hover:opacity-70 transition-opacity">
+                <Plus style={{ width: 13, height: 13 }} />Add custom line item
+              </button>
+            </div>
 
             {lineItems.length > 0 && (
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }} className="space-y-2">
@@ -433,6 +448,8 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
           onClose={() => setEmailDraft(null)}
         />
       )}
+
+      <RoomPickerModal open={showRoomPicker} onClose={() => setShowRoomPicker(false)} onAdd={addRoomsLine} />
     </div>
   )
 }
