@@ -3,11 +3,12 @@ import { z } from 'zod'
 import { requireProfile, parseBody, jsonError, friendlyDbError } from '@/lib/http'
 import { zRequiredText, zNullableText } from '@/lib/validation/common'
 
-// Any signed-in user may edit their own name/phone. The `.eq('supabase_auth_id')`
-// scope means a user can only ever update their own row.
+// Any signed-in user may edit their own name/phone/signature template. The
+// `.eq('supabase_auth_id')` scope means a user can only ever update their own row.
 const profileSchema = z.object({
   full_name: zRequiredText(200).optional(),
   phone: zNullableText(40),
+  email_signature_template: zNullableText(4000),
 })
 
 export async function PATCH(req: Request) {

@@ -17,7 +17,7 @@ const C = {
 interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string; website: string | null; instagram_url: string | null }
 interface TeamMember { id: string; full_name: string; email: string; role: string; phone: string | null; is_active: boolean; hourly_rate: number | null }
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
-interface Props { org: Org; team: TeamMember[]; profile: Profile; jobTitle: string | null; isAdmin: boolean; initialTab?: string }
+interface Props { org: Org; team: TeamMember[]; profile: Profile; jobTitle: string | null; signatureTemplate: string | null; isAdmin: boolean; initialTab?: string }
 
 const TABS = [
   { id: 'business',  label: 'Business',  icon: Building2, adminOnly: true },
@@ -27,7 +27,7 @@ const TABS = [
   { id: 'health',    label: 'System Health', icon: Activity, adminOnly: true },
 ]
 
-export function SettingsView({ org, team, profile, jobTitle, isAdmin, initialTab }: Props) {
+export function SettingsView({ org, team, profile, jobTitle, signatureTemplate, isAdmin, initialTab }: Props) {
   const visibleTabs = TABS.filter(t => !t.adminOnly || isAdmin)
   const startTab = visibleTabs.some(t => t.id === initialTab) ? initialTab! : visibleTabs[0].id
   const [activeTab, setActiveTab] = useState(startTab)
@@ -64,7 +64,7 @@ export function SettingsView({ org, team, profile, jobTitle, isAdmin, initialTab
         {activeTab === 'business' && isAdmin && <BusinessSettings org={org} />}
         {activeTab === 'templates' && isAdmin && <TemplatesSettings canManage={isAdmin} />}
         {activeTab === 'team' && <TeamSettings initialTeam={team} canManage={isAdmin} currentUserId={profile.id} />}
-        {activeTab === 'profile' && <ProfileSettings profile={profile} org={org} jobTitle={jobTitle} />}
+        {activeTab === 'profile' && <ProfileSettings profile={profile} org={org} jobTitle={jobTitle} initialSignatureTemplate={signatureTemplate} />}
         {activeTab === 'health' && isAdmin && <SystemHealth />}
       </div>
     </div>

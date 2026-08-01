@@ -21,6 +21,22 @@ async function fetchOrg(supabase: Awaited<ReturnType<typeof createClient>>, orgI
   return base.data ? { ...base.data, website: null, instagram_url: null } : null
 }
 
+// email_signature_template ships via 2026-08-01_custom_email_signature.sql,
+// same "may not be applied yet" caveat as the org socials above.
+async function fetchSignatureTemplate(supabase: Awaited<ReturnType<typeof createClient>>, profileId: string) {
+  const { data, error } = await supabase
+    .from('users').select('email_signature_template').eq('id', profileId).single()
+  if (error) {
+    await captureError(error, {
+      source: 'settings/page', level: 'warning', context: {
+        stage: 'signature_template_fetch', hint: 'has 2026-08-01_custom_email_signature.sql been applied?',
+      },
+    })
+    return null
+  }
+  return data?.email_signature_template ?? null
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -35,7 +51,7 @@ export default async function SettingsPage({
 
   if (!profile) redirect('/login')
 
-  const [org, { data: team }, { data: employeeProfile }] = await Promise.all([
+  const [org, { data: team }, { data: employeeProfile }, signatureTemplate] = await Promise.all([
     fetchOrg(supabase, profile.org_id),
     supabase
       .from('users')
@@ -47,6 +63,7 @@ export default async function SettingsPage({
       .select('job_title')
       .eq('user_id', profile.id)
       .maybeSingle(),
+    fetchSignatureTemplate(supabase, profile.id),
   ])
 
   if (!org) redirect('/dashboard')
@@ -57,6 +74,7 @@ export default async function SettingsPage({
       team={team ?? []}
       profile={profile}
       jobTitle={employeeProfile?.job_title ?? null}
+      signatureTemplate={signatureTemplate}
       isAdmin={profile.role === 'admin'}
       initialTab={tab}
     />

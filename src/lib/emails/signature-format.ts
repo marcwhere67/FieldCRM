@@ -26,24 +26,28 @@ export interface SignatureOrg {
   logoUrl?: string | null
 }
 
-/** `esc()` covers text content; attribute values also need quotes escaped. */
-function escAttr(s: string): string {
+/**
+ * `esc()` covers text content; attribute values also need quotes escaped.
+ * Exported: also used by custom-signature.ts to build the same safe
+ * href/src attributes for the free-form signature editor's merge fields.
+ */
+export function escAttr(s: string): string {
   return esc(s).replace(/"/g, '&quot;')
 }
 
 /** Adds a protocol if the admin typed a bare domain/handle URL. */
-function ensureHref(url: string): string {
+export function ensureHref(url: string): string {
   const trimmed = url.trim()
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }
 
 /** "https://www.saltaircleaning.com.au/" -> "saltaircleaning.com.au" for display. */
-function cleanUrlDisplay(url: string): string {
+export function cleanUrlDisplay(url: string): string {
   return url.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '')
 }
 
 /** Extracts "@handle" from a typical instagram.com/<handle> URL, else falls back to the cleaned URL. */
-function instagramHandle(url: string): string {
+export function instagramHandle(url: string): string {
   const match = url.trim().match(/instagram\.com\/([^/?#]+)/i)
   return match ? `@${match[1]}` : cleanUrlDisplay(url)
 }

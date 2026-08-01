@@ -4,6 +4,39 @@ Assumptions made under ambiguity, per SPEC.md §1. Newest first.
 
 ---
 
+## D-010 — Free-form per-user signature editor, reusing the existing template engine
+**Date:** 2026-08-01
+
+User's explicit choice: full free-form editor (not just more structured
+fields), per-person in Settings → Profile (not a shared org-wide setting).
+
+**Decision:** reuse the app's EXISTING `{{snake_case}}` merge-field engine
+(`renderTemplate` in `src/lib/templates.ts`, already used for quote/invoice/
+appointment message templates) rather than inventing a second templating
+syntax. New variable catalog (`SIGNATURE_VARIABLES` in
+`src/lib/emails/custom-signature.ts`) is kept SEPARATE from the existing
+`TEMPLATE_VARIABLES` — `job_title` already means something different there
+(a job/service title, not a staff member's title), so merging catalogs would
+have created a real naming collision.
+
+Empty/unset template = automatically use the existing CRM-built signature —
+this feature is purely additive. A user flipping to "Write my own" for the
+first time gets a working starter template (not a blank box), built from the
+exact fields the default signature already uses.
+
+**Resolution priority in `resolveSenderSignatureHtml`:** custom template →
+CRM-built structured signature → live Gmail signature (unchanged from D-007).
+
+**Consequence — verified live:** the new `users.email_signature_template`
+column isn't applied to this environment yet. Confirmed the read path
+degrades gracefully (preview and default signature both work, `captureError`
+logs a clear warning) and the write path fails with a friendly, non-leaking
+message (`friendlyDbError`) rather than a raw Postgres error — save will
+start working the moment the migration
+(`2026-08-01_custom_email_signature.sql`) is applied, no code changes needed.
+
+---
+
 ## D-009 — Logo moved into the signature block; quote-acceptance email unified
 **Date:** 2026-08-01
 

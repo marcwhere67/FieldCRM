@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Save, KeyRound, Lock, Mail, PenLine } from 'lucide-react'
 import { buildSenderSignatureHtml } from '@/lib/emails/signature-format'
+import { renderCustomSignatureHtml, SIGNATURE_VARIABLES } from '@/lib/emails/custom-signature'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -20,15 +21,32 @@ const AVATAR_COLORS = [
   { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed' },
 ]
 
+// Pre-filled starting point when someone switches to "write my own" for the
+// first time — a working template, not a blank box, built from the same
+// fields the default signature already uses.
+const SIGNATURE_STARTER = `Kind regards,
+
+{{full_name}}
+{{job_title}}
+{{business_name}}
+Phone: {{phone}}
+Email: {{email}}
+Website: {{website}}
+Instagram: {{instagram}}
+
+{{logo}}`
+
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
 interface Org { name: string; phone: string | null; email: string | null; website?: string | null; instagram_url?: string | null }
 
-export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; org: Org; jobTitle: string | null }) {
+export function ProfileSettings({ profile, org, jobTitle, initialSignatureTemplate }: { profile: Profile; org: Org; jobTitle: string | null; initialSignatureTemplate: string | null }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [form, setForm] = useState({ full_name: profile.full_name, phone: profile.phone ?? '' })
+  const [useCustomSignature, setUseCustomSignature] = useState(!!initialSignatureTemplate?.trim())
+  const [signatureTemplate, setSignatureTemplate] = useState(initialSignatureTemplate ?? '')
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
@@ -82,7 +100,11 @@ export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; 
     if (!form.full_name.trim()) { toast.error('Name is required'); return }
     setSaving(true)
     try {
-      const res = await fetch('/api/settings/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const body = {
+        ...form,
+        email_signature_template: useCustomSignature && signatureTemplate.trim() ? signatureTemplate : null,
+      }
+      const res = await fetch('/api/settings/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       toast.success('Profile updated')
@@ -173,20 +195,69 @@ export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; 
           <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Email Signature</h3>
         </div>
         <p style={{ color: C.muted, fontSize: 11, marginBottom: 14 }}>
-          This is what appears on quotes, invoices and receipts you send — built from your name and
-          phone above, your job title, and the website/Instagram set in Settings → Business. It shows
-          correctly no matter who sends from the shared{org.email ? ` ${org.email}` : ' business'} inbox.
+          This appears on quotes, invoices and receipts you send. It shows correctly no matter who
+          sends from the shared{org.email ? ` ${org.email}` : ' business'} inbox.
         </p>
-        {/* The logo is built INTO the signature itself (buildSenderSignatureHtml) —
-            same function, same output, used for every sent email. No separate
-            header wrapper needed here; this preview IS the real thing. */}
+
+        <div className="flex" style={{ border: `1px solid ${C.border}`, marginBottom: 14 }}>
+          {([
+            { val: false, label: 'Default (built for you)' },
+            { val: true, label: 'Write my own' },
+          ] as const).map(opt => (
+            <button key={String(opt.val)} type="button"
+              onClick={() => {
+                if (opt.val && !signatureTemplate.trim()) setSignatureTemplate(SIGNATURE_STARTER)
+                setUseCustomSignature(opt.val)
+              }}
+              style={{
+                flex: 1, padding: '8px 0', fontSize: 11, letterSpacing: '0.06em', border: 'none',
+                backgroundColor: useCustomSignature === opt.val ? C.navy : '#fff',
+                color: useCustomSignature === opt.val ? '#fff' : C.muted, cursor: 'pointer',
+              }}
+              className="uppercase">
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {useCustomSignature && (
+          <div className="space-y-3" style={{ marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Your signature template</label>
+              <textarea value={signatureTemplate} onChange={e => setSignatureTemplate(e.target.value)} rows={9}
+                placeholder={SIGNATURE_STARTER}
+                style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit' }}
+                className="focus:border-[#76A58F]" />
+            </div>
+            <div>
+              <label style={labelStyle}>Insert</label>
+              <div className="flex flex-wrap gap-1.5">
+                {SIGNATURE_VARIABLES.map(v => (
+                  <button key={v.key} type="button" onClick={() => setSignatureTemplate(t => `${t}{{${v.key}}}`)} title={v.label}
+                    style={{ backgroundColor: C.cream, border: `1px solid ${C.border}`, color: '#4A5A65', fontSize: 10, padding: '3px 8px' }}
+                    className="hover:opacity-80 transition-opacity">
+                    {'{{'}{v.key}{'}}'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <p style={{ color: C.muted, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>Preview</p>
         <div
           style={{ border: `1px solid ${C.border}`, backgroundColor: C.cream, padding: '14px 16px', fontSize: 13, color: C.fg }}
           dangerouslySetInnerHTML={{
-            __html: buildSenderSignatureHtml(
-              { fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone },
-              { name: org.name, phone: org.phone, email: org.email ?? '', website: org.website, instagramUrl: org.instagram_url, logoUrl: '/salt-air-logo.png' },
-            ),
+            __html: useCustomSignature && signatureTemplate.trim()
+              ? renderCustomSignatureHtml(signatureTemplate, {
+                  fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone || org.phone,
+                  businessName: org.name, email: org.email ?? '', website: org.website ?? null, instagramUrl: org.instagram_url ?? null,
+                  logoUrl: '/salt-air-logo.png',
+                })
+              : buildSenderSignatureHtml(
+                  { fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone },
+                  { name: org.name, phone: org.phone, email: org.email ?? '', website: org.website, instagramUrl: org.instagram_url, logoUrl: '/salt-air-logo.png' },
+                ),
           }}
         />
         <p style={{ color: C.muted, fontSize: 11, marginTop: 10 }}>
