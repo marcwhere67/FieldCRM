@@ -187,6 +187,9 @@ export function QuoteApproval({ quote, org }: Props) {
                   <ul style={{ margin: 0, paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.7 }}>
                     {scope.includes.map((item, i) => <li key={i}>{item}</li>)}
                   </ul>
+                  {scope.footnote && (
+                    <p style={{ color: '#4A5A65', fontSize: 11, lineHeight: 1.6, marginTop: 10, fontStyle: 'italic' }}>{scope.footnote}</p>
+                  )}
                 </div>
               )}
             </div>

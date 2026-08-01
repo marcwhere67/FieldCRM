@@ -41,11 +41,13 @@ describe('SCOPE / CLEAN_TYPE_LABELS coverage', () => {
     }
   })
 
-  it('end_of_lease does not promise a bond-back guarantee or free re-clean (a contractual decision, not scope wording)', () => {
-    const text = JSON.stringify(SCOPE.end_of_lease).toLowerCase()
-    expect(text).not.toContain('bond back')
-    expect(text).not.toContain('bond-back')
-    expect(text).not.toContain('guarantee')
-    expect(text).not.toContain('re-clean')
+  it('end_of_lease does not promise a bond-back guarantee or free re-clean (only a disclaimer that bond return is outside our control)', () => {
+    const includesText = JSON.stringify(SCOPE.end_of_lease.includes).toLowerCase()
+    expect(includesText).not.toContain('bond back')
+    expect(includesText).not.toContain('bond-back')
+    expect(includesText).not.toContain('guarantee')
+    expect(includesText).not.toContain('re-clean')
+    // The footnote disclaims a guarantee rather than promising one.
+    expect(SCOPE.end_of_lease.footnote?.toLowerCase()).toContain('does not guarantee')
   })
 })

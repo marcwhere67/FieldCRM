@@ -60,7 +60,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const [lineItems, setLineItems] = useState<LineItem[]>(existingQuote?.line_items ?? initialLineItems ?? [])
   const [notes, setNotes] = useState(existingQuote?.notes_client ?? '')
   const [internalNotes, setInternalNotes] = useState(existingQuote?.notes_internal ?? '')
-  const [validDays, setValidDays] = useState(30)
+  const [validDays, setValidDays] = useState(14)
   const [serviceSearch, setServiceSearch] = useState('')
   const [depositType, setDepositType] = useState<'none' | 'percentage' | 'fixed'>((existingQuote?.deposit_type as 'none' | 'percentage' | 'fixed') ?? 'none')
   const [depositValue, setDepositValue] = useState(existingQuote?.deposit_value ?? 0)
@@ -336,7 +336,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
             <p style={{ color: C.navy, fontSize: 12, fontWeight: 500 }}>Quote Settings</p>
             <div>
               <label style={labelSt}>Valid for (days)</label>
-              <input type="number" value={validDays} onChange={e => setValidDays(parseInt(e.target.value) || 30)} min="1" max="365" style={{ ...inp }} />
+              <input type="number" value={validDays} onChange={e => setValidDays(parseInt(e.target.value) || 14)} min="1" max="365" style={{ ...inp }} />
             </div>
             <div>
               <label style={labelSt}>Scope of work (clean type)</label>

@@ -473,6 +473,10 @@ export function QuotePDF({ quote, org, contact }: Props) {
               </View>
             ))}
 
+            {scope.footnote && (
+              <Text style={[styles.notesText, { marginTop: 8, fontStyle: 'italic' }]}>{scope.footnote}</Text>
+            )}
+
             {/* Add-ons — informational only, same list under every clean type */}
             <Text style={styles.scopeSubLabel}>Optional Add-ons (available on request):</Text>
             {ADD_ONS.map((b, i) => (

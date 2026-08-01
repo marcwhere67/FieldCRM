@@ -19,13 +19,15 @@ const REGULAR_BULLETS = [
   'Exterior of appliances wiped',
   'Kitchen and bathroom cupboard exteriors and kickboards wiped',
   'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
+  'Laundry: sink, tapware and surfaces wiped',
   'Bedrooms and living areas dusted and surfaces cleaned',
   'Floors vacuumed and mopped throughout accessible areas',
   'Skirting boards dusted',
 ]
 
-// Deep Clean — one list, ordered by area (kitchen → bathrooms → bedrooms/living →
-// floors & finishing) with the deep-specific extras folded into their relevant area.
+// Deep Clean — one list, ordered by area (kitchen → bathrooms → laundry →
+// bedrooms/living → floors & finishing) with the deep-specific extras folded
+// into their relevant area.
 const DEEP_BULLETS = [
   // Kitchen
   'Kitchen bench tops, splashbacks and surfaces cleaned',
@@ -39,6 +41,9 @@ const DEEP_BULLETS = [
   // Bathrooms
   'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
   'Bathrooms given additional detailed cleaning, including grout scrubbing and tap fittings',
+  // Laundry
+  'Laundry: sink, tapware and surfaces wiped',
+  'Laundry given additional detailed clean, including exterior of appliances',
   // Bedrooms & living
   'Bedrooms and living areas dusted and surfaces cleaned',
   // Floors & finishing
@@ -64,6 +69,8 @@ const AIRBNB_BULLETS = [
   'Kitchen and bathroom bins emptied, re-lined, and interior and exterior wiped down where required',
   // Bathrooms
   'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
+  // Laundry
+  'Laundry: sink, tapware and surfaces wiped',
   // Bedrooms & living
   'Bedrooms and living areas dusted and surfaces cleaned',
   'Linen changed and beds remade with provided linen',
@@ -80,45 +87,39 @@ const AIRBNB_BULLETS = [
   'Reporting of visible guest damages or issues to the client',
 ]
 
-// End of Lease / Bond Clean — DRAFTED FOR REVIEW. Priced the same as Deep
-// Clean for now (per business decision), but scoped more thoroughly than
-// Deep since it targets what real estate/property managers check during an
-// exit inspection: full oven, wardrobes, exhaust fans, blinds, interior
-// window glass, garage. Deliberately does NOT include any "bond back
-// guarantee" or free re-clean promise — that's a contractual commitment for
-// the business to decide on, not a cleaning-scope line item.
+// End of Lease / Bond Clean — for vacating properties, assumed empty of
+// furniture/belongings (occupied properties may affect access and incur
+// additional cost). Deliberately does NOT include any "bond back guarantee"
+// or free re-clean promise — that's a contractual commitment for the
+// business to decide on, not a cleaning-scope line item; instead a footnote
+// disclaims that bond return is determined by the property manager/landlord.
 const END_OF_LEASE_BULLETS = [
   // Kitchen
   'Kitchen bench tops, splashbacks and surfaces cleaned',
   'Sink and cooktop cleaned',
   'Exterior of appliances wiped',
-  'Kitchen and bathroom cupboard exteriors and kickboards wiped',
-  'Kitchen cupboards and drawers cleaned inside and out (excluding food storage cupboards, where contents can be easily and safely removed and put back)',
-  'Interior and exterior oven cleaning',
+  'Oven cleaned inside and out, including racks and door glass (exterior and interior panel only, excludes between double-glazed door panels, and excessively burnt-on residue requiring specialist treatment)',
   'Interior microwave cleaning',
-  'Range hood and filter cleaned using standard cleaning products (results may vary depending on level of grease build-up)',
-  'Interior and exterior of kitchen and bathroom bins cleaned',
+  'Range hood filter cleaned using standard cleaning products (results may vary depending on level of grease build-up)',
+  'Interior and exterior of kitchen and bathroom bins cleaned (does not include removal of embedded stains or odours from prolonged heavy use)',
+  'Interior and exterior of all cupboards and drawers cleaned throughout the house — kitchen, bathroom, bedrooms and living areas (excluding food storage cupboards, where contents can be easily and safely removed and put back)',
+  'Wardrobes and built-in storage cleaned internally, including shelving and tracks',
   // Bathrooms
   'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
-  'Bathrooms given additional detailed cleaning, including grout scrubbing, tap fittings and exhaust fans',
-  'Bathroom cabinets and drawers cleaned inside and out',
+  'Bathrooms given additional detailed cleaning, including grout scrubbing and tap fittings',
+  // Laundry
+  'Laundry: sink, tapware and surfaces wiped, including exterior of appliances',
   // Bedrooms & living
   'Bedrooms and living areas dusted and surfaces cleaned',
-  'Built-in wardrobes cleaned inside and out (contents removed by client prior to service)',
-  'Ceiling fans and light fittings cleaned',
   // Floors & finishing
   'Floors vacuumed and mopped throughout accessible areas',
-  'Carpets vacuumed throughout (steam/carpet shampooing quoted separately where required)',
-  'Skirting boards thoroughly cleaned',
-  'Window tracks and sills cleaned where accessible',
-  'Interior window glass cleaned',
-  'Light switches, door handles and door frames wiped down',
+  'Carpets vacuumed throughout',
+  'Skirting boards, architraves and door frames cleaned throughout',
+  'Window tracks cleaned where accessible',
+  'Light switches and door handles wiped down',
   'Spot-cleaning of visible marks on walls, where marks can be removed without excessive scrubbing (does not include full wall washing, textured/heavily soiled walls, or marks requiring repainting)',
   'Accessible air conditioning filters removed, cleaned and put back (does not include filters requiring tools to access, servicing, or units showing signs of fault)',
-  'Blinds dusted/wiped where accessible',
-  'Exhaust fans cleaned throughout',
-  // Outdoor
-  'Garage/carport floor swept where accessible (does not include removal of stored items or oil/grease stains)',
+  'All light fittings, exhaust fans and ceiling fans cleaned, up to a two-step ladder height',
 ]
 
 // Add-ons — informational only (no pricing shown), the SAME list appears under
@@ -140,6 +141,7 @@ export interface ScopeDefinition {
   title: string
   intro: string
   includes: string[]
+  footnote?: string
 }
 
 export const SCOPE: Record<CleanType, ScopeDefinition> = {
@@ -160,8 +162,9 @@ export const SCOPE: Record<CleanType, ScopeDefinition> = {
   },
   end_of_lease: {
     title: CLEAN_TYPE_LABELS.end_of_lease,
-    intro: 'A comprehensive clean designed to help meet real estate and landlord expectations at the end of a tenancy, covering the areas most commonly checked during a bond/exit inspection.',
+    intro: 'A thorough end of lease clean for vacating properties, assuming the property is empty of furniture and belongings (occupied properties may affect access and incur additional cost).',
     includes: END_OF_LEASE_BULLETS,
+    footnote: 'This service does not guarantee bond return, as this is determined by the property manager or landlord based on factors outside our control.',
   },
 }
 

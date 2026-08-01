@@ -1,11 +1,12 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { FileText, ChevronRight } from 'lucide-react'
+import { FileText, ChevronRight, Plus } from 'lucide-react'
+import { NewInvoiceModal } from './new-invoice-modal'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   draft:   { bg: 'rgba(44,62,80,0.06)',    color: '#4A5A65', border: 'rgba(44,62,80,0.15)',    dot: '#8A9BA6' },
@@ -34,15 +35,19 @@ interface Invoice {
   contacts: { id: string; first_name: string; last_name: string; email: string | null } | { id: string; first_name: string; last_name: string; email: string | null }[] | null
 }
 
+interface Contact { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }
+
 interface Props {
   invoices: Invoice[]
   filters: { status?: string; type?: string }
   total?: number
+  contacts: Contact[]
 }
 
-export function InvoicesList({ invoices, filters, total }: Props) {
+export function InvoicesList({ invoices, filters, total, contacts }: Props) {
   const router = useRouter()
   const pathname = usePathname()
+  const [showNewInvoice, setShowNewInvoice] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   function updateFilter(key: string, value: string | null) {
@@ -83,7 +88,14 @@ export function InvoicesList({ invoices, filters, total }: Props) {
             {(total ?? 0) > invoices.length && <> · showing most recent {invoices.length}</>}
           </p>
         </div>
+        <button onClick={() => setShowNewInvoice(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', backgroundColor: '#2C3E50', color: '#fff', border: 'none', cursor: 'pointer' }}
+          className="uppercase hover:opacity-90 transition-opacity">
+          <Plus style={{ width: 12, height: 12 }} />New invoice
+        </button>
       </div>
+
+      {showNewInvoice && <NewInvoiceModal contacts={contacts} onClose={() => setShowNewInvoice(false)} />}
 
       {/* Stat strip */}
       <div className="grid grid-cols-3 gap-4">

@@ -33,6 +33,12 @@ export default async function InvoicesPage({
   // Cap the payload at the 500 most-recent to avoid an unbounded fetch.
   const { data: invoices, count } = await query.limit(500)
 
+  const { data: contacts } = await supabase
+    .from('contacts')
+    .select('id, first_name, last_name, email, phone')
+    .eq('org_id', profile.org_id)
+    .order('first_name')
+
   // Mark overdue on the fly (status=sent and past due_date), using Melbourne "today"
   const now = melbourneDateOnly()
   const enriched = (invoices ?? []).map(inv => ({
@@ -40,5 +46,5 @@ export default async function InvoicesPage({
     is_overdue: inv.status === 'sent' && inv.due_date && inv.due_date < now,
   }))
 
-  return <InvoicesList invoices={enriched} filters={params} total={count ?? enriched.length} />
+  return <InvoicesList invoices={enriched} filters={params} total={count ?? enriched.length} contacts={contacts ?? []} />
 }
