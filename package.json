@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:rls": "vitest run src/tests/rls.spec.ts",
+    "test:rls:local": "vitest run src/tests/rls-local.spec.ts",
+    "rls:bootstrap": "printf -- '-- GENERATED = schema.sql + rls-test-policies.sql. Regenerate: npm run rls:bootstrap\\n\\n' > supabase/rls-test-bootstrap.sql && cat supabase/schema.sql supabase/rls-test-policies.sql >> supabase/rls-test-bootstrap.sql",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
@@ -39,6 +43,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

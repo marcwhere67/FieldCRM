@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: types, lint, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # The tree carries 32 pre-existing lint errors (see AUDIT-vs-SPEC.md P3).
+      # Blocking on zero today would mean either a 32-error cleanup in this phase
+      # or disabling lint entirely. Instead we ratchet: new errors fail, and the
+      # baseline only ever goes down.
+      - name: Lint (ratchet against baseline)
+        run: |
+          set -uo pipefail
+          BASELINE=32
+          npm run lint 2>&1 | tee lint.log || true
+          COUNT=$(grep -oE '✖ [0-9]+ problems \([0-9]+ errors' lint.log | grep -oE '\(([0-9]+) errors' | grep -oE '[0-9]+' || echo 0)
+          echo "eslint errors: $COUNT (baseline $BASELINE)"
+          if [ "$COUNT" -gt "$BASELINE" ]; then
+            echo "::error::Lint errors increased to $COUNT (baseline $BASELINE). Fix the new ones."
+            exit 1
+          fi
+          if [ "$COUNT" -lt "$BASELINE" ]; then
+            echo "::notice::Lint errors down to $COUNT — lower BASELINE in .github/workflows/ci.yml to lock the win in."
+          fi
+
+      - name: Unit tests
+        run: npm test
+
+  rls-cloud:
+    name: tenant isolation (hosted Supabase, optional)
+    runs-on: ubuntu-latest
+    # The PRIMARY isolation gate is the local PGlite suite (src/tests/rls-local.spec.ts),
+    # which runs in the `verify` job above via `npm test` — real Postgres RLS, no
+    # secrets, always enforced. THIS job additionally exercises the policies against
+    # a hosted Supabase project (real GoTrue auth) when RLS_TEST_* secrets exist. If
+    # they don't, it skips with a notice rather than failing — isolation is already
+    # proven locally.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: RLS hosted-Supabase suite (if configured)
+        env:
+          RLS_TEST_SUPABASE_URL: ${{ secrets.RLS_TEST_SUPABASE_URL }}
+          RLS_TEST_SERVICE_ROLE_KEY: ${{ secrets.RLS_TEST_SERVICE_ROLE_KEY }}
+          RLS_TEST_ANON_KEY: ${{ secrets.RLS_TEST_ANON_KEY }}
+          RLS_TEST_USER_EMAIL: ${{ secrets.RLS_TEST_USER_EMAIL }}
+          RLS_TEST_USER_PASSWORD: ${{ secrets.RLS_TEST_USER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RLS_TEST_SUPABASE_URL:-}" ]; then
+            echo "::notice::RLS_TEST_* not set — skipping the hosted check. Local PGlite gate already enforced isolation in the verify job."
+            exit 0
+          fi
+          npx vitest run src/tests/rls.spec.ts --reporter=verbose 2>&1 | tee rls.log
+          if grep -q 'RLS tenant-isolation suite SKIPPED' rls.log; then
+            echo "::error::Hosted RLS suite did not execute (env not seen by the test process)."
+            exit 1
+          fi
+          if ! grep -q 'cannot SELECT org B rows' rls.log; then
+            echo "::error::Hosted RLS isolation assertions were not found in the run."
+            exit 1
+          fi
