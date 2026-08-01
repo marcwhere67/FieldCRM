@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { createServiceClient } from '@/lib/supabase/server'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
 
 // Tables whose rows must be preserved (financial / job history). If a contact
 // is referenced here, we archive rather than hard-delete.
@@ -9,27 +12,19 @@ const BLOCKING_TABLES = ['quotes', 'jobs', 'invoices', 'payments', 'visits', 'co
 // For a pure lead we null these out first, then delete the contact.
 const SOFT_REF_TABLES = ['reviews', 'workflow_executions', 'automation_queue', 'form_submissions'] as const
 
-export async function POST(req: NextRequest) {
+const deleteSchema = z.object({
+  ids: z.array(zUuid).min(1, 'No contacts selected').max(500, 'Too many contacts in one request'),
+})
+
+export async function POST(req: Request) {
   try {
-    const { ids } = await req.json()
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: 'No contacts selected' }, { status: 400 })
-    }
+    const auth = await requireRole(MANAGER_ROLES)
+    if (!auth.ok) return auth.response
+    const { profile } = auth.data
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id, org_id, role')
-      .eq('supabase_auth_id', user.id)
-      .single()
-
-    if (!profile) return NextResponse.json({ error: 'No profile' }, { status: 403 })
-    if (!['admin', 'manager'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Only managers can delete contacts' }, { status: 403 })
-    }
+    const parsed = await parseBody(req, deleteSchema)
+    if (!parsed.ok) return parsed.response
+    const { ids } = parsed.data
 
     const svc = createServiceClient()
 
@@ -60,7 +55,7 @@ export async function POST(req: NextRequest) {
         .from('contacts')
         .update({ archived_at: new Date().toISOString() })
         .in('id', [...toArchive])
-      if (error) return NextResponse.json({ error: `Archive failed: ${error.message}` }, { status: 500 })
+      if (error) return jsonError(`Could not archive contacts: ${friendlyDbError(error)}`, 400)
       archived = toArchive.size
     }
 
@@ -73,12 +68,12 @@ export async function POST(req: NextRequest) {
       await svc.from('jobs').update({ source_lead_id: null }).in('source_lead_id', toDelete)
 
       const { error } = await svc.from('contacts').delete().in('id', toDelete)
-      if (error) return NextResponse.json({ error: `Delete failed: ${error.message}` }, { status: 500 })
+      if (error) return jsonError(`Could not delete contacts: ${friendlyDbError(error)}`, 400)
       deleted = toDelete.length
     }
 
     return NextResponse.json({ ok: true, deleted, archived })
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unexpected error' }, { status: 500 })
+  } catch {
+    return jsonError('Something went wrong deleting those contacts. Please try again.', 500)
   }
 }

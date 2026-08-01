@@ -1,52 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zUuid, zOptionalUuid, zRequiredText, zNullableText } from '@/lib/validation/common'
 
-export async function POST(req: NextRequest) {
-  try {
-    const { workflowId, name, description, triggerType, triggerConditions, steps } = await req.json()
+// workflows is a "restricted" table (managers+ write) per p0_lockdown RLS.
+const saveSchema = z.object({
+  workflowId: zOptionalUuid,
+  name: zRequiredText(200),
+  description: zNullableText(1000),
+  triggerType: zRequiredText(50),
+  triggerConditions: z.record(z.string(), z.unknown()).default({}),
+  steps: z.array(z.unknown()).max(100, 'Too many steps').default([]),
+})
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+const SELECT = 'id, name, description, is_active, trigger_type, trigger_conditions, steps, stats, created_at'
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id, org_id')
-      .eq('supabase_auth_id', user.id)
-      .single()
-    if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+export async function POST(req: Request) {
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    const payload = {
-      name,
-      description: description ?? null,
-      trigger_type: triggerType,
-      trigger_conditions: triggerConditions ?? {},
-      steps: steps ?? [],
-    }
+  const parsed = await parseBody(req, saveSchema)
+  if (!parsed.ok) return parsed.response
+  const { workflowId, name, description, triggerType, triggerConditions, steps } = parsed.data
 
-    let workflow
-    if (workflowId) {
-      const { data, error } = await supabase
-        .from('workflows')
-        .update(payload)
-        .eq('id', workflowId)
-        .eq('org_id', profile.org_id)
-        .select('id, name, description, is_active, trigger_type, trigger_conditions, steps, stats, created_at')
-        .single()
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      workflow = data
-    } else {
-      const { data, error } = await supabase
-        .from('workflows')
-        .insert({ ...payload, org_id: profile.org_id, is_active: true })
-        .select('id, name, description, is_active, trigger_type, trigger_conditions, steps, stats, created_at')
-        .single()
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      workflow = data
-    }
-
-    return NextResponse.json({ workflow })
-  } catch (err: unknown) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
+  const payload = {
+    name,
+    description,
+    trigger_type: triggerType,
+    trigger_conditions: triggerConditions,
+    steps,
   }
+
+  if (workflowId) {
+    const { data, error } = await supabase
+      .from('workflows')
+      .update(payload)
+      .eq('id', zUuid.parse(workflowId))
+      .eq('org_id', profile.org_id)
+      .select(SELECT)
+      .single()
+    if (error) return jsonError(friendlyDbError(error), 400)
+    return NextResponse.json({ workflow: data })
+  }
+
+  const { data, error } = await supabase
+    .from('workflows')
+    .insert({ ...payload, org_id: profile.org_id, is_active: true })
+    .select(SELECT)
+    .single()
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ workflow: data })
 }

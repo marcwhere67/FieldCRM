@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitor'
 import { notifyNewLead } from '@/lib/notify'
+import { normaliseAuPhone } from '@/lib/validation/phone'
 
 const cap = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '')
 
@@ -39,7 +40,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
   const raw = await req.json().catch(() => ({}))
   const firstName = cap(raw.firstName ?? raw.first_name, 100)
   const lastName = cap(raw.lastName ?? raw.last_name, 100)
-  const phone = cap(raw.phone, 40)
+  const rawPhone = cap(raw.phone, 40)
+  // Store E.164 when we can recognise the number; otherwise keep what the
+  // visitor typed. A public lead form must never drop a real enquiry over a
+  // phone-format quirk — better a non-canonical number than a lost lead.
+  const phone = normaliseAuPhone(rawPhone) ?? rawPhone
   const email = cap(raw.email, 200)
   const address = cap(raw.address, 300)
   const serviceType = cap(raw.serviceType ?? raw.service, 100)
@@ -111,7 +116,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
     notes: notesParts.join('\n') || null,
   })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers })
+  if (error) {
+    await captureError(error, { source: 'api/intake/[orgSlug] insert', level: 'error', orgId: org.id })
+    return NextResponse.json({ error: 'We could not save your enquiry. Please try again.' }, { status: 500, headers })
+  }
 
   // CRM-native notification: email the org's inbox via connected Gmail.
   // Best-effort (never throws) — the lead is already saved.

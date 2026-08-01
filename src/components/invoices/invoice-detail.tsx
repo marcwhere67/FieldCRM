@@ -94,7 +94,12 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) { toast.error(data?.error ?? 'Failed to send invoice'); return }
-      toast.success(`Invoice emailed to ${contact.email}`); setEmailDraft(null); router.refresh()
+      toast.success(`Invoice emailed to ${contact.email}`)
+      // Non-blocking compliance advisories (e.g. no-ABN withholding).
+      if (Array.isArray(data?.warnings)) {
+        for (const w of data.warnings as string[]) toast.warning(w, { duration: 8000 })
+      }
+      setEmailDraft(null); router.refresh()
     })
   }
 

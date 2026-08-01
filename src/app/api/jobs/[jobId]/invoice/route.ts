@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireRole, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
 import { melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
 
@@ -15,18 +15,11 @@ interface LineItem {
 
 export async function POST(_req: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('users').select('id, org_id, role').eq('supabase_auth_id', user.id).single()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-
-  // Invoices are manager+ only (matches Track A RLS)
-  if (!['admin', 'manager'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Only managers or admins can create invoices' }, { status: 403 })
-  }
+  // Invoices are manager+ only (matches Track A RLS).
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
   const { data: job } = await supabase
     .from('jobs')
@@ -96,7 +89,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
       source: SOURCE, level: 'critical', orgId: profile.org_id, userId: profile.id,
       context: { jobId: job.id, quoteId: job.quote_id ?? null },
     })
-    return NextResponse.json({ error: invErr?.message ?? 'Failed to create invoice' }, { status: 400 })
+    return jsonError(invErr ? friendlyDbError(invErr) : 'Failed to create invoice', 400)
   }
 
   const { error: jobErr } = await supabase

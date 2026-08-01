@@ -2,8 +2,12 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import React from 'react'
+import { z } from 'zod'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
-import { createClient } from '@/lib/supabase/server'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import {
+  zUuid, zPositiveMoneyInput, zDateOnly, zNullableText, zLongText,
+} from '@/lib/validation/common'
 import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
@@ -13,39 +17,43 @@ import {
 } from '@/lib/emails/invoice-email'
 
 const SOURCE = 'api/invoices/[id]/payment'
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export const PAYMENT_METHODS = ['bank_transfer', 'card', 'cash', 'cheque', 'payid', 'other'] as const
+
+const paymentSchema = z.object({
+  amount: zPositiveMoneyInput,
+  method: z.enum(PAYMENT_METHODS, { error: 'Choose a valid payment method' }).default('bank_transfer'),
+  payment_date: zDateOnly.optional(),
+  reference: zNullableText(200),
+  note: zNullableText(500),
+  send_receipt: z.boolean().default(true),
+  receipt_message: zLongText(5000).optional(),
+  // Idempotency key minted by the client when the payment modal opens and
+  // reused on every retry, so a double-tap or a retried-after-timeout request
+  // records the payment (and emails the receipt) exactly once. A malformed key
+  // is now a 400 rather than being silently dropped — dropping it turned a
+  // retry into a duplicate payment.
+  client_request_id: zUuid.nullish(),
+})
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('users').select('id, org_id, role, full_name').eq('supabase_auth_id', user.id).single()
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-  if (!['admin', 'manager'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Only managers or admins can record payments' }, { status: 403 })
-  }
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const body = await req.json().catch(() => ({}))
-  const amount = Number(body.amount)
-  const method = String(body.method || 'bank_transfer')
-  const paymentDate = body.payment_date || melbourneDateOnly()
-  const reference = body.reference ? String(body.reference).slice(0, 200) : null
-  const note = body.note ? String(body.note).slice(0, 500) : null
-  const sendReceipt = body.send_receipt !== false
-  const receiptMessage = typeof body.receipt_message === 'string' ? body.receipt_message.trim() : ''
-  // Idempotency key minted by the client when the payment modal opens and
-  // reused on every retry, so a double-tap or a retried-after-timeout request
-  // records the payment (and emails the receipt) exactly once.
-  const clientRequestId = typeof body.client_request_id === 'string' && UUID_RE.test(body.client_request_id)
-    ? body.client_request_id
-    : null
+  const parsed = await parseBody(req, paymentSchema)
+  if (!parsed.ok) return parsed.response
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ error: 'Enter a payment amount greater than zero' }, { status: 400 })
-  }
+  const amount = parsed.data.amount
+  const method = parsed.data.method
+  const paymentDate = parsed.data.payment_date ?? melbourneDateOnly()
+  const reference = parsed.data.reference
+  const note = parsed.data.note
+  const sendReceipt = parsed.data.send_receipt
+  const receiptMessage = parsed.data.receipt_message ?? ''
+  const clientRequestId = parsed.data.client_request_id ?? null
 
   const { data: invoice } = await supabase
     .from('invoices')
@@ -53,7 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .eq('id', id)
     .eq('org_id', profile.org_id)
     .single()
-  if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+  if (!invoice) return jsonError('Invoice not found', 404)
   const inv = invoice
 
   // Idempotent replay: this exact request already recorded a payment. Return
@@ -118,7 +126,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       source: SOURCE, level: 'critical', orgId: profile.org_id, userId: profile.id,
       context: { invoiceId: invoice.id, amount, method },
     })
-    return NextResponse.json({ error: payErr?.message ?? 'Failed to record payment' }, { status: 400 })
+    // Rule 7: the driver's constraint text never reaches the UI.
+    return jsonError(friendlyDbError(payErr), 400)
   }
 
   // Authoritative total paid = sum of all payments for this invoice
@@ -178,7 +187,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
       const shell: EmailShell = {
         orgName: org?.name ?? 'us', orgEmail, orgPhone: org?.phone ?? null,
-        senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png`,
+        senderName: profile.full_name ?? org?.name ?? 'us', logoUrl: `${siteUrl}/salt-air-logo.png`,
       }
       const message = receiptMessage || defaultReceiptMessage({
         firstName: contact.first_name?.trim(), paidLine, invoiceNumber: invoice.invoice_number,

@@ -1,53 +1,57 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireProfile, requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zRequiredText, zNullableText, zLongText } from '@/lib/validation/common'
+
+const campaignSchema = z.object({
+  name: zRequiredText(200),
+  type: zRequiredText(50),
+  subject: zNullableText(300),
+  content: zLongText(50_000).optional(),
+  // Free-form audience filter object; kept permissive but bounded to an object.
+  audience_filters: z.record(z.string(), z.unknown()).default({}),
+  scheduled_at: z.string().datetime({ offset: true }).optional(),
+})
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { supabase } = auth.data
 
   const { data, error } = await supabase
     .from('campaigns')
     .select('*')
     .order('created_at', { ascending: false })
+    .limit(500)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(data)
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('org_id, role')
-    .eq('supabase_auth_id', user.id)
-    .single()
-
-  if (!profile || !['admin', 'manager'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const body = await req.json()
-  const { name, type, subject, content, audience_filters, scheduled_at } = body
+  const parsed = await parseBody(req, campaignSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from('campaigns')
     .insert({
       org_id: profile.org_id,
-      name,
-      type,
-      subject,
-      content,
-      audience_filters: audience_filters ?? {},
-      scheduled_at: scheduled_at ?? null,
-      status: scheduled_at ? 'scheduled' : 'draft',
+      name: body.name,
+      type: body.type,
+      subject: body.subject,
+      content: body.content ?? null,
+      audience_filters: body.audience_filters,
+      scheduled_at: body.scheduled_at ?? null,
+      status: body.scheduled_at ? 'scheduled' : 'draft',
     })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(data, { status: 201 })
 }

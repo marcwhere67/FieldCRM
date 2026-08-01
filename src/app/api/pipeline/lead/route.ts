@@ -1,39 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireProfile, parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText, zNullableText, zOptionalUuid } from '@/lib/validation/common'
+import { zAuPhoneOptional } from '@/lib/validation/phone'
 
-export async function POST(req: NextRequest) {
-  try {
-    const { firstName, lastName, company, phone, email, stageId } = await req.json()
-    if (!firstName) return NextResponse.json({ error: 'First name required' }, { status: 400 })
+const leadSchema = z.object({
+  firstName: zRequiredText(100),
+  lastName: zNullableText(100),
+  company: zNullableText(200),
+  // Normalised to E.164 on write; empty is allowed.
+  phone: zAuPhoneOptional,
+  email: zNullableText(200),
+  stageId: zOptionalUuid,
+})
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(req: Request) {
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id, org_id')
-      .eq('supabase_auth_id', user.id)
-      .single()
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  const parsed = await parseBody(req, leadSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
 
-    const { data: contact, error } = await supabase
-      .from('contacts')
-      .insert({
-        org_id: profile.org_id,
-        first_name: firstName,
-        last_name: lastName || '',
-        company_name: company ?? null,
-        phone: phone ?? null,
-        email: email ?? null,
-        pipeline_stage_id: stageId ?? null,
-      })
-      .select('id, first_name, last_name, company_name, phone, email, pipeline_stage_id, created_at')
-      .single()
+  const { data: contact, error } = await supabase
+    .from('contacts')
+    .insert({
+      org_id: profile.org_id,
+      first_name: body.firstName,
+      last_name: body.lastName ?? '',
+      company_name: body.company,
+      phone: body.phone,
+      email: body.email,
+      pipeline_stage_id: body.stageId,
+    })
+    .select('id, first_name, last_name, company_name, phone, email, pipeline_stage_id, created_at')
+    .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ contact })
-  } catch {
-    return NextResponse.json({ error: 'Error' }, { status: 500 })
-  }
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ contact })
 }

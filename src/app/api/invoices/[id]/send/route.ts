@@ -2,8 +2,12 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import React from 'react'
+import { z } from 'zod'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zShortText, zLongText } from '@/lib/validation/common'
+import { validateTaxInvoice } from '@/lib/validation/tax-invoice'
 import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
 import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
 import { formatDate, melbourneDateOnly } from '@/lib/format'
@@ -13,6 +17,12 @@ import {
 } from '@/lib/emails/invoice-email'
 
 const SOURCE = 'api/invoices/[id]/send'
+
+// Optional subject/body overrides from the "Review & send" modal.
+const sendSchema = z.object({
+  subject: zShortText(300).optional(),
+  message: zLongText(10_000).optional(),
+})
 
 // Shared loader for both the send (POST) and the draft preview (GET).
 async function loadContext(req: Request, id: string) {
@@ -92,9 +102,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ('error' in ctx) return ctx.error
   const { supabase, profile, invoice, org, contact, orgEmail, contactEmail, shell, balanceDue, dueText, bankHtml, bankText, firstName } = ctx
 
-  const body = await req.json().catch(() => ({})) as { subject?: string; message?: string }
-  const subject = body.subject?.trim() || defaultInvoiceSubject(firstName, shell.orgName, invoice.invoice_number)
-  const message = body.message?.trim() || defaultInvoiceMessage(firstName, shell.orgName)
+  const parsed = await parseBody(req, sendSchema)
+  if (!parsed.ok) return parsed.response
+  const subject = parsed.data.subject || defaultInvoiceSubject(firstName, shell.orgName, invoice.invoice_number)
+  const message = parsed.data.message || defaultInvoiceMessage(firstName, shell.orgName)
+
+  // Block a non-compliant tax invoice before it goes out (SPEC.md §3, P1-5).
+  const buyerName = [contact?.first_name, contact?.last_name].filter(Boolean).join(' ').trim() || null
+  const compliance = validateTaxInvoice({
+    total: Number(invoice.total),
+    tax: Number(invoice.tax ?? 0),
+    supplierName: org?.name ?? null,
+    supplierAbn: org?.abn ?? null,
+    issueDate: invoice.created_at ?? null,
+    lineItems: invoice.line_items,
+    buyerName,
+    buyerAbn: null, // contacts don't carry an ABN in the send query yet
+  })
+  if (!compliance.compliant) {
+    return jsonError(
+      `This tax invoice can't be sent yet: ${compliance.blockingIssues.join(' ')}`,
+      422,
+      { blockingIssues: compliance.blockingIssues },
+    )
+  }
 
   let sent = false
   let warning: string | null = null
@@ -144,8 +175,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id,
       context: { stage: 'status_update', invoiceId: id },
     })
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return jsonError(friendlyDbError(error), 500)
   }
 
-  return NextResponse.json({ sent: true })
+  // Warnings (e.g. no-ABN withholding) don't block the send but are worth showing.
+  return NextResponse.json({ sent: true, warnings: compliance.warnings })
 }

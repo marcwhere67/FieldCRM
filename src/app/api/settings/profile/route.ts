@@ -1,21 +1,30 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireProfile, parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText, zNullableText } from '@/lib/validation/common'
+
+// Any signed-in user may edit their own name/phone. The `.eq('supabase_auth_id')`
+// scope means a user can only ever update their own row.
+const profileSchema = z.object({
+  full_name: zRequiredText(200).optional(),
+  phone: zNullableText(40),
+})
 
 export async function PATCH(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { supabase, authUserId } = auth.data
 
-  const body = await req.json()
-  const { full_name, phone } = body
+  const parsed = await parseBody(req, profileSchema)
+  if (!parsed.ok) return parsed.response
 
   const { data, error } = await supabase
     .from('users')
-    .update({ full_name, phone, updated_at: new Date().toISOString() })
-    .eq('supabase_auth_id', user.id)
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq('supabase_auth_id', authUserId)
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(data)
 }

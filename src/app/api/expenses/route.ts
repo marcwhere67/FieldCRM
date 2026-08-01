@@ -1,54 +1,58 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireProfile, requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zMoneyInput, zRequiredText, zNullableText, zOptionalUuid, zDateOnly } from '@/lib/validation/common'
 import { melbourneDateOnly } from '@/lib/format'
 
+const expenseSchema = z.object({
+  category: zRequiredText(100),
+  description: zNullableText(500),
+  amount: zMoneyInput,
+  job_id: zOptionalUuid,
+  // Absent means "today in Melbourne" — but a supplied date must be a real one.
+  expense_date: zDateOnly.optional(),
+  tax_included: z.boolean().default(true),
+})
+
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { supabase } = auth.data
 
   const { data, error } = await supabase
     .from('expenses')
     .select('*, jobs(title)')
     .order('expense_date', { ascending: false })
+    .limit(500)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(data)
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('org_id, role, id')
-    .eq('supabase_auth_id', user.id)
-    .single()
-
-  if (!profile || !['admin', 'manager'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const body = await req.json()
-  const { category, description, amount, job_id, expense_date, tax_included } = body
+  const parsed = await parseBody(req, expenseSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from('expenses')
     .insert({
       org_id: profile.org_id,
-      category,
-      description,
-      amount,
-      job_id: job_id || null,
-      expense_date: expense_date || melbourneDateOnly(),
-      tax_included: tax_included ?? true,
+      category: body.category,
+      description: body.description,
+      amount: body.amount,
+      job_id: body.job_id,
+      expense_date: body.expense_date ?? melbourneDateOnly(),
+      tax_included: body.tax_included,
       recorded_by: profile.id,
     })
     .select('*, jobs(title)')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(data, { status: 201 })
 }

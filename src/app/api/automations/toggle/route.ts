@@ -1,25 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
 
-export async function POST(req: NextRequest) {
-  try {
-    const { workflowId, isActive } = await req.json()
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ ok: false }, { status: 401 })
+const toggleSchema = z.object({ workflowId: zUuid, isActive: z.boolean() })
 
-    const { data: profile } = await supabase
-      .from('users').select('id, org_id').eq('supabase_auth_id', user.id).single()
-    if (!profile) return NextResponse.json({ ok: false }, { status: 404 })
+export async function POST(req: Request) {
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    await supabase
-      .from('workflows')
-      .update({ is_active: isActive })
-      .eq('id', workflowId)
-      .eq('org_id', profile.org_id)
+  const parsed = await parseBody(req, toggleSchema)
+  if (!parsed.ok) return parsed.response
+  const { workflowId, isActive } = parsed.data
 
-    return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 500 })
-  }
+  const { error } = await supabase
+    .from('workflows')
+    .update({ is_active: isActive })
+    .eq('id', workflowId)
+    .eq('org_id', profile.org_id)
+
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ ok: true })
 }

@@ -1,42 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
 
-export async function POST(req: NextRequest) {
-  try {
-    const { timesheetId, approve } = await req.json()
-    if (!timesheetId) return NextResponse.json({ ok: false }, { status: 400 })
+const approveSchema = z.object({
+  timesheetId: zUuid,
+  approve: z.boolean(),
+})
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ ok: false }, { status: 401 })
+export async function POST(req: Request) {
+  // Only managers and admins may approve timesheets (also guarded by a DB trigger).
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id, role')
-      .eq('supabase_auth_id', user.id)
-      .single()
+  const parsed = await parseBody(req, approveSchema)
+  if (!parsed.ok) return parsed.response
+  const { timesheetId, approve } = parsed.data
 
-    if (!profile) {
-      return NextResponse.json({ ok: false }, { status: 403 })
-    }
+  const { error } = await supabase
+    .from('timesheets')
+    .update({
+      approved: approve,
+      approved_by: approve ? profile.id : null,
+      approved_at: approve ? new Date().toISOString() : null,
+    })
+    .eq('id', timesheetId)
+    .eq('org_id', profile.org_id)
 
-    // Only managers and admins may approve timesheets
-    if (!['admin', 'manager'].includes(profile.role)) {
-      return NextResponse.json({ ok: false, error: 'Insufficient permissions' }, { status: 403 })
-    }
-
-    const { error } = await supabase
-      .from('timesheets')
-      .update({
-        approved: approve,
-        approved_by: approve ? profile.id : null,
-        approved_at: approve ? new Date().toISOString() : null,
-      })
-      .eq('id', timesheetId)
-
-    if (error) return NextResponse.json({ ok: false }, { status: 500 })
-    return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 500 })
-  }
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ ok: true })
 }

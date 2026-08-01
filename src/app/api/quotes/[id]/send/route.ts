@@ -2,8 +2,11 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import React from 'react'
+import { z } from 'zod'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zShortText, zLongText } from '@/lib/validation/common'
 import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
 import { QuotePDF } from '@/lib/pdf/quote-pdf'
 import { captureError } from '@/lib/monitor'
@@ -12,6 +15,13 @@ import {
 } from '@/lib/emails/quote-email'
 
 const SOURCE = 'api/quotes/[id]/send'
+
+// The "Review & send" modal may override the subject/body; both are optional
+// and fall back to the generated defaults.
+const sendSchema = z.object({
+  subject: zShortText(300).optional(),
+  message: zLongText(10_000).optional(),
+})
 
 // Shared loader for both the send (POST) and the draft preview (GET) so the
 // "Review & send" modal and the actual send use identical data + defaults.
@@ -72,9 +82,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ('error' in ctx) return ctx.error
   const { supabase, profile, quote, org, contact, orgEmail, contactEmail, shell, approvalUrl, firstName } = ctx
 
-  const body = await req.json().catch(() => ({})) as { subject?: string; message?: string }
-  const subject = body.subject?.trim() || defaultQuoteSubject(firstName, shell.orgName, quote.quote_number)
-  const message = body.message?.trim() || defaultQuoteMessage(firstName, shell.orgName)
+  const parsed = await parseBody(req, sendSchema)
+  if (!parsed.ok) return parsed.response
+  const subject = parsed.data.subject || defaultQuoteSubject(firstName, shell.orgName, quote.quote_number)
+  const message = parsed.data.message || defaultQuoteMessage(firstName, shell.orgName)
 
   let sent = false
   let warning: string | null = null
@@ -118,7 +129,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id,
       context: { stage: 'status_update', quoteId: id },
     })
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return jsonError(friendlyDbError(error), 500)
   }
 
   return NextResponse.json({ sent: true })

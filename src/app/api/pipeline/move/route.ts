@@ -1,41 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireProfile, parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zUuid, zOptionalUuid } from '@/lib/validation/common'
 import { runAutomations } from '@/lib/automation-engine'
 
-export async function POST(req: NextRequest) {
-  try {
-    const { contactId, stageId } = await req.json()
-    if (!contactId) return NextResponse.json({ ok: false }, { status: 400 })
+const moveSchema = z.object({
+  contactId: zUuid,
+  stageId: zOptionalUuid,
+})
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ ok: false }, { status: 401 })
+export async function POST(req: Request) {
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id, org_id')
-      .eq('supabase_auth_id', user.id)
-      .single()
-    if (!profile) return NextResponse.json({ ok: false }, { status: 404 })
+  const parsed = await parseBody(req, moveSchema)
+  if (!parsed.ok) return parsed.response
+  const { contactId, stageId } = parsed.data
 
-    const { error } = await supabase
-      .from('contacts')
-      .update({ pipeline_stage_id: stageId ?? null })
-      .eq('id', contactId)
-      .eq('org_id', profile.org_id)
+  const { error } = await supabase
+    .from('contacts')
+    .update({ pipeline_stage_id: stageId })
+    .eq('id', contactId)
+    .eq('org_id', profile.org_id)
 
-    if (error) return NextResponse.json({ ok: false }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 400)
 
-    // Fire automations in background (don't block response)
-    if (stageId) {
-      runAutomations(supabase, 'contact_stage_change', { stageId }, {
-        contactId,
-        orgId: profile.org_id,
-      }).catch(console.error)
-    }
-
-    return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 500 })
+  // Fire automations in the background (don't block the response).
+  if (stageId) {
+    runAutomations(supabase, 'contact_stage_change', { stageId }, {
+      contactId,
+      orgId: profile.org_id,
+    }).catch(console.error)
   }
+
+  return NextResponse.json({ ok: true })
 }

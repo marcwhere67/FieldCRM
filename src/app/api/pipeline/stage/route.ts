@@ -1,95 +1,87 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireProfile, parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zUuid, zRequiredText } from '@/lib/validation/common'
 
-async function getProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data } = await supabase
-    .from('users')
-    .select('id, org_id')
-    .eq('supabase_auth_id', userId)
+// Hex colour like #6366f1 or #fff — pipeline stage swatch.
+const zHexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Enter a hex colour like #6366f1')
+
+const createSchema = z.object({
+  name: zRequiredText(100),
+  color: zHexColor.optional(),
+  position: z.number().int().min(0).max(1000).optional(),
+})
+
+const patchSchema = z.object({
+  stageId: zUuid,
+  name: zRequiredText(100).optional(),
+  color: zHexColor.optional(),
+})
+
+const deleteSchema = z.object({ stageId: zUuid })
+
+export async function POST(req: Request) {
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
+
+  const parsed = await parseBody(req, createSchema)
+  if (!parsed.ok) return parsed.response
+  const { name, color, position } = parsed.data
+
+  const { data: stage, error } = await supabase
+    .from('pipeline_stages')
+    .insert({ org_id: profile.org_id, name, color: color ?? '#6366f1', position: position ?? 0 })
+    .select('id, name, position, color')
     .single()
-  return data
+
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ stage })
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const { name, color, position } = await req.json()
-    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 })
+export async function PATCH(req: Request) {
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const parsed = await parseBody(req, patchSchema)
+  if (!parsed.ok) return parsed.response
+  const { stageId, name, color } = parsed.data
 
-    const profile = await getProfile(supabase, user.id)
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  const { data: stage, error } = await supabase
+    .from('pipeline_stages')
+    .update({ name, color })
+    .eq('id', stageId)
+    .eq('org_id', profile.org_id)
+    .select('id, name, position, color')
+    .single()
 
-    const { data: stage, error } = await supabase
-      .from('pipeline_stages')
-      .insert({ org_id: profile.org_id, name, color: color ?? '#6366f1', position: position ?? 0 })
-      .select('id, name, position, color')
-      .single()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ stage })
-  } catch {
-    return NextResponse.json({ error: 'Error' }, { status: 500 })
-  }
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ stage })
 }
 
-export async function PATCH(req: NextRequest) {
-  try {
-    const { stageId, name, color } = await req.json()
-    if (!stageId) return NextResponse.json({ error: 'stageId required' }, { status: 400 })
+export async function DELETE(req: Request) {
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const parsed = await parseBody(req, deleteSchema)
+  if (!parsed.ok) return parsed.response
+  const { stageId } = parsed.data
 
-    const profile = await getProfile(supabase, user.id)
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+  // Unassign contacts in this stage first so the delete doesn't orphan them.
+  await supabase
+    .from('contacts')
+    .update({ pipeline_stage_id: null })
+    .eq('pipeline_stage_id', stageId)
+    .eq('org_id', profile.org_id)
 
-    const { data: stage, error } = await supabase
-      .from('pipeline_stages')
-      .update({ name, color })
-      .eq('id', stageId)
-      .eq('org_id', profile.org_id)
-      .select('id, name, position, color')
-      .single()
+  const { error } = await supabase
+    .from('pipeline_stages')
+    .delete()
+    .eq('id', stageId)
+    .eq('org_id', profile.org_id)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ stage })
-  } catch {
-    return NextResponse.json({ error: 'Error' }, { status: 500 })
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    const { stageId } = await req.json()
-    if (!stageId) return NextResponse.json({ error: 'stageId required' }, { status: 400 })
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const profile = await getProfile(supabase, user.id)
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-
-    // Unassign contacts in this stage first
-    await supabase
-      .from('contacts')
-      .update({ pipeline_stage_id: null })
-      .eq('pipeline_stage_id', stageId)
-      .eq('org_id', profile.org_id)
-
-    const { error } = await supabase
-      .from('pipeline_stages')
-      .delete()
-      .eq('id', stageId)
-      .eq('org_id', profile.org_id)
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: 'Error' }, { status: 500 })
-  }
+  if (error) return jsonError(friendlyDbError(error), 400)
+  return NextResponse.json({ ok: true })
 }
