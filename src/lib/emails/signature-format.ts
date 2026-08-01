@@ -16,9 +16,13 @@ export interface SignatureOrg {
   email: string
   website?: string | null
   instagramUrl?: string | null
-  /** When set, rendered at the top of the signature block. Every email uses
-   * the same structure: logo lives IN the signature, not in a separate
-   * top-of-email header — so this is the only place a logo appears. */
+  /** When set, rendered at the BOTTOM of the signature block, after the
+   * contact details. Every email uses the same structure: logo lives IN the
+   * signature, not in a separate top-of-email header — so this is the only
+   * place a logo appears. Placed last (not first) on purpose: leads with the
+   * person's name for a personal tone, and degrades gracefully in email
+   * clients that block images by default (Outlook, etc.) — the reader still
+   * gets the name/phone/email even if the logo never loads. */
   logoUrl?: string | null
 }
 
@@ -74,10 +78,10 @@ export function buildSenderSignatureHtml(sender: SignatureSender, org: Signature
   // Tailwind preflight's `img { height: auto }`), rendering the logo at full
   // natural size instead of a compact signature mark.
   const logo = org.logoUrl?.trim()
-    ? `<p><img src="${escAttr(org.logoUrl.trim())}" alt="${org.name ? esc(org.name) : 'logo'}" height="32" style="display:block;height:32px;width:auto;margin-bottom:4px;" /></p>\n    `
+    ? `\n    <p><img src="${escAttr(org.logoUrl.trim())}" alt="${org.name ? esc(org.name) : 'logo'}" height="32" style="display:block;height:32px;width:auto;margin-top:8px;" /></p>`
     : ''
 
-  return `${logo}<p>Kind regards,</p>\n    <p>${[...nameLines, ...contactLines].join('<br>')}</p>`
+  return `<p>Kind regards,</p>\n    <p>${[...nameLines, ...contactLines].join('<br>')}</p>${logo}`
 }
 
 export function buildSenderSignatureText(sender: SignatureSender, org: SignatureOrg): string {

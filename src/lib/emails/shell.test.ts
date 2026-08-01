@@ -33,7 +33,8 @@ describe('signoffHtml', () => {
   it('includes the logo in the generic fallback too, so every email has the same structure', () => {
     const out = signoffHtml(base)
     expect(out).toContain(`<img src="${base.logoUrl}"`)
-    expect(out.indexOf('<img')).toBeLessThan(out.indexOf('Kind regards,'))
+    // Below the contact details, not above "Kind regards" — see signature-format.ts.
+    expect(out.indexOf('Kind regards,')).toBeLessThan(out.indexOf('<img'))
   })
 })
 

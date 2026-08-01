@@ -50,10 +50,10 @@ export function signoffHtml(shell: EmailShell): string {
   // builds a real signature — see signature.ts). Kept structurally identical
   // to the built one (logo in the signature, same as every other email).
   const logo = shell.logoUrl
-    ? `<p><img src="${esc(shell.logoUrl)}" alt="${esc(shell.orgName)}" height="32" style="display:block;height:32px;width:auto;margin-bottom:4px;" /></p>\n    `
+    ? `\n    <p><img src="${esc(shell.logoUrl)}" alt="${esc(shell.orgName)}" height="32" style="display:block;height:32px;width:auto;margin-top:8px;" /></p>`
     : ''
-  return `${logo}<p>Kind regards,</p>
-    <p>${esc(shell.senderName)}<br>${esc(shell.orgName)}<br>${shell.orgPhone ? esc(shell.orgPhone) + '<br>' : ''}${esc(shell.orgEmail)}<br>${WEBSITE}</p>`
+  return `<p>Kind regards,</p>
+    <p>${esc(shell.senderName)}<br>${esc(shell.orgName)}<br>${shell.orgPhone ? esc(shell.orgPhone) + '<br>' : ''}${esc(shell.orgEmail)}<br>${WEBSITE}</p>${logo}`
 }
 
 export function signoffText(shell: EmailShell): string {
