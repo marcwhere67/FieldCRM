@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { LogExpenseModal } from './log-expense-modal'
 import { toast } from 'sonner'
 import { RevenueChart } from './revenue-chart'
+import { AccountingExport } from './accounting-export'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Plus, Receipt, ArrowUpRight, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -186,6 +187,9 @@ export function FinancesView({ invoices, payments, initialExpenses, chartData, c
             )}
           </div>
         </div>
+
+        {/* Accounting export (Xero / MYOB / BAS) */}
+        <AccountingExport />
 
         {/* Recent expenses */}
         <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }}>
