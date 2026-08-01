@@ -85,7 +85,7 @@ export function RoomPickerModal({ open, onClose, onAdd }: Props) {
           <Stepper label="Storeys" value={r.storeys} min={1} onChange={v => set('storeys', v)} />
 
           <SubLabel>Bedrooms</SubLabel>
-          <Stepper label="Queen bedrooms" value={r.queenBeds} onChange={v => set('queenBeds', v)} />
+          <Stepper label="Bedrooms" value={r.queenBeds} onChange={v => set('queenBeds', v)} />
           <Stepper label="Twin / single bedrooms" value={r.twinBeds} onChange={v => set('twinBeds', v)} />
 
           <SubLabel>Bathrooms</SubLabel>

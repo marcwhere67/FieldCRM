@@ -44,7 +44,7 @@ function calcResult(inp: Inputs) {
   const totalBeds = inp.queenBeds + inp.twinBeds
   const tier = totalBeds <= 2 ? 'S' : totalBeds <= 4 ? 'M' : 'L'
   const roomBreakdown: { label: string; mins: number }[] = []
-  if (inp.queenBeds > 0) roomBreakdown.push({ label: `Queen bedroom ×${inp.queenBeds}`, mins: (deep ? 49 : 15) * inp.queenBeds })
+  if (inp.queenBeds > 0) roomBreakdown.push({ label: `Bedroom ×${inp.queenBeds}`, mins: (deep ? 49 : 15) * inp.queenBeds })
   if (inp.twinBeds > 0)  roomBreakdown.push({ label: `Twin/single bedroom ×${inp.twinBeds}`, mins: (deep ? 70 : 15) * inp.twinBeds })
   if (inp.fullBaths > 0) roomBreakdown.push({ label: `Full bathroom ×${inp.fullBaths}`, mins: (deep ? 90 : 35) * inp.fullBaths })
   if (inp.powderRooms > 0) roomBreakdown.push({ label: `Powder room ×${inp.powderRooms}`, mins: (deep ? 28 : 20) * inp.powderRooms })
@@ -320,7 +320,7 @@ export function QuoteCalculator() {
                 <Stepper label="Storeys" value={inp.storeys} min={1} onChange={v => set('storeys', v)} />
                 <p style={{ color: C.muted, fontSize: 10, marginTop: -6, marginBottom: 8 }}>1 = single storey, no extra charge</p>
                 <SubLabel>Bedrooms</SubLabel>
-                <Stepper label="Queen bedrooms" value={inp.queenBeds} onChange={v => set('queenBeds', v)} />
+                <Stepper label="Bedrooms" value={inp.queenBeds} onChange={v => set('queenBeds', v)} />
                 <Stepper label="Twin / single bedrooms" value={inp.twinBeds} onChange={v => set('twinBeds', v)} />
                 <SubLabel>Bathrooms</SubLabel>
                 <Stepper label="Full bathrooms" value={inp.fullBaths} onChange={v => set('fullBaths', v)} />

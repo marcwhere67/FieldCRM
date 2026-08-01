@@ -36,12 +36,12 @@ function plural(n: number, singular: string, pluralForm = `${singular}s`): strin
 
 /**
  * Builds a comma-joined description, e.g.
- * "2 Queen bedrooms, 1 Bathroom, Kitchen, Laundry, 2-storey property".
+ * "2 Bedrooms, 1 Bathroom, Kitchen, Laundry, 2-storey property".
  * Returns '' when nothing is selected.
  */
 export function buildRoomsDescription(r: RoomSelection): string {
   const parts: string[] = []
-  if (r.queenBeds > 0) parts.push(plural(r.queenBeds, 'Queen bedroom'))
+  if (r.queenBeds > 0) parts.push(plural(r.queenBeds, 'Bedroom'))
   if (r.twinBeds > 0) parts.push(plural(r.twinBeds, 'Twin/single bedroom'))
   if (r.fullBaths > 0) parts.push(plural(r.fullBaths, 'Bathroom'))
   if (r.powderRooms > 0) parts.push(plural(r.powderRooms, 'Powder room'))

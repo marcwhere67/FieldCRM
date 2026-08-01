@@ -30,12 +30,12 @@ describe('buildRoomsDescription', () => {
   })
 
   it('singularises a count of one', () => {
-    expect(buildRoomsDescription(sel({ queenBeds: 1 }))).toBe('1 Queen bedroom')
+    expect(buildRoomsDescription(sel({ queenBeds: 1 }))).toBe('1 Bedroom')
     expect(buildRoomsDescription(sel({ fullBaths: 1 }))).toBe('1 Bathroom')
   })
 
   it('pluralises counts above one', () => {
-    expect(buildRoomsDescription(sel({ queenBeds: 2 }))).toBe('2 Queen bedrooms')
+    expect(buildRoomsDescription(sel({ queenBeds: 2 }))).toBe('2 Bedrooms')
     expect(buildRoomsDescription(sel({ fullBaths: 3 }))).toBe('3 Bathrooms')
   })
 
@@ -50,7 +50,7 @@ describe('buildRoomsDescription', () => {
       kitchens: 1, livingRooms: 1, diningAreas: 1, offices: 1, laundries: 1,
     }))
     expect(desc).toBe(
-      '2 Queen bedrooms, 1 Twin/single bedroom, 2 Bathrooms, 1 Powder room, ' +
+      '2 Bedrooms, 1 Twin/single bedroom, 2 Bathrooms, 1 Powder room, ' +
       '1 Kitchen, 1 Living/games room, 1 Dining area, 1 Office, 1 Laundry',
     )
   })
