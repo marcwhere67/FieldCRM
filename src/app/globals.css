@@ -172,9 +172,11 @@
     -webkit-font-smoothing: antialiased;
   }
   /* Stop the whole page rubber-banding on mobile — scrolling happens inside the
-     app's <main> container, not the body. */
+     app's <main> container, not the body. overflow-x: hidden also stops
+     sideways bounce if any element is briefly a pixel wider than the viewport. */
   html, body {
     overscroll-behavior: none;
+    overflow-x: hidden;
   }
   h1, h2, h3 {
     font-family: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
