@@ -88,6 +88,23 @@ describe('buildSenderSignatureHtml', () => {
     expect(emailIdx).toBeLessThan(websiteIdx)
     expect(websiteIdx).toBeLessThan(instaIdx)
   })
+
+  it('renders no logo when logoUrl is not set', () => {
+    const html = buildSenderSignatureHtml({ fullName: 'Marc' }, org)
+    expect(html).not.toContain('<img')
+  })
+
+  it('renders the logo above "Kind regards" when logoUrl is set', () => {
+    const html = buildSenderSignatureHtml({ fullName: 'Marc' }, { ...org, logoUrl: '/salt-air-logo.png' })
+    expect(html).toContain('<img src="/salt-air-logo.png"')
+    expect(html.indexOf('<img')).toBeLessThan(html.indexOf('Kind regards,'))
+  })
+
+  it('escapes a hostile logoUrl so it cannot break out of the src attribute', () => {
+    const html = buildSenderSignatureHtml({ fullName: 'Marc' }, { ...org, logoUrl: '"><script>alert(1)</script>' })
+    expect(html).not.toContain('<script>')
+    expect(html).toContain('&quot;')
+  })
 })
 
 describe('buildSenderSignatureText', () => {

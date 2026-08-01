@@ -88,7 +88,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // the receipt sent when the payment is first recorded). Fixed alongside
     // the per-sender signature work rather than left newly inconsistent.
     shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
-      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail, logoUrl: shell.logoUrl,
     })
 
     const body = await req.json().catch(() => ({})) as { message?: string }

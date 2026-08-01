@@ -4,6 +4,49 @@ Assumptions made under ambiguity, per SPEC.md §1. Newest first.
 
 ---
 
+## D-009 — Logo moved into the signature block; quote-acceptance email unified
+**Date:** 2026-08-01
+
+Two changes, same theme ("every email needs the same structure"):
+
+1. **Logo placement.** Every email previously had a navy logo banner at the
+   top (`shellHtml`'s `headerHtml`), separate from the sign-off block at the
+   bottom. Per explicit instruction, the logo now lives INSIDE the signature
+   (above "Kind regards,") and the top banner is gone — one logo per email,
+   not two. Applies uniformly: real sends, the rare generic fallback (no
+   Gmail/CRM signature available), and the Settings → Profile preview all use
+   the same `buildSenderSignatureHtml`, so there is exactly one code path that
+   can render a logo into an email.
+
+2. **Quote-acceptance confirmation unified with every other send.** It
+   previously used its own hand-rolled HTML in `sendBrandedAsOrg`, calling
+   `getGmailSignature` directly — bypassing the CRM-signature system entirely
+   (D-007's whole point) and explaining why it "had no signature." Rewrote
+   `sendBrandedAsOrg` to use the same `shellHtml`/`resolveSenderSignatureHtml`
+   pipeline as quotes/invoices/receipts.
+
+   This email has no logged-in sender (a customer triggers it by clicking
+   Approve). Per instruction: credit whoever actually SENT that quote. Added
+   `quotes.sent_by` (migration `2026-08-01_quote_sent_by.sql`, nullable, set
+   automatically when Send is clicked) and thread it through as the signature
+   identity, falling back to whichever Gmail is connected for the org for
+   quotes sent before this column existed (same fallback the job-auto-invoice
+   email already used) — the user's explicit choice.
+
+**Consequence:** a real, if minor, bug was caught during verification —
+`height="32"` as a bare HTML attribute was overridden by Tailwind's preflight
+`img { height: auto }`, rendering the logo at full natural size in the
+Settings preview. Fixed by moving `height`/`width` into the inline `style`
+(higher CSS specificity). Both the real logo path and the fallback path had
+the same bug; both fixed.
+
+Both new DB dependencies (`quotes.sent_by`, `organisations.website`/
+`instagram_url` from D-008) are fetched via isolated, error-tolerant queries —
+a missing column degrades gracefully (older sender-fallback behaviour) rather
+than breaking the public approve/decline endpoint.
+
+---
+
 ## D-008 — Website/Instagram fetched separately in the signature resolver
 **Date:** 2026-08-01
 

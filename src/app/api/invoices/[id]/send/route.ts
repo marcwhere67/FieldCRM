@@ -147,7 +147,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     )
 
     shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
-      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail, logoUrl: shell.logoUrl,
     })
     const { html, text } = buildInvoiceEmail({ message, shell, balanceDue, dueText, bankHtml, bankText })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail

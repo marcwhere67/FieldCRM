@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { signoffHtml, signoffText, htmlSignatureToText, type EmailShell } from './shell'
+import { signoffHtml, signoffText, shellHtml, htmlSignatureToText, type EmailShell } from './shell'
 
 const base: EmailShell = {
   orgName: 'Salt Air Cleaning',
@@ -28,6 +28,28 @@ describe('signoffHtml', () => {
 
   it('falls back to the generic sign-off when the signature is null', () => {
     expect(signoffHtml({ ...base, signatureHtml: null })).toContain('Kind regards,')
+  })
+
+  it('includes the logo in the generic fallback too, so every email has the same structure', () => {
+    const out = signoffHtml(base)
+    expect(out).toContain(`<img src="${base.logoUrl}"`)
+    expect(out.indexOf('<img')).toBeLessThan(out.indexOf('Kind regards,'))
+  })
+})
+
+describe('shellHtml', () => {
+  it('has no separate top-of-email header — the logo only appears via the signature', () => {
+    const html = shellHtml(base, '<p>Hello</p>')
+    // One logo image total (from the fallback signature), not a duplicate header banner.
+    expect((html.match(/<img/g) ?? []).length).toBe(1)
+  })
+
+  it('does not duplicate the logo when a real signature (with its own logo) is supplied', () => {
+    const html = shellHtml(
+      { ...base, signatureHtml: '<p><img src="/logo.png" height="32"/></p>\n<p>Kind regards,</p><p>Marc</p>' },
+      '<p>Hello</p>',
+    )
+    expect((html.match(/<img/g) ?? []).length).toBe(1)
   })
 })
 

@@ -100,7 +100,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     )
 
     shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
-      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail, logoUrl: shell.logoUrl,
     })
     const { html, text } = buildQuoteEmail({ message, shell, total: Number(quote.total), approvalUrl })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
@@ -125,7 +125,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // (e.g. approved/declined) and only refreshes sent_at.
   const nextStatus = quote.status === 'draft' ? 'sent' : quote.status
   const { error } = await supabase
-    .from('quotes').update({ status: nextStatus, sent_at: new Date().toISOString() }).eq('id', id)
+    .from('quotes').update({ status: nextStatus, sent_at: new Date().toISOString(), sent_by: profile.id }).eq('id', id)
 
   if (error) {
     await captureError(error, {

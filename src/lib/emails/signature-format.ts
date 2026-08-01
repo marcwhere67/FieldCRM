@@ -16,6 +16,10 @@ export interface SignatureOrg {
   email: string
   website?: string | null
   instagramUrl?: string | null
+  /** When set, rendered at the top of the signature block. Every email uses
+   * the same structure: logo lives IN the signature, not in a separate
+   * top-of-email header — so this is the only place a logo appears. */
+  logoUrl?: string | null
 }
 
 /** `esc()` covers text content; attribute values also need quotes escaped. */
@@ -65,7 +69,15 @@ export function buildSenderSignatureHtml(sender: SignatureSender, org: Signature
     contactLines.push(`Instagram: <a href="${escAttr(ensureHref(org.instagramUrl))}">${esc(instagramHandle(org.instagramUrl))}</a>`)
   }
 
-  return `<p>Kind regards,</p>\n    <p>${[...nameLines, ...contactLines].join('<br>')}</p>`
+  // height must be in the inline style, not just the bare HTML attribute —
+  // a bare `height="32"` can be overridden by a page-level CSS reset (e.g.
+  // Tailwind preflight's `img { height: auto }`), rendering the logo at full
+  // natural size instead of a compact signature mark.
+  const logo = org.logoUrl?.trim()
+    ? `<p><img src="${escAttr(org.logoUrl.trim())}" alt="${org.name ? esc(org.name) : 'logo'}" height="32" style="display:block;height:32px;width:auto;margin-bottom:4px;" /></p>\n    `
+    : ''
+
+  return `${logo}<p>Kind regards,</p>\n    <p>${[...nameLines, ...contactLines].join('<br>')}</p>`
 }
 
 export function buildSenderSignatureText(sender: SignatureSender, org: SignatureOrg): string {

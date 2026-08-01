@@ -104,7 +104,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
     // Signature is keyed to `connected.user_id` — whoever's Gmail is actually
     // sending this — not `profile` (the field worker who completed the job).
     shell.signatureHtml = await resolveSenderSignatureHtml(admin, connected.user_id, profile.org_id, accessToken, {
-      name: org.name ?? null, phone: org.phone ?? null, email: org.email,
+      name: org.name ?? null, phone: org.phone ?? null, email: org.email, logoUrl: shell.logoUrl,
     })
 
     const balanceDue = Number(invoice.total) - Number(invoice.deposit_credit ?? 0)

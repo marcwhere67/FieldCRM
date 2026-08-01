@@ -1,7 +1,10 @@
 // Shared branded shell + helpers for all customer emails (quotes, invoices,
-// receipts). The editable part of every email is a plain-text `message`; this
-// module wraps it in the fixed logo header + sign-off so branding and structure
-// can't be broken from the "Review & send" editor.
+// receipts, and public-action confirmations like quote acceptance). Every
+// email has the SAME structure: plain-text `message` content, then a sign-off
+// that carries the logo, name/title, and contact details together as one
+// signature block — there is no separate top-of-email logo banner. Branding
+// and structure can't be broken from the "Review & send" editor because the
+// editable part is only the message.
 
 export const WEBSITE = 'https://saltaircleaning.com.au'
 
@@ -26,12 +29,6 @@ export function paragraphsHtml(message: string): string {
   return message.trim().split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n    ')
 }
 
-function headerHtml(shell: EmailShell): string {
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
-    <tr><td><img src="${shell.logoUrl}" alt="${esc(shell.orgName)}" height="40" style="display: block;" /></td></tr>
-  </table>`
-}
-
 // A Gmail signature comes back as a fragment of HTML (its own <p>/<br> markup,
 // possibly a logo <img>, etc.) — this collapses it to readable plain text for
 // the text/plain half of an email. Shared by every sender that may embed a
@@ -49,7 +46,13 @@ export function htmlSignatureToText(html: string): string {
 
 export function signoffHtml(shell: EmailShell): string {
   if (shell.signatureHtml) return shell.signatureHtml
-  return `<p>Kind regards,</p>
+  // Not expected to run in practice (resolveSenderSignatureHtml almost always
+  // builds a real signature — see signature.ts). Kept structurally identical
+  // to the built one (logo in the signature, same as every other email).
+  const logo = shell.logoUrl
+    ? `<p><img src="${esc(shell.logoUrl)}" alt="${esc(shell.orgName)}" height="32" style="display:block;height:32px;width:auto;margin-bottom:4px;" /></p>\n    `
+    : ''
+  return `${logo}<p>Kind regards,</p>
     <p>${esc(shell.senderName)}<br>${esc(shell.orgName)}<br>${shell.orgPhone ? esc(shell.orgPhone) + '<br>' : ''}${esc(shell.orgEmail)}<br>${WEBSITE}</p>`
 }
 
@@ -61,10 +64,10 @@ export function signoffText(shell: EmailShell): string {
 }
 
 // Wrap inner HTML (message paragraphs + any fixed blocks) in the branded shell.
+// No top-of-email header — the logo lives in the signature (see signoffHtml).
 export function shellHtml(shell: EmailShell, inner: string): string {
   return `<html>
 <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
-  ${headerHtml(shell)}
   <div style="padding: 24px;">
     ${inner}
     ${signoffHtml(shell)}

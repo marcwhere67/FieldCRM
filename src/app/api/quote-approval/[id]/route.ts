@@ -6,6 +6,24 @@ import { captureError } from '@/lib/monitor'
 import { formatCurrency } from '@/lib/format'
 
 const SOURCE = 'api/quote-approval/[id]'
+const QUOTE_FIELDS = 'id, status, valid_until, quote_number, org_id, total, contacts!quotes_contact_id_fkey(first_name, last_name, email, phone)'
+
+// `sent_by` ships via a migration (2026-08-01_quote_sent_by.sql) that may not
+// be applied to every environment yet. This is the public quote-approval
+// endpoint — a missing column here must never break approve/decline for a
+// waiting customer, so it falls back to the base field set (sent_by: null,
+// meaning the confirmation email credits whichever Gmail account is connected
+// instead of the specific sender).
+async function fetchQuote(admin: ReturnType<typeof createServiceClient>, id: string) {
+  const withSender = await admin.from('quotes').select(`${QUOTE_FIELDS}, sent_by`).eq('id', id).single()
+  if (!withSender.error) return withSender.data
+
+  await captureError(withSender.error, {
+    source: SOURCE, level: 'warning', context: { stage: 'quote_fetch_with_sender', quoteId: id, hint: 'has 2026-08-01_quote_sent_by.sql been applied?' },
+  })
+  const base = await admin.from('quotes').select(QUOTE_FIELDS).eq('id', id).single()
+  return base.data ? { ...base.data, sent_by: null } : null
+}
 
 // Public endpoint — the unguessable quote UUID is the access token.
 // Anonymous customers can't write through RLS, so this runs server-side.
@@ -22,11 +40,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const admin = createServiceClient()
-  const { data: quote } = await admin
-    .from('quotes')
-    .select('id, status, valid_until, quote_number, org_id, total, contacts!quotes_contact_id_fkey(first_name, last_name, email, phone)')
-    .eq('id', id)
-    .single()
+  const quote = await fetchQuote(admin, id)
 
   if (!quote) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (['approved', 'declined', 'converted'].includes(quote.status)) {
@@ -64,6 +78,7 @@ interface QuoteRow {
   quote_number: string
   org_id: string
   total: number
+  sent_by: string | null
   contacts: { first_name: string; last_name: string; email: string | null; phone: string | null }
     | { first_name: string; last_name: string; email: string | null; phone: string | null }[] | null
 }
@@ -108,9 +123,11 @@ async function notify(
     await sendAsOrg(admin, q.org_id, org.email, subject, html, text)
   }
 
-  // 2. Customer confirmation — only on acceptance. Branded like other customer
-  // emails (logo header + the connected Gmail account's own signature), via
-  // sendBrandedAsOrg — the sign-off is added there, not hardcoded here.
+  // 2. Customer confirmation — only on acceptance. Same structure as every
+  // other customer email (sendBrandedAsOrg uses the shared shell + signature
+  // resolver) — credited to whoever actually sent this quote (quote.sent_by),
+  // falling back to whichever Gmail is connected for older quotes with no
+  // sender on record.
   if (action === 'approve' && contact?.email) {
     const firstName = contact.first_name?.trim()
     const subject = firstName
@@ -129,6 +146,6 @@ What happens next: a member of our team will be in touch within 2 business days 
 
 If anything changes in the meantime, or you have any questions, simply reply to this email${org.phone ? ` or call us on ${org.phone}` : ''}.`
 
-    await sendBrandedAsOrg(admin, q.org_id, contact.email, subject, messageHtml, messageText, `${siteUrl}/salt-air-logo.png`)
+    await sendBrandedAsOrg(admin, q.org_id, contact.email, subject, messageHtml, messageText, `${siteUrl}/salt-air-logo.png`, q.sent_by)
   }
 }

@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     }))
 
     shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
-      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail, logoUrl: shell.logoUrl,
     })
     const { html, text } = buildBatchEmail({ message, shell, quotes: quoteSummaries, siteUrl })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabase
     .from('quotes')
-    .update({ status: 'sent', sent_at: new Date().toISOString() })
+    .update({ status: 'sent', sent_at: new Date().toISOString(), sent_by: profile.id })
     .in('id', quoteIds)
 
   if (error) {

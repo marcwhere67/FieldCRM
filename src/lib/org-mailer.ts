@@ -1,10 +1,13 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { getGmailAccessToken, getGmailSignature, sendEmailViaGmail } from '@/lib/gmail'
-import { esc, htmlSignatureToText } from '@/lib/emails/shell'
+import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { shellHtml, signoffText, type EmailShell } from '@/lib/emails/shell'
+import { resolveSenderSignatureHtml } from '@/lib/emails/signature'
 
 // Shared lookup: any Gmail account connected for the org, from a context with
 // no logged-in user (public routes, cron). Returns null if Gmail isn't
 // connected or org email is missing — callers treat that as "can't send".
+// `userId` is the CRM user that connected the token — used as the signature
+// identity when the caller has no more specific sender to credit.
 async function resolveOrgGmail(supabase: SupabaseClient, orgId: string) {
   const { data: org } = await supabase
     .from('organisations').select('name, email, phone').eq('id', orgId).single()
@@ -17,7 +20,10 @@ async function resolveOrgGmail(supabase: SupabaseClient, orgId: string) {
   const token = await getGmailAccessToken(orgId, connected.user_id).catch(() => null)
   if (!token) return null
 
-  return { token, orgName: org.name?.trim() || 'FieldCRM', orgEmail: org.email, orgPhone: org.phone as string | null }
+  return {
+    token, userId: connected.user_id as string,
+    orgName: org.name?.trim() || 'FieldCRM', orgEmail: org.email, orgPhone: org.phone as string | null,
+  }
 }
 
 // Sends mail "as the business" from a context with no logged-in user (public
@@ -50,14 +56,18 @@ export async function sendAsOrg(
 
 /**
  * Sends a CUSTOMER-facing email "as the business" from a context with no
- * logged-in user (public routes, cron) — branded the same way as quote/
- * invoice/receipt emails: a logo header, and the connected Gmail account's
- * own signature when one is set up, falling back to a generic business
- * sign-off otherwise. This is what closes the gap where public actions (like
- * a customer approving a quote) produced a plain, unbranded confirmation.
+ * logged-in user (public routes, cron) — built with the exact same shell
+ * (shellHtml) and signature resolution (resolveSenderSignatureHtml) as every
+ * other customer email, so structure never drifts between "a staff member
+ * clicked Send" and "a customer triggered this automatically".
  *
  * `messageHtml`/`messageText` are the INNER content only (e.g. paragraphs) —
- * no header, no sign-off; those are added here.
+ * no header, no sign-off; those are added here, same as shellHtml everywhere else.
+ *
+ * `senderProfileId` credits a specific person in the signature (e.g. whoever
+ * actually sent the quote being accepted). Falls back to whichever CRM user
+ * has Gmail connected for the org when there's no more specific sender to
+ * credit — the same fallback the job-auto-invoice email already uses.
  */
 export async function sendBrandedAsOrg(
   supabase: SupabaseClient,
@@ -67,29 +77,24 @@ export async function sendBrandedAsOrg(
   messageHtml: string,
   messageText: string,
   logoUrl: string,
+  senderProfileId?: string | null,
 ): Promise<boolean> {
   try {
     const gmail = await resolveOrgGmail(supabase, orgId)
     if (!gmail) return false
 
-    const signatureHtml = await getGmailSignature(gmail.token)
+    const shell: EmailShell = {
+      orgName: gmail.orgName, orgEmail: gmail.orgEmail, orgPhone: gmail.orgPhone,
+      senderName: gmail.orgName, logoUrl,
+    }
+    shell.signatureHtml = await resolveSenderSignatureHtml(
+      supabase, senderProfileId ?? gmail.userId, orgId, gmail.token,
+      { name: gmail.orgName, phone: gmail.orgPhone, email: gmail.orgEmail, logoUrl },
+    )
+
     const from = `"${gmail.orgName.replace(/"/g, '')}" <${gmail.orgEmail}>`
-
-    const signoffHtml = signatureHtml || `<p>Kind regards,</p><p>${esc(gmail.orgName)}</p>`
-    const signoffText = signatureHtml ? htmlSignatureToText(signatureHtml) : `Kind regards,\n\n${gmail.orgName}`
-
-    const html = `<html>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #2C3E50; padding: 16px 24px;">
-    <tr><td><img src="${logoUrl}" alt="${esc(gmail.orgName)}" height="40" style="display: block;" /></td></tr>
-  </table>
-  <div style="padding: 24px;">
-    ${messageHtml}
-    ${signoffHtml}
-  </div>
-</body>
-</html>`
-    const text = `${messageText}\n\n${signoffText}`
+    const html = shellHtml(shell, messageHtml)
+    const text = `${messageText}\n\n${signoffText(shell)}`
 
     await sendEmailViaGmail(gmail.token, from, to, subject, html, text)
     return true
