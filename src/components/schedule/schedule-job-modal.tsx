@@ -90,7 +90,7 @@ export function ScheduleJobModal({ job, onClose }: {
           <button onClick={onClose} style={{ color: C.muted }} className="hover:opacity-70"><X className="w-4 h-4" /></button>
         </div>
 
-        <div style={{ padding: 20 }} className="grid grid-cols-2 gap-3">
+        <div style={{ padding: 20 }} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="col-span-2">
             <span style={label}>Date</span>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />

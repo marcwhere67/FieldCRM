@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { CheckCircle, XCircle, Clock, AlertCircle, ChevronDown } from 'lucide-react'
-import { QUOTE_TERMS, getScope } from '@/lib/scope-of-work'
+import { QUOTE_TERMS, getScope, ADD_ONS } from '@/lib/scope-of-work'
 
 interface LineItem { id: string; description: string; quantity: number; unit_price: number; subtotal: number; tax_rate: number }
 interface Quote {
@@ -184,12 +184,17 @@ export function QuoteApproval({ quote, org }: Props) {
               {scopeOpen && (
                 <div style={{ padding: '0 24px 20px' }}>
                   <p style={{ color: '#4A5A65', fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}>{scope.intro}</p>
+                  <p style={{ color: C.navy, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Includes:</p>
                   <ul style={{ margin: 0, paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.7 }}>
                     {scope.includes.map((item, i) => <li key={i}>{item}</li>)}
                   </ul>
                   {scope.footnote && (
                     <p style={{ color: '#4A5A65', fontSize: 11, lineHeight: 1.6, marginTop: 10, fontStyle: 'italic' }}>{scope.footnote}</p>
                   )}
+                  <p style={{ color: C.navy, fontSize: 11, fontWeight: 600, marginTop: 16, marginBottom: 6 }}>Optional Add-ons (available on request):</p>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.7 }}>
+                    {ADD_ONS.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
                 </div>
               )}
             </div>

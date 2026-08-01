@@ -385,7 +385,7 @@ export function SuppliersView({ initialSuppliers, initialPOs, jobs, canManage, n
             </div>
             <div style={{ padding: 20 }} className="space-y-4">
               <div><label style={labelSt}>Business Name *</label><input value={supplierForm.name} onChange={e => setSupplierForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Bunnings Warehouse" style={inp} className="focus:border-[#76A58F]" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label style={labelSt}>Contact Name</label><input value={supplierForm.contact_name} onChange={e => setSupplierForm(p => ({ ...p, contact_name: e.target.value }))} placeholder="Full name" style={inp} className="focus:border-[#76A58F]" /></div>
                 <div><label style={labelSt}>Category</label><input value={supplierForm.category} onChange={e => setSupplierForm(p => ({ ...p, category: e.target.value }))} placeholder="e.g. Electrical, Plumbing" style={inp} className="focus:border-[#76A58F]" /></div>
                 <div><label style={labelSt}>Email</label><input type="email" value={supplierForm.email} onChange={e => setSupplierForm(p => ({ ...p, email: e.target.value }))} placeholder="orders@supplier.com" style={inp} className="focus:border-[#76A58F]" /></div>
@@ -415,7 +415,7 @@ export function SuppliersView({ initialSuppliers, initialPOs, jobs, canManage, n
               <button onClick={() => setShowPoModal(false)} style={{ color: C.muted, width: 28, height: 28 }} className="flex items-center justify-center hover:text-[#2C3E50] transition-colors"><X style={{ width: 16, height: 16 }} /></button>
             </div>
             <div style={{ padding: 20 }} className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label style={labelSt}>Supplier *</label>
                   <select value={poForm.supplier_id} onChange={e => setPoForm(p => ({ ...p, supplier_id: e.target.value }))} style={inp}>
@@ -438,24 +438,28 @@ export function SuppliersView({ initialSuppliers, initialPOs, jobs, canManage, n
 
               <div className="space-y-2">
                 <label style={labelSt}>Line Items</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 80px', gap: 8, color: C.muted, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 4px', marginBottom: 4 }}>
-                  <div>Description</div><div style={{ textAlign: 'right' }}>Qty</div><div style={{ textAlign: 'right' }}>Unit price</div><div style={{ textAlign: 'right' }}>Total</div>
-                </div>
-                {lineItems.map((item, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 80px', gap: 8, alignItems: 'center' }}>
-                    <input value={item.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Item description" style={inp} className="focus:border-[#76A58F]" />
-                    <input type="number" value={item.quantity} onChange={e => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} style={{ ...inp, textAlign: 'right' }} min="0" />
-                    <input type="number" value={item.unit_price} onChange={e => updateLine(i, 'unit_price', parseFloat(e.target.value) || 0)} style={{ ...inp, textAlign: 'right' }} min="0" step="0.01" />
-                    <div className="flex items-center justify-end gap-1">
-                      <span style={{ color: '#4A5A65', fontSize: 12 }}>{formatCurrency(item.subtotal)}</span>
-                      {lineItems.length > 1 && (
-                        <button onClick={() => setLineItems(prev => prev.filter((_, idx) => idx !== i))} style={{ color: C.muted, width: 20, height: 20 }} className="flex items-center justify-center hover:text-[#dc2626] transition-colors ml-1">
-                          <X style={{ width: 12, height: 12 }} />
-                        </button>
-                      )}
+                <div className="overflow-x-auto">
+                  <div style={{ minWidth: 460 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 80px', gap: 8, color: C.muted, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 4px', marginBottom: 4 }}>
+                      <div>Description</div><div style={{ textAlign: 'right' }}>Qty</div><div style={{ textAlign: 'right' }}>Unit price</div><div style={{ textAlign: 'right' }}>Total</div>
                     </div>
+                    {lineItems.map((item, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 80px', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                        <input value={item.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Item description" style={inp} className="focus:border-[#76A58F]" />
+                        <input type="number" value={item.quantity} onChange={e => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} style={{ ...inp, textAlign: 'right' }} min="0" />
+                        <input type="number" value={item.unit_price} onChange={e => updateLine(i, 'unit_price', parseFloat(e.target.value) || 0)} style={{ ...inp, textAlign: 'right' }} min="0" step="0.01" />
+                        <div className="flex items-center justify-end gap-1">
+                          <span style={{ color: '#4A5A65', fontSize: 12 }}>{formatCurrency(item.subtotal)}</span>
+                          {lineItems.length > 1 && (
+                            <button onClick={() => setLineItems(prev => prev.filter((_, idx) => idx !== i))} style={{ color: C.muted, width: 20, height: 20 }} className="flex items-center justify-center hover:text-[#dc2626] transition-colors ml-1">
+                              <X style={{ width: 12, height: 12 }} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
                 <button onClick={() => setLineItems(prev => [...prev, { ...emptyLine }])} style={{ color: C.sage, fontSize: 11, marginTop: 4 }} className="flex items-center gap-1 hover:underline">
                   <Plus style={{ width: 13, height: 13 }} />Add line
                 </button>

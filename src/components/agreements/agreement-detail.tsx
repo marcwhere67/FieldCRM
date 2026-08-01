@@ -107,7 +107,7 @@ export function AgreementDetail({ agreement, jobs, isManager }: { agreement: Agr
       )}
 
       {/* Details */}
-      <div style={{ border: `1px solid ${C.border}`, backgroundColor: '#fff', padding: 16 }} className="grid grid-cols-2 gap-y-3 gap-x-6">
+      <div style={{ border: `1px solid ${C.border}`, backgroundColor: '#fff', padding: 16 }} className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
         {[
           ['Property', property ? (property.label || property.address_line1) + (property.suburb ? `, ${property.suburb}` : '') : 'Not set'],
           ['Duration', `${agreement.duration_minutes} min`],

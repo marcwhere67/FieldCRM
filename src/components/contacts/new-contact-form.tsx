@@ -87,7 +87,7 @@ export function NewContactForm({ orgId, teamMembers, pipelineStages }: Props) {
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           {/* Basic info */}
           <Section title="Basic Information">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><span style={labelSt}>First name *</span><input value={form.first_name} onChange={e => set('first_name', e.target.value)} placeholder="Jane" required style={inp} /></div>
               <div><span style={labelSt}>Last name</span><input value={form.last_name} onChange={e => set('last_name', e.target.value)} placeholder="Smith" style={inp} /></div>
             </div>
@@ -99,7 +99,7 @@ export function NewContactForm({ orgId, teamMembers, pipelineStages }: Props) {
           {/* Address */}
           <Section title="Address">
             <div><span style={labelSt}>Street address</span><input value={form.address_line1} onChange={e => set('address_line1', e.target.value)} placeholder="123 Main St" style={inp} /></div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div><span style={labelSt}>Suburb</span><input value={form.suburb} onChange={e => set('suburb', e.target.value)} placeholder="Richmond" style={inp} /></div>
               <div>
                 <span style={labelSt}>State</span>
@@ -114,7 +114,7 @@ export function NewContactForm({ orgId, teamMembers, pipelineStages }: Props) {
 
           {/* CRM */}
           <Section title="CRM">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span style={labelSt}>Status</span>
                 <select value={form.status} onChange={e => set('status', e.target.value)} style={inp}>
@@ -132,7 +132,7 @@ export function NewContactForm({ orgId, teamMembers, pipelineStages }: Props) {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span style={labelSt}>Assigned to</span>
                 <select value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)} style={inp}>

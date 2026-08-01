@@ -289,7 +289,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
         </div>
 
         {/* Dates */}
-        <div style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }} className="grid grid-cols-3 gap-6">
+        <div style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
             <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>Bill to</p>
             {contact ? (
@@ -413,7 +413,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
               const inp = { backgroundColor: '#fff', border: `1px solid rgba(44,62,80,0.15)`, borderRadius: 0, color: C.fg, fontSize: 13, height: 36, width: '100%', padding: '0 10px', outline: 'none' as const }
               return (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label style={lbl}>Amount</label>
                       <input type="number" step="0.01" min="0" value={payForm.amount} onChange={e => setPay('amount', e.target.value)} style={inp} />

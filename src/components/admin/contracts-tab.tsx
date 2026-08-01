@@ -221,7 +221,7 @@ export function ContractsTab({ initialContracts, teamMembers, canManage }: Props
                 <input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
                   placeholder="https://drive.google.com/file/..." style={inp} className="focus:border-[#76A58F]" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Description <span style={{ textTransform: 'none', opacity: 0.7 }}>(optional)</span></label>
                   <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}

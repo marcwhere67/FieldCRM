@@ -133,7 +133,7 @@ export function CampaignDetail({ campaign: initial, pipelineStages, canManage }:
 
       <div className="px-6 space-y-6">
         {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { icon: Users, label: 'Recipients', value: campaign.recipient_count || '—', sub: null },
             { icon: Eye, label: 'Opens', value: campaign.open_count || '—', sub: campaign.recipient_count ? rate(campaign.open_count, campaign.recipient_count) + ' rate' : null },
@@ -152,7 +152,7 @@ export function CampaignDetail({ campaign: initial, pipelineStages, canManage }:
         </div>
 
         {/* Details */}
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="col-span-2 space-y-4">
             {campaign.subject && (
               <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: 16 }}>

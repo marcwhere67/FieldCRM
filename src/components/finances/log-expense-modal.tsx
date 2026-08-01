@@ -84,7 +84,7 @@ export function LogExpenseModal({ open, onClose, onSaved }: Props) {
           </button>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: 20 }} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <span style={labelSt}>Category</span>
               <select value={form.category} onChange={e => set('category', e.target.value)} style={inp}>
@@ -102,7 +102,7 @@ export function LogExpenseModal({ open, onClose, onSaved }: Props) {
             <input value={form.description} onChange={e => set('description', e.target.value)}
               placeholder="Fertiliser for Acacia Ridge job" style={inp} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <span style={labelSt}>Date</span>
               <input type="date" value={form.expense_date} onChange={e => set('expense_date', e.target.value)} style={inp} />

@@ -81,7 +81,7 @@ export function AddReviewModal({ open, onClose, onSaved }: Props) {
           </button>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: 20 }} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <span style={labelSt}>Platform</span>
               <select value={form.platform} onChange={e => set('platform', e.target.value)} style={inp}>

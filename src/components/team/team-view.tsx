@@ -349,7 +349,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                         </div>
                         {showCertForm && (
                           <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: 14, marginBottom: 8 }} className="space-y-3">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {[{ label: 'Certificate name', key: 'name', ph: 'e.g. White Card' },{ label: 'Issuing body', key: 'issuer', ph: 'e.g. SafeWork NSW' }].map(f => (
                                 <div key={f.key}>
                                   <label style={labelSt}>{f.label}</label>
@@ -488,7 +488,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                   {LEAVE_TYPES.map(t => <option key={t} value={t} className="capitalize">{t}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label style={labelSt}>Start date</label>
                   <input type="date" value={leaveForm.start_date} onChange={e => { const s = e.target.value; const end = leaveForm.end_date < s ? s : leaveForm.end_date; setLeaveForm(p => ({ ...p, start_date: s, end_date: end, days: businessDays(s, end, p.start_time, p.end_time) })) }} style={inputCls} className="focus:border-[#76A58F]" />
                 </div>
@@ -496,7 +496,7 @@ export function TeamView({ members: initialMembers, leaveRequests: initialLeave,
                   <input type="date" value={leaveForm.end_date} min={leaveForm.start_date} onChange={e => { const end = e.target.value; setLeaveForm(p => ({ ...p, end_date: end, days: p.start_date ? businessDays(p.start_date, end, p.start_time, p.end_time) : 0 })) }} style={inputCls} className="focus:border-[#76A58F]" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label style={labelSt}>Start time (optional)</label>
                   <input type="time" value={leaveForm.start_time} onChange={e => { const st = e.target.value; setLeaveForm(p => ({ ...p, start_time: st, days: p.start_date && p.end_date ? businessDays(p.start_date, p.end_date, st, p.end_time) : p.days })) }} style={inputCls} className="focus:border-[#76A58F]" />
                 </div>

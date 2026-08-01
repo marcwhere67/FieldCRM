@@ -209,7 +209,7 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, alignItems: 'start' }}>
+      <div style={{ gap: 20, alignItems: 'start' }} className="grid grid-cols-1 lg:grid-cols-[1fr_280px]">
         {/* Main column */}
         <div className="space-y-5">
           {/* Client */}

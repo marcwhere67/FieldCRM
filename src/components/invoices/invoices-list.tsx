@@ -98,7 +98,7 @@ export function InvoicesList({ invoices, filters, total, contacts }: Props) {
       {showNewInvoice && <NewInvoiceModal contacts={contacts} onClose={() => setShowNewInvoice(false)} />}
 
       {/* Stat strip */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Outstanding', value: formatCurrency(outstanding), accent: '#2563eb', sub: 'awaiting payment' },
           { label: 'Overdue',     value: formatCurrency(overdue),     accent: overdue > 0 ? '#dc2626' : '#8A9BA6', sub: overdue > 0 ? 'needs attention' : 'all clear' },

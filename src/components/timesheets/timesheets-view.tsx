@@ -144,7 +144,7 @@ export function TimesheetsView({ timesheets, users, currentUserId, currentUserRo
 
       <div className="px-6 space-y-5">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: 'Total Hours', value: formatMinutes(totalMins), sub: `${filtered.length} entries`, accent: C.sage },
             { label: 'Awaiting Approval', value: String(pendingCount), sub: 'completed entries', accent: '#b45309' },

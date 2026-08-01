@@ -338,7 +338,7 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
         </div>
 
         {/* Bill to / Property */}
-        <div style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }} className="grid grid-cols-2 gap-6">
+        <div style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>Bill to</p>
             {contact ? (

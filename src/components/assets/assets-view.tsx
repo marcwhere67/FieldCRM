@@ -303,7 +303,7 @@ export function AssetsView({ initialAssets, team, canManage }: Props) {
                 <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="e.g. Ford Ranger — Ute 1" style={inp} className="focus:border-[#76A58F]" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Type</label>
                   <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={inp}>
@@ -329,7 +329,7 @@ export function AssetsView({ initialAssets, team, canManage }: Props) {
                   {team.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Last Serviced</label>
                   <input type="date" value={form.last_serviced} onChange={e => setForm(p => ({ ...p, last_serviced: e.target.value }))} style={inp} className="focus:border-[#76A58F]" />
@@ -339,7 +339,7 @@ export function AssetsView({ initialAssets, team, canManage }: Props) {
                   <input type="date" value={form.maintenance_due} onChange={e => setForm(p => ({ ...p, maintenance_due: e.target.value }))} style={inp} className="focus:border-[#76A58F]" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Purchase Date</label>
                   <input type="date" value={form.purchase_date} onChange={e => setForm(p => ({ ...p, purchase_date: e.target.value }))} style={inp} className="focus:border-[#76A58F]" />

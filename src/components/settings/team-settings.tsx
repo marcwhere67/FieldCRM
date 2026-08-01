@@ -160,7 +160,7 @@ export function TeamSettings({ initialTeam, canManage, currentUserId }: Props) {
                 <label style={labelStyle}>Email</label>
                 <input type="email" value={invite.email} onChange={e => setInv('email', e.target.value)} placeholder="jane@example.com" style={inputStyle} className="focus:border-[#76A58F]" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label style={labelStyle}>Role</label>
                   <Select value={invite.role} onValueChange={v => setInv('role', v ?? 'field')}>

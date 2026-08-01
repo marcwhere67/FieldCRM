@@ -117,7 +117,7 @@ export function CampaignsList({ initialCampaigns, pipelineStages, canManage }: P
 
       <div className="px-6 space-y-6">
         {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Total',     value: stats.total,     accent: C.navy },
             { label: 'Sent',      value: stats.sent,      accent: C.sage },

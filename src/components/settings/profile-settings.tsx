@@ -174,7 +174,7 @@ export function ProfileSettings({ profile, org, jobTitle, initialSignatureTempla
           <label style={labelStyle}>Email <span style={{ color: C.muted, fontSize: 10, letterSpacing: 0, textTransform: 'none' }}>(cannot be changed here)</span></label>
           <input value={profile.email} disabled style={{ ...inputStyle, backgroundColor: 'rgba(44,62,80,0.04)', color: C.muted, cursor: 'not-allowed' }} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>Phone</label>
             <input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0400 000 000" style={inputStyle} className="focus:border-[#76A58F]" />
@@ -288,7 +288,7 @@ export function ProfileSettings({ profile, org, jobTitle, initialSignatureTempla
                 <label style={labelStyle}>Current Password</label>
                 <input type="password" value={pwForm.current} onChange={e => setPw('current', e.target.value)} style={inputStyle} className="focus:border-[#76A58F]" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label style={labelStyle}>New Password</label>
                   <input type="password" value={pwForm.next} onChange={e => setPw('next', e.target.value)} style={inputStyle} className="focus:border-[#76A58F]" />

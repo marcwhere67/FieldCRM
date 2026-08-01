@@ -210,7 +210,7 @@ function TemplateEditor({ template, onClose, onSaved, onDeleted }: {
 
         <div style={{ padding: 20 }} className="space-y-4">
           {/* Channel + category — locked once created */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label style={labelStyle}>Channel</label>
               <select value={channel} disabled={isEdit} onChange={e => setChannel(e.target.value as 'email' | 'sms')}

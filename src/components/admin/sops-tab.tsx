@@ -204,7 +204,7 @@ export function SopsTab({ initialSops, canManage }: Props) {
                 <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                   placeholder="Lawn Mowing Procedure" style={inp} className="focus:border-[#76A58F]" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Category</label>
                   <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v ?? 'General' }))}>

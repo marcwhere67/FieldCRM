@@ -74,11 +74,11 @@ export function IntakeForm({ org, orgSlug }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: 24 }} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><span style={labelSt}>First name *</span><input value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Jane" required style={inp} /></div>
             <div><span style={labelSt}>Last name</span><input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Smith" style={inp} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><span style={labelSt}>Phone *</span><input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+61 4xx xxx xxx" required style={inp} /></div>
             <div><span style={labelSt}>Email</span><input type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="jane@example.com" style={inp} /></div>
           </div>

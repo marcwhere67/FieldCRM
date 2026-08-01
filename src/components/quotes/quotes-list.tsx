@@ -142,7 +142,7 @@ export function QuotesList({ quotes, filters, total }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Pipeline value',    value: formatCurrency(totalValue),    accent: '#2C3E50', sub: 'total quoted' },
           { label: 'Approved',          value: formatCurrency(approvedValue),  accent: '#76A58F', sub: 'won' },

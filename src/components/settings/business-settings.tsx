@@ -55,7 +55,7 @@ export function BusinessSettings({ org }: { org: Org }) {
           <label style={labelStyle}>Business Name</label>
           <input value={form.name} onChange={e => set('name', e.target.value)} style={inputStyle} className="focus:border-[#76A58F] focus:ring-2 focus:ring-[#76A58F]/20" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>ABN</label>
             <input value={form.abn} onChange={e => set('abn', e.target.value)} placeholder="12 345 678 901" style={inputStyle} className="focus:border-[#76A58F]" />
@@ -73,7 +73,7 @@ export function BusinessSettings({ org }: { org: Org }) {
           <label style={labelStyle}>Address</label>
           <input value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Main St, Brisbane QLD 4000" style={inputStyle} className="focus:border-[#76A58F]" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>Website</label>
             <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://yourbusiness.com.au" style={inputStyle} className="focus:border-[#76A58F]" />
@@ -88,7 +88,7 @@ export function BusinessSettings({ org }: { org: Org }) {
 
       <div style={{ backgroundColor: '#fff', border: `1px solid rgba(44,62,80,0.09)`, padding: 20 }}>
         <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500, marginBottom: 14 }}>Preferences</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>Payment Terms (days)</label>
             <input type="number" min="0" value={form.default_payment_terms_days} onChange={e => set('default_payment_terms_days', e.target.value)} style={inputStyle} className="focus:border-[#76A58F]" />
@@ -116,7 +116,7 @@ export function BusinessSettings({ org }: { org: Org }) {
           <label style={labelStyle}>Account Name</label>
           <input value={form.bank_account_name} onChange={e => set('bank_account_name', e.target.value)} placeholder="Salt Air Cleaning Pty Ltd" style={inputStyle} className="focus:border-[#76A58F]" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>BSB</label>
             <input value={form.bank_bsb} onChange={e => set('bank_bsb', e.target.value)} placeholder="123-456" style={inputStyle} className="focus:border-[#76A58F]" />

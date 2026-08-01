@@ -114,7 +114,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
       </div>
 
       {/* Customer + property */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <span style={label}>Customer *</span>
           <select value={contactId} onChange={e => { setContactId(e.target.value); setPropertyId('') }} style={inp}>
@@ -141,7 +141,7 @@ export function AgreementForm({ contacts, properties, team, initialContactId, ex
       </div>
 
       {/* Schedule */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <span style={label}>Repeats *</span>
           <select value={frequency} onChange={e => setFrequency(e.target.value as Frequency)} style={inp}>

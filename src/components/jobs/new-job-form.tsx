@@ -107,7 +107,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, ini
               <textarea value={form.description} onChange={e => set('description', e.target.value)}
                 placeholder="Job details..." rows={3} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span style={labelSt}>Job type</span>
                 <select value={form.job_type} onChange={e => set('job_type', e.target.value)} style={inp}>
@@ -156,7 +156,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, ini
           </Section>
 
           <Section title="Schedule & Assignment">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><span style={labelSt}>Start</span><input type="datetime-local" value={form.scheduled_start} onChange={e => set('scheduled_start', e.target.value)} style={inp} /></div>
               <div><span style={labelSt}>End</span><input type="datetime-local" value={form.scheduled_end} onChange={e => set('scheduled_end', e.target.value)} style={inp} /></div>
             </div>

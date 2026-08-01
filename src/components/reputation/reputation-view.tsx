@@ -113,7 +113,7 @@ export function ReputationView({ initialReviews, canManage }: Props) {
 
       <div className="px-6 space-y-6">
         {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { icon: Star, label: 'Avg Rating', value: avgRating ? avgRating.toFixed(1) : '—', sub: null, accent: '#f59e0b' },
             { icon: MessageSquare, label: 'Total Reviews', value: String(totalReviews), sub: null, accent: C.navy },
@@ -131,7 +131,7 @@ export function ReputationView({ initialReviews, canManage }: Props) {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="col-span-2 space-y-4">
             {/* Filters */}
             <div className="flex gap-2 flex-wrap">

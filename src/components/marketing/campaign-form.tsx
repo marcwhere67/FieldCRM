@@ -89,7 +89,7 @@ export function CampaignForm({ open, onClose, onSaved, pipelineStages, initial }
             <span style={labelSt}>Campaign Name</span>
             <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Summer Re-engagement" style={inp} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <span style={labelSt}>Type</span>
               <select value={form.type} onChange={e => set('type', e.target.value)} style={inp}>

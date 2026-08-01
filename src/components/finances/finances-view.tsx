@@ -80,7 +80,7 @@ export function FinancesView({ invoices, payments, initialExpenses, chartData, c
 
       <div className="px-6 space-y-6">
         {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {statCards.map(({ label, value, icon: Icon, accent, sub }) => (
             <div key={label} style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, borderTop: `2px solid ${accent}`, padding: 16 }}>
               <div className="flex items-center gap-2 mb-2">
@@ -94,7 +94,7 @@ export function FinancesView({ invoices, payments, initialExpenses, chartData, c
         </div>
 
         {/* Chart + expense breakdown */}
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="col-span-2">
             <RevenueChart data={chartData} />
           </div>
@@ -124,7 +124,7 @@ export function FinancesView({ invoices, payments, initialExpenses, chartData, c
         </div>
 
         {/* Outstanding + recent payments */}
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }}>
             <div style={{ borderBottom: `1px solid ${C.border}`, padding: '12px 16px' }} className="flex items-center justify-between">
               <p style={{ color: C.navy, fontSize: 12, fontWeight: 500 }}>Outstanding Invoices</p>

@@ -68,7 +68,7 @@ export function QuickAddModal({ orgId, defaultStageId, stages, onClose, onCreate
         </div>
 
         <div style={{ padding: 20 }} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <span style={labelSt}>First name *</span>
               <input autoFocus value={firstName} onChange={e => setFirstName(e.target.value)} style={inp} />
@@ -82,7 +82,7 @@ export function QuickAddModal({ orgId, defaultStageId, stages, onClose, onCreate
             <span style={labelSt}>Company</span>
             <input value={company} onChange={e => setCompany(e.target.value)} style={inp} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <span style={labelSt}>Phone</span>
               <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" style={inp} />

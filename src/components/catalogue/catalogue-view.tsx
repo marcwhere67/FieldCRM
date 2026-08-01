@@ -176,7 +176,7 @@ export function CatalogueView({ initialProducts, canManage }: Props) {
             </div>
             <div style={{ padding: 20 }} className="space-y-4">
               {/* Type picker */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {(['service','product'] as const).map(t => (
                   <button key={t} onClick={() => setForm(f => ({ ...f, type: t }))}
                     style={{ padding: '8px 0', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',
@@ -197,7 +197,7 @@ export function CatalogueView({ initialProducts, canManage }: Props) {
                     placeholder={field.placeholder} style={inp} className="focus:border-[#76A58F]" />
                 </div>
               ))}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Unit Price *</label>
                   <div style={{ position: 'relative' }}>

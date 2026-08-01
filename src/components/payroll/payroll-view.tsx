@@ -214,30 +214,32 @@ export function PayrollView({ employees, periodStart: initStart, periodEnd: init
                   </div>
 
                   {expanded === emp.id && (
-                    <div style={{ borderTop: `1px solid ${C.border}` }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 2fr 2fr 1fr 1fr', gap: 8, padding: '8px 16px', color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', borderBottom: `1px solid ${C.border}`, backgroundColor: C.cream }}>
-                        <div>Date</div><div>Clock In</div><div>Clock Out</div><div>Hours</div><div>Job</div><div>Pay</div><div style={{ textAlign: 'right' }}>Status</div>
-                      </div>
-                      {emp.sheets.map(t => {
-                        const hours = minutesToHours(t.total_minutes ?? 0)
-                        const pay = Math.round(hours * (emp.hourly_rate ?? 0) * 100) / 100
-                        return (
-                          <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 2fr 2fr 1fr 1fr', gap: 8, padding: '9px 16px', fontSize: 11, borderBottom: `1px solid rgba(44,62,80,0.05)` }}
-                            className="hover:bg-[rgba(44,62,80,0.02)] transition-colors">
-                            <div style={{ color: C.muted }}>{formatDate(t.clocked_in_at.split('T')[0])}</div>
-                            <div style={{ color: '#4A5A65', fontFamily: 'monospace' }}>{new Date(t.clocked_in_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
-                            <div style={{ color: '#4A5A65', fontFamily: 'monospace' }}>{t.clocked_out_at ? new Date(t.clocked_out_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false }) : <span style={{ color: C.sage }}>Active</span>}</div>
-                            <div style={{ color: '#4A5A65' }}>{fmtHours(hours)}</div>
-                            <div style={{ color: C.muted }} className="truncate">{t.jobs?.title ?? '—'}</div>
-                            <div style={{ color: C.fg }}>{emp.hourly_rate != null ? fmtMoney(pay) : '—'}</div>
-                            <div style={{ textAlign: 'right' }}>{t.approved ? <span style={{ color: C.sage }}>✓</span> : <span style={{ color: '#b45309' }}>Pending</span>}</div>
-                          </div>
-                        )
-                      })}
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 2fr 2fr 1fr 1fr', gap: 8, padding: '10px 16px', fontSize: 11, backgroundColor: C.cream, fontWeight: 600, borderTop: `1px solid ${C.border}` }}>
-                        <div style={{ color: C.muted, gridColumn: '1 / 4' }}>Total</div>
-                        <div style={{ color: C.navy }}>{fmtHours(emp.totalHours)}</div>
-                        <div /><div style={{ color: C.navy, fontFamily: C.serif, fontSize: 13 }}>{emp.hourly_rate != null ? fmtMoney(emp.gross) : '—'}</div><div />
+                    <div style={{ borderTop: `1px solid ${C.border}` }} className="overflow-x-auto">
+                      <div style={{ minWidth: 560 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 2fr 2fr 1fr 1fr', gap: 8, padding: '8px 16px', color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', borderBottom: `1px solid ${C.border}`, backgroundColor: C.cream }}>
+                          <div>Date</div><div>Clock In</div><div>Clock Out</div><div>Hours</div><div>Job</div><div>Pay</div><div style={{ textAlign: 'right' }}>Status</div>
+                        </div>
+                        {emp.sheets.map(t => {
+                          const hours = minutesToHours(t.total_minutes ?? 0)
+                          const pay = Math.round(hours * (emp.hourly_rate ?? 0) * 100) / 100
+                          return (
+                            <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 2fr 2fr 1fr 1fr', gap: 8, padding: '9px 16px', fontSize: 11, borderBottom: `1px solid rgba(44,62,80,0.05)` }}
+                              className="hover:bg-[rgba(44,62,80,0.02)] transition-colors">
+                              <div style={{ color: C.muted }}>{formatDate(t.clocked_in_at.split('T')[0])}</div>
+                              <div style={{ color: '#4A5A65', fontFamily: 'monospace' }}>{new Date(t.clocked_in_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+                              <div style={{ color: '#4A5A65', fontFamily: 'monospace' }}>{t.clocked_out_at ? new Date(t.clocked_out_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false }) : <span style={{ color: C.sage }}>Active</span>}</div>
+                              <div style={{ color: '#4A5A65' }}>{fmtHours(hours)}</div>
+                              <div style={{ color: C.muted }} className="truncate">{t.jobs?.title ?? '—'}</div>
+                              <div style={{ color: C.fg }}>{emp.hourly_rate != null ? fmtMoney(pay) : '—'}</div>
+                              <div style={{ textAlign: 'right' }}>{t.approved ? <span style={{ color: C.sage }}>✓</span> : <span style={{ color: '#b45309' }}>Pending</span>}</div>
+                            </div>
+                          )
+                        })}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 2fr 2fr 1fr 1fr', gap: 8, padding: '10px 16px', fontSize: 11, backgroundColor: C.cream, fontWeight: 600, borderTop: `1px solid ${C.border}` }}>
+                          <div style={{ color: C.muted, gridColumn: '1 / 4' }}>Total</div>
+                          <div style={{ color: C.navy }}>{fmtHours(emp.totalHours)}</div>
+                          <div /><div style={{ color: C.navy, fontFamily: C.serif, fontSize: 13 }}>{emp.hourly_rate != null ? fmtMoney(emp.gross) : '—'}</div><div />
+                        </div>
                       </div>
                     </div>
                   )}

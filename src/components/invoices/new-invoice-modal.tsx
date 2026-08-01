@@ -93,18 +93,29 @@ export function NewInvoiceModal({ contacts, onClose }: Props) {
                 <Plus style={{ width: 12, height: 12 }} />Add line
               </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '5fr 1fr 1fr 1fr 24px', gap: 8, padding: '4px 8px' }}>
+            <div className="hidden sm:grid" style={{ gridTemplateColumns: '5fr 1fr 1fr 1fr 24px', gap: 8, padding: '4px 8px' }}>
               {['Item', 'Qty', 'Price', 'Total', ''].map((h, i) => (
                 <div key={i} style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: i > 0 && i < 4 ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
             {lineItems.map((item, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '5fr 1fr 1fr 1fr 24px', gap: 8, alignItems: 'center', padding: '4px 4px', backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAF8' }}>
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-[5fr_1fr_1fr_1fr_24px]" style={{ gap: 8, alignItems: 'center', padding: '8px 4px', backgroundColor: i % 2 === 0 ? '#fff' : '#FAFAF8' }}>
                 <input value={item.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Item description" style={{ ...inp, padding: '5px 8px', fontSize: 12 }} />
-                <input type="number" value={item.quantity} onChange={e => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} min="0" style={{ ...inp, padding: '5px 8px', fontSize: 12, textAlign: 'right' }} />
-                <input type="number" value={item.unit_price} onChange={e => updateLine(i, 'unit_price', parseFloat(e.target.value) || 0)} min="0" style={{ ...inp, padding: '5px 8px', fontSize: 12, textAlign: 'right' }} />
-                <span style={{ color: C.navy, fontSize: 12, fontWeight: 500, textAlign: 'right' }}>{formatCurrency(item.subtotal ?? 0)}</span>
-                <button onClick={() => removeLine(i)} style={{ color: C.muted, background: 'none', border: 'none', cursor: 'pointer' }}>
+                <div className="grid grid-cols-3 gap-2 sm:contents">
+                  <div>
+                    <span className="sm:hidden" style={{ color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Qty</span>
+                    <input type="number" value={item.quantity} onChange={e => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} min="0" style={{ ...inp, padding: '5px 8px', fontSize: 12, textAlign: 'right' }} />
+                  </div>
+                  <div>
+                    <span className="sm:hidden" style={{ color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Price</span>
+                    <input type="number" value={item.unit_price} onChange={e => updateLine(i, 'unit_price', parseFloat(e.target.value) || 0)} min="0" style={{ ...inp, padding: '5px 8px', fontSize: 12, textAlign: 'right' }} />
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span className="sm:hidden block" style={{ color: C.muted, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Total</span>
+                    <span style={{ color: C.navy, fontSize: 12, fontWeight: 500 }}>{formatCurrency(item.subtotal ?? 0)}</span>
+                  </div>
+                </div>
+                <button onClick={() => removeLine(i)} style={{ color: C.muted, background: 'none', border: 'none', cursor: 'pointer', justifySelf: 'end' }} className="sm:justify-self-auto">
                   <Trash2 style={{ width: 13, height: 13 }} />
                 </button>
               </div>
