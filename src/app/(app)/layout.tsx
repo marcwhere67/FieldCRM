@@ -69,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             userName={profile?.full_name ?? user.email ?? 'User'}
             userRole={profile?.role ?? 'admin'}
           />
-          <main className="flex-1 overflow-y-auto overscroll-contain p-4 pb-24 md:p-6">
+          <main className="flex-1 overflow-y-auto overscroll-none p-4 pb-24 md:p-6">
             {children}
           </main>
         </div>
