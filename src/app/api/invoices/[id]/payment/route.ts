@@ -8,7 +8,8 @@ import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } fro
 import {
   zUuid, zPositiveMoneyInput, zDateOnly, zNullableText, zLongText,
 } from '@/lib/validation/common'
-import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
+import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { resolveSenderSignatureHtml } from '@/lib/emails/signature'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
@@ -198,7 +199,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const balanceText = balanceRemaining > 0
         ? `Remaining balance: ${formatCurrency(balanceRemaining)}.`
         : 'This invoice is now paid in full.'
-      shell.signatureHtml = await getGmailSignature(accessToken)
+      shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, accessToken, {
+        name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+      })
       const { html, text } = buildReceiptEmail({ message, shell, balanceHtml, balanceText })
 
       await sendEmailViaGmail(accessToken, fromHeader, contact.email, subject, html, text, [

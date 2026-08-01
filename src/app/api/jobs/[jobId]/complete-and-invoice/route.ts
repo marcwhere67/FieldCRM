@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server'
 import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
+import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { resolveSenderSignatureHtml } from '@/lib/emails/signature'
 import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
 import { formatDate, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
@@ -100,7 +101,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://fieldcrm-sigma.vercel.app'
     const shell: EmailShell = { orgName: org.name ?? 'us', orgEmail: org.email, orgPhone: org.phone ?? null, senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png` }
-    shell.signatureHtml = await getGmailSignature(accessToken)
+    // Signature is keyed to `connected.user_id` — whoever's Gmail is actually
+    // sending this — not `profile` (the field worker who completed the job).
+    shell.signatureHtml = await resolveSenderSignatureHtml(admin, connected.user_id, accessToken, {
+      name: org.name ?? null, phone: org.phone ?? null, email: org.email,
+    })
 
     const balanceDue = Number(invoice.total) - Number(invoice.deposit_credit ?? 0)
     const dueText = dueDate ? formatDate(dueDate) : null

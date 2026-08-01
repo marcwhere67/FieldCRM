@@ -16,7 +16,7 @@ export default async function SettingsPage({
 
   if (!profile) redirect('/login')
 
-  const [{ data: org }, { data: team }] = await Promise.all([
+  const [{ data: org }, { data: team }, { data: employeeProfile }] = await Promise.all([
     supabase
       .from('organisations')
       .select('id, name, abn, phone, email, address, default_payment_terms_days, timezone, subscription_plan, bank_account_name, bank_bsb, bank_account_number, bank_payid, payment_instructions')
@@ -27,6 +27,11 @@ export default async function SettingsPage({
       .select('id, full_name, email, role, phone, is_active, hourly_rate')
       .eq('org_id', profile.org_id)
       .order('full_name'),
+    supabase
+      .from('employee_profiles')
+      .select('job_title')
+      .eq('user_id', profile.id)
+      .maybeSingle(),
   ])
 
   if (!org) redirect('/dashboard')
@@ -36,6 +41,7 @@ export default async function SettingsPage({
       org={org}
       team={team ?? []}
       profile={profile}
+      jobTitle={employeeProfile?.job_title ?? null}
       isAdmin={profile.role === 'admin'}
       initialTab={tab}
     />

@@ -5,6 +5,7 @@ import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { resolveSenderSignatureHtml } from '@/lib/emails/signature'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
@@ -83,6 +84,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       orgName: org?.name ?? 'us', orgEmail, orgPhone: org?.phone ?? null,
       senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png`,
     }
+    // Pre-existing gap: this resend path never set a signature at all (unlike
+    // the receipt sent when the payment is first recorded). Fixed alongside
+    // the per-sender signature work rather than left newly inconsistent.
+    shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, accessToken, {
+      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+    })
 
     const body = await req.json().catch(() => ({})) as { message?: string }
     const paidLine = formatCurrency(Number(payment.amount))

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Save, KeyRound, Lock, Mail } from 'lucide-react'
+import { Save, KeyRound, Lock, Mail, PenLine } from 'lucide-react'
+import { buildSenderSignatureHtml } from '@/lib/emails/signature-format'
 
 const C = {
   navy: '#2C3E50', sage: '#76A58F', cream: '#F5F0EB',
@@ -20,8 +21,9 @@ const AVATAR_COLORS = [
 ]
 
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
+interface Org { name: string; phone: string | null; email: string | null }
 
-export function ProfileSettings({ profile }: { profile: Profile }) {
+export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; org: Org; jobTitle: string | null }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [saving, setSaving] = useState(false)
@@ -162,6 +164,31 @@ export function ProfileSettings({ profile }: { profile: Profile }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Email signature */}
+      <div style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, padding: 20 }}>
+        <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+          <PenLine className="w-3.5 h-3.5" style={{ color: C.sage }} />
+          <h3 style={{ color: C.navy, fontSize: 13, fontWeight: 500 }}>Email Signature</h3>
+        </div>
+        <p style={{ color: C.muted, fontSize: 11, marginBottom: 14 }}>
+          This is what appears on quotes, invoices and receipts you send — built from your name and
+          phone above, plus your job title. It shows correctly no matter who sends from the shared
+          {org.email ? ` ${org.email}` : ' business'} inbox.
+        </p>
+        <div
+          style={{ backgroundColor: C.cream, border: `1px solid ${C.border}`, padding: '14px 16px', fontSize: 13, color: C.fg }}
+          dangerouslySetInnerHTML={{
+            __html: buildSenderSignatureHtml(
+              { fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone },
+              { name: org.name, phone: org.phone, email: org.email ?? '' },
+            ),
+          }}
+        />
+        <p style={{ color: C.muted, fontSize: 11, marginTop: 10 }}>
+          Job title is set by an admin in Settings → Team.
+        </p>
       </div>
 
       {/* Security */}

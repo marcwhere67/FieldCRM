@@ -4,6 +4,31 @@ Assumptions made under ambiguity, per SPEC.md §1. Newest first.
 
 ---
 
+## D-007 — Per-sender email signature is CRM-built, not fetched from Gmail
+**Date:** 2026-08-01
+
+Marc and Tegan share one Gmail login (hello@saltaircleaning.com.au). Gmail's
+signature is a property of the mailbox, not of who's using it — so fetching it
+live (`getGmailSignature`) could never distinguish sender A from sender B, no
+matter which one's OAuth token was used to send. Confirmed by user: they
+manually swap Gmail's signature by hand today when using a personal device.
+
+**Decision:** build the signature from CRM data instead — `users.full_name`
+(NOT NULL, always available) + `employee_profiles.job_title` (optional,
+admin/manager-editable via Settings → Team, unchanged from existing access
+rules) + `users.phone` (falls back to org phone if unset) + org name/email.
+Resolution order per user's explicit choice: CRM-built signature first, live
+Gmail fetch only as a fallback (dormant in practice, since full_name is
+mandatory — kept for defensiveness, not expected to trigger).
+
+**Consequence:** job title is not self-editable by field-role staff (existing
+restriction, untouched) — Marc/Tegan can already set their own since they're
+both admins. A live preview was added to Settings → Profile (built from the
+exact same pure function used at send time) so what's seen matches what's
+sent, no test email required to verify.
+
+---
+
 ## D-006 — BAS GST summary is computed on an accrual basis
 **Phase:** P1-8 · **Date:** 2026-07-31
 

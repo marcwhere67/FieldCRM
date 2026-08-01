@@ -8,7 +8,8 @@ import { createClient } from '@/lib/supabase/server'
 import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
 import { zShortText, zLongText } from '@/lib/validation/common'
 import { validateTaxInvoice } from '@/lib/validation/tax-invoice'
-import { getGmailAccessToken, sendEmailViaGmail, getGmailSignature } from '@/lib/gmail'
+import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
+import { resolveSenderSignatureHtml } from '@/lib/emails/signature'
 import { InvoicePDF } from '@/lib/pdf/invoice-pdf'
 import { formatDate, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
@@ -145,7 +146,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       React.createElement(InvoicePDF, { invoice: invoicePdfData, org, contact }) as React.ReactElement<DocumentProps>,
     )
 
-    shell.signatureHtml = await getGmailSignature(accessToken)
+    shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, accessToken, {
+      name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
+    })
     const { html, text } = buildInvoiceEmail({ message, shell, balanceDue, dueText, bankHtml, bankText })
     const fromHeader = shell.orgName ? `"${shell.orgName.replace(/"/g, '')}" <${orgEmail}>` : orgEmail
     await sendEmailViaGmail(accessToken, fromHeader, contactEmail, subject, html, text, [
