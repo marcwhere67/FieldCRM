@@ -177,15 +177,22 @@ export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; 
           phone above, plus your job title. It shows correctly no matter who sends from the shared
           {org.email ? ` ${org.email}` : ' business'} inbox.
         </p>
-        <div
-          style={{ backgroundColor: C.cream, border: `1px solid ${C.border}`, padding: '14px 16px', fontSize: 13, color: C.fg }}
-          dangerouslySetInnerHTML={{
-            __html: buildSenderSignatureHtml(
-              { fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone },
-              { name: org.name, phone: org.phone, email: org.email ?? '' },
-            ),
-          }}
-        />
+        {/* Mirrors the real email: navy logo header, then the signature block */}
+        <div style={{ border: `1px solid ${C.border}` }}>
+          <div style={{ backgroundColor: C.navy, padding: '12px 16px' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- static branding asset, not a Next-optimised image */}
+            <img src="/salt-air-logo.png" alt={org.name} style={{ height: 32, display: 'block' }} />
+          </div>
+          <div
+            style={{ backgroundColor: C.cream, padding: '14px 16px', fontSize: 13, color: C.fg }}
+            dangerouslySetInnerHTML={{
+              __html: buildSenderSignatureHtml(
+                { fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone },
+                { name: org.name, phone: org.phone, email: org.email ?? '' },
+              ),
+            }}
+          />
+        </div>
         <p style={{ color: C.muted, fontSize: 11, marginTop: 10 }}>
           Job title is set by an admin in Settings → Team.
         </p>
