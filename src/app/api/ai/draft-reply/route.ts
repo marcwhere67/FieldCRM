@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { anthropic } from '@/lib/anthropic'
+import { parseBody } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
+
+const draftReplySchema = z.object({ conversationId: zUuid })
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { conversationId } = await req.json()
+  const parsed = await parseBody(req, draftReplySchema)
+  if (!parsed.ok) return parsed.response
+  const { conversationId } = parsed.data
 
   const { data: profile } = await supabase
     .from('users')

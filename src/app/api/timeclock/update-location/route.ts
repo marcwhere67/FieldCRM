@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
+
+const updateLocationSchema = z.object({
+  timesheetId: zUuid,
+  lat: z.number().finite(),
+  lng: z.number().finite(),
+  field: z.enum(['clock_in', 'clock_out']).optional(),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { timesheetId, lat, lng, field } = await req.json()
-    if (!timesheetId || !lat || !lng) return NextResponse.json({ ok: false })
+    const parsed = await parseBody(req, updateLocationSchema)
+    if (!parsed.ok) return NextResponse.json({ ok: false })
+    const { timesheetId, lat, lng, field } = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

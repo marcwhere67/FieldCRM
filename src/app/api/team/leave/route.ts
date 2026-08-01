@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireProfile, parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zDateOnly, zNullableText, zOptionalUuid } from '@/lib/validation/common'
+
+const leaveRequestSchema = z.object({
+  type: z.enum(['annual', 'sick', 'unpaid', 'other'], { error: 'Choose a valid leave type' }),
+  start_date: zDateOnly,
+  end_date: zDateOnly,
+  start_time: z.union([z.string(), z.null()]).optional().transform((v) => v || null),
+  end_time: z.union([z.string(), z.null()]).optional().transform((v) => v || null),
+  days: z.number().finite().min(0),
+  reason: zNullableText(2000),
+  user_id: zOptionalUuid,
+})
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireProfile()
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase.from('users').select('org_id, id').eq('supabase_auth_id', user.id).single()
-  if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const parsed = await parseBody(req, leaveRequestSchema)
+  if (!parsed.ok) return parsed.response
 
-  const body = await req.json()
   const { data, error } = await supabase
     .from('leave_requests')
-    .insert({ ...body, org_id: profile.org_id, user_id: body.user_id ?? profile.id })
+    .insert({ ...parsed.data, org_id: profile.org_id, user_id: parsed.data.user_id ?? profile.id })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }

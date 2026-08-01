@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zUuid, zRequiredText } from '@/lib/validation/common'
+
+const CHANNELS = ['sms', 'email'] as const
+
+const newConversationSchema = z.object({
+  contactId: zUuid,
+  message: zRequiredText(5000),
+  channel: z.enum(CHANNELS).optional().default('sms'),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { contactId, message, channel } = await req.json()
-    if (!contactId || !message) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    const parsed = await parseBody(req, newConversationSchema)
+    if (!parsed.ok) return parsed.response
+    const { contactId, message, channel } = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -33,7 +45,7 @@ export async function POST(req: NextRequest) {
       .select('id, channel, status, last_message_at, unread_count, created_at, contacts!conversations_contact_id_fkey(id, first_name, last_name, phone, email)')
       .eq('contact_id', contactId)
       .eq('org_id', profile.org_id)
-      .eq('channel', channel ?? 'sms')
+      .eq('channel', channel)
       .eq('status', 'open')
       .order('created_at', { ascending: false })
       .limit(1)
@@ -47,20 +59,20 @@ export async function POST(req: NextRequest) {
         .insert({
           org_id: profile.org_id,
           contact_id: contactId,
-          channel: channel ?? 'sms',
+          channel,
           status: 'open',
           last_message_at: now,
         })
         .select('id, channel, status, last_message_at, unread_count, created_at, contacts!conversations_contact_id_fkey(id, first_name, last_name, phone, email)')
         .single()
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error) return jsonError(friendlyDbError(error), 500)
       conv = newConv
     }
 
     // Send via Twilio if SMS
     let externalMessageId: string | null = null
-    if ((channel ?? 'sms') === 'sms' && contact.phone) {
+    if (channel === 'sms' && contact.phone) {
       const sid = process.env.TWILIO_ACCOUNT_SID
       const token = process.env.TWILIO_AUTH_TOKEN
       const from = process.env.TWILIO_PHONE_NUMBER

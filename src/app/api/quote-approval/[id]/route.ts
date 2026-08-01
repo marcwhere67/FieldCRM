@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 import { sendAsOrg, sendBrandedAsOrg } from '@/lib/org-mailer'
 import { captureError } from '@/lib/monitor'
 import { formatCurrency } from '@/lib/format'
+import { parseBody } from '@/lib/http'
+import { recordQuoteEvent } from '@/lib/quote-events'
+
+const quoteActionSchema = z.object({
+  action: z.enum(['approve', 'decline']),
+})
 
 const SOURCE = 'api/quote-approval/[id]'
 const QUOTE_FIELDS = 'id, status, valid_until, quote_number, org_id, total, contacts!quotes_contact_id_fkey(first_name, last_name, email, phone)'
@@ -34,10 +41,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const { id } = await params
-  const { action } = await req.json().catch(() => ({}))
-  if (action !== 'approve' && action !== 'decline') {
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-  }
+  const parsed = await parseBody(req, quoteActionSchema)
+  if (!parsed.ok) return parsed.response
+  const { action } = parsed.data
 
   const admin = createServiceClient()
   const quote = await fetchQuote(admin, id)
@@ -57,6 +63,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { error } = await admin.from('quotes').update(update).eq('id', id)
   if (error) return NextResponse.json({ error: 'Failed to update quote' }, { status: 500 })
+
+  void recordQuoteEvent(
+    admin,
+    { id: quote.id, org_id: quote.org_id, quote_number: quote.quote_number, status: update.status },
+    action === 'approve' ? 'accepted' : 'declined',
+    clientIp(req),
+    req.headers.get('user-agent'),
+  )
 
   // Notifications are best-effort — the customer's decision is already saved,
   // so a mail failure must never surface as a failed approval.

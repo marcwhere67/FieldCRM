@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { captureError } from '@/lib/monitor'
 import { generateRecurringJobs } from '@/lib/recurring'
 import { melbourneDateOnly } from '@/lib/format'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zUuid, zDateOnly, zLineItems } from '@/lib/validation/common'
 
 // Fields that change WHEN/HOW the recurring jobs fall — a change to any of these
 // means the already-generated future jobs are stale and must be rebuilt.
@@ -34,27 +37,54 @@ async function requireManager(supabase: Awaited<ReturnType<typeof createClient>>
   return { profile }
 }
 
+// Every field is optional — a PATCH only touches the keys the client actually
+// sent. Values are still fully validated when present, closing the mass-
+// assignment hole the old ad-hoc `typeof` checks left open (no allowlist of
+// keys, no rejection of malformed-but-truthy values).
+const agreementPatchSchema = z.object({
+  active: z.boolean().optional(),
+  title: z.string().trim().min(1).max(200).optional(),
+  frequency: z.enum(FREQUENCIES).optional(),
+  anchor_date: zDateOnly.optional(),
+  first_visit_date: z.union([zDateOnly, z.null()]).optional(),
+  start_time: z.string().regex(/^\d{2}:\d{2}/, 'Enter a valid time').transform((s) => s.slice(0, 5)).optional(),
+  duration_minutes: z.number().finite().transform((n) => Math.max(15, n)).optional(),
+  end_date: z.union([zDateOnly, z.null()]).optional(),
+  line_items: zLineItems.optional(),
+  assigned_users: z.array(zUuid).optional(),
+  property_id: z.union([zUuid, z.null()]).optional(),
+  // Not zNullableText: that helper always resolves undefined -> null, which
+  // would make "instructions omitted" indistinguishable from "clear
+  // instructions" and silently wipe the field on every unrelated PATCH.
+  instructions: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v == null ? null : v.trim().slice(0, 2000) || null)),
+}).partial()
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
   const guard = await requireManager(supabase)
   if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
 
-  const body = await req.json().catch(() => ({}))
+  const parsed = await parseBody(req, agreementPatchSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
   const patch: Record<string, unknown> = {}
 
-  if (typeof body.active === 'boolean') patch.active = body.active
-  if (typeof body.title === 'string' && body.title.trim()) patch.title = body.title.trim()
-  if (FREQUENCIES.includes(body.frequency)) patch.frequency = body.frequency
-  if (/^\d{4}-\d{2}-\d{2}$/.test(body.anchor_date)) patch.anchor_date = body.anchor_date
-  if (body.first_visit_date === null || /^\d{4}-\d{2}-\d{2}$/.test(body.first_visit_date)) patch.first_visit_date = body.first_visit_date || null
-  if (/^\d{2}:\d{2}/.test(body.start_time)) patch.start_time = String(body.start_time).slice(0, 5)
-  if (Number.isFinite(Number(body.duration_minutes))) patch.duration_minutes = Math.max(15, Number(body.duration_minutes))
-  if (body.end_date === null || /^\d{4}-\d{2}-\d{2}$/.test(body.end_date)) patch.end_date = body.end_date || null
-  if (Array.isArray(body.line_items)) patch.line_items = body.line_items
-  if (Array.isArray(body.assigned_users)) patch.assigned_users = body.assigned_users.map(String)
-  if (body.property_id === null || typeof body.property_id === 'string') patch.property_id = body.property_id || null
-  if (typeof body.instructions === 'string' || body.instructions === null) patch.instructions = body.instructions ? String(body.instructions).slice(0, 2000) : null
+  if (body.active !== undefined) patch.active = body.active
+  if (body.title !== undefined) patch.title = body.title
+  if (body.frequency !== undefined) patch.frequency = body.frequency
+  if (body.anchor_date !== undefined) patch.anchor_date = body.anchor_date
+  if (body.first_visit_date !== undefined) patch.first_visit_date = body.first_visit_date
+  if (body.start_time !== undefined) patch.start_time = body.start_time
+  if (body.duration_minutes !== undefined) patch.duration_minutes = body.duration_minutes
+  if (body.end_date !== undefined) patch.end_date = body.end_date
+  if (body.line_items !== undefined) patch.line_items = body.line_items
+  if (body.assigned_users !== undefined) patch.assigned_users = body.assigned_users
+  if (body.property_id !== undefined) patch.property_id = body.property_id
+  if (body.instructions !== undefined) patch.instructions = body.instructions
 
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
@@ -76,7 +106,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await captureError(error ?? new Error('Agreement update returned no row'), {
       source: SOURCE, level: 'error', orgId: guard.profile.org_id, userId: guard.profile.id, context: { id },
     })
-    return NextResponse.json({ error: error?.message ?? 'Failed to update' }, { status: 400 })
+    return jsonError(error ? friendlyDbError(error) : 'Failed to update', 400)
   }
 
   // Reshuffle the schedule to match the new settings (best-effort — the edit is
@@ -139,7 +169,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   if (error) {
     await captureError(error, { source: SOURCE, level: 'error', orgId: guard.profile.org_id, userId: guard.profile.id, context: { id, stage: 'delete' } })
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return jsonError(friendlyDbError(error), 400)
   }
   return NextResponse.json({ ok: true })
 }

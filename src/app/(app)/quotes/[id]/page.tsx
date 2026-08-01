@@ -24,11 +24,12 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
 
   if (!quote) notFound()
 
-  const [{ data: services }, { data: contacts }, { data: org }, { data: products }] = await Promise.all([
+  const [{ data: services }, { data: contacts }, { data: org }, { data: products }, { data: viewEvents }] = await Promise.all([
     supabase.from('services').select('*').eq('org_id', profile!.org_id).eq('is_active', true),
     supabase.from('contacts').select('id, first_name, last_name, email, phone').eq('org_id', profile!.org_id),
     supabase.from('organisations').select('name, abn, email, phone, address, logo_url, default_payment_terms_days').eq('id', profile!.org_id).single(),
     supabase.from('products').select('id, name, description, unit_price, unit, type, category').eq('org_id', profile!.org_id).eq('active', true).order('name'),
+    supabase.from('quote_events').select('created_at').eq('quote_id', id).eq('event_type', 'viewed').order('created_at', { ascending: false }),
   ])
 
   return (
@@ -39,6 +40,8 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
       contacts={contacts ?? []}
       org={org}
       orgId={profile!.org_id}
+      viewCount={viewEvents?.length ?? 0}
+      lastViewedAt={viewEvents?.[0]?.created_at ?? null}
     />
   )
 }

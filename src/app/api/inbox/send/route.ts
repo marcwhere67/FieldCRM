@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zUuid, zRequiredText } from '@/lib/validation/common'
+
+const sendSchema = z.object({
+  conversationId: zUuid,
+  content: zRequiredText(5000),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { conversationId, content } = await req.json()
-    if (!conversationId || !content) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    const parsed = await parseBody(req, sendSchema)
+    if (!parsed.ok) return parsed.response
+    const { conversationId, content } = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -69,7 +78,7 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return jsonError(friendlyDbError(error), 500)
 
     await supabase
       .from('conversations')

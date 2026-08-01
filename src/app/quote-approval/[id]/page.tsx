@@ -1,6 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import { QuoteApproval } from '@/components/quotes/quote-approval'
+import { recordQuoteEvent } from '@/lib/quote-events'
 
 export default async function QuoteApprovalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -26,6 +28,12 @@ export default async function QuoteApprovalPage({ params }: { params: Promise<{ 
     .select('name, abn, email, phone, address, logo_url')
     .eq('id', quote.org_id)
     .single()
+
+  const h = await headers()
+  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+  const userAgent = h.get('user-agent')
+  // Fire-and-forget: logging a view must never delay or break rendering the quote.
+  void recordQuoteEvent(supabase, quote, 'viewed', ip, userAgent)
 
   return <QuoteApproval quote={quote} org={org} />
 }

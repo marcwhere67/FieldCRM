@@ -51,9 +51,11 @@ interface Props {
   quote: Quote; services: Service[]; products?: CatalogueItem[]; contacts: Contact[]
   org: { name: string; abn: string | null; email: string | null; phone: string | null; address: string | null; logo_url: string | null; default_payment_terms_days: number | null } | null
   orgId: string
+  viewCount?: number
+  lastViewedAt?: string | null
 }
 
-export function QuoteDetail({ quote, services, products = [], contacts, org, orgId }: Props) {
+export function QuoteDetail({ quote, services, products = [], contacts, org, orgId, viewCount = 0, lastViewedAt = null }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -305,6 +307,11 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
           quote.valid_until ? { label: 'Valid until', value: formatDate(quote.valid_until), color: new Date(quote.valid_until) < new Date() ? '#dc2626' : C.fg } : null,
           quote.approved_at ? { label: 'Approved', value: formatDate(quote.approved_at), color: C.sage } : null,
           quote.declined_at ? { label: 'Declined', value: formatDate(quote.declined_at), color: '#dc2626' } : null,
+          viewCount > 0 ? {
+            label: viewCount > 1 ? 'Viewed' : 'Viewed',
+            value: viewCount > 1 ? `${viewCount}× — reopened${lastViewedAt ? `, last ${formatDate(lastViewedAt)}` : ''}` : `Once${lastViewedAt ? `, ${formatDate(lastViewedAt)}` : ''}`,
+            color: viewCount > 1 ? '#b45309' : C.muted,
+          } : null,
         ].filter(Boolean).map((item, i) => (
           <div key={i}>
             <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 2 }}>{item!.label}</p>

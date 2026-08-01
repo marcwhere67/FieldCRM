@@ -1,5 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zNullableText, zMoneyInput, zDateOnly } from '@/lib/validation/common'
+
+const certificationSchema = z.object({
+  name: z.string().trim().max(200).default(''),
+  issued: z.union([zDateOnly, z.literal('')]).optional().default(''),
+  expires: z.union([zDateOnly, z.literal('')]).optional().default(''),
+  issuer: z.string().trim().max(200).default(''),
+})
+
+const profileUpdateSchema = z.object({
+  hire_date: z.union([zDateOnly, z.literal(''), z.null()]).optional().transform((v) => (v ? v : null)),
+  job_title: zNullableText(200),
+  department: zNullableText(200),
+  employment_type: z.enum(['full_time', 'part_time', 'casual', 'contractor']).optional(),
+  skills: z.array(z.string().trim().max(100)).max(100).optional(),
+  certifications: z.array(certificationSchema).max(100).optional(),
+  emergency_contact_name: zNullableText(200),
+  emergency_contact_phone: zNullableText(50),
+  emergency_contact_relation: zNullableText(100),
+  notes: zNullableText(2000),
+  hourly_rate: z.union([zMoneyInput, z.null()]).optional(),
+})
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,7 +37,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!profile || (!isManager && !isSelf))
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const rawBody = await req.json()
+  const parsed = await parseBody(req, profileUpdateSchema)
+  if (!parsed.ok) return parsed.response
+  const rawBody = parsed.data
+
   // Field staff editing their own profile may only touch personal fields —
   // job title, department, employment type, hourly rate and certifications stay manager/admin-only
   const body = isManager ? rawBody : {
@@ -31,11 +58,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
 
   // Also update hourly_rate on users table if provided (managers only)
-  if (isManager && body.hourly_rate !== undefined) {
-    await supabase.from('users').update({ hourly_rate: body.hourly_rate }).eq('id', id).eq('org_id', profile.org_id)
+  if (isManager && rawBody.hourly_rate !== undefined) {
+    await supabase.from('users').update({ hourly_rate: rawBody.hourly_rate }).eq('id', id).eq('org_id', profile.org_id)
   }
 
   return NextResponse.json(data)

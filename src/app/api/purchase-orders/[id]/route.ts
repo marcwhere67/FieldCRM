@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { melbourneDateOnly } from '@/lib/format'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+
+const PO_STATUSES = ['draft', 'sent', 'received', 'cancelled'] as const
+
+const poPatchSchema = z.object({
+  status: z.enum(PO_STATUSES, { error: 'Choose a valid status' }),
+})
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -12,7 +20,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!profile || !['admin', 'manager'].includes(profile.role))
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const body = await req.json()
+  const parsed = await parseBody(req, poPatchSchema)
+  if (!parsed.ok) return parsed.response
+  const body: Record<string, unknown> = { status: parsed.data.status }
 
   // When marking as received, auto-create an expense entry
   if (body.status === 'received' && !body.expense_id) {
@@ -44,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .from('purchase_orders').update(body).eq('id', id).eq('org_id', profile.org_id)
     .select(`*, suppliers(id, name)`).single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
 
@@ -59,6 +69,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { error } = await supabase.from('purchase_orders').delete().eq('id', id).eq('org_id', profile.org_id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json({ ok: true })
 }

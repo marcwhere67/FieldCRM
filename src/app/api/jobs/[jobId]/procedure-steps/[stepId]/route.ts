@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zBoolish } from '@/lib/validation/common'
+
+const progressSchema = z.object({
+  completed: zBoolish,
+})
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ jobId: string; stepId: string }> }) {
   const { jobId, stepId } = await params
@@ -13,20 +20,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ jobId:
   const { data: job } = await supabase.from('jobs').select('org_id').eq('id', jobId).single()
   if (!job || job.org_id !== profile.org_id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const body = await req.json() as { completed: boolean }
+  const parsed = await parseBody(req, progressSchema)
+  if (!parsed.ok) return parsed.response
+  const { completed } = parsed.data
+
   const { data, error } = await supabase
     .from('job_procedure_progress')
     .upsert({
       job_id: jobId,
       step_id: stepId,
       org_id: profile.org_id,
-      completed: body.completed,
-      completed_by: body.completed ? profile.id : null,
-      completed_at: body.completed ? new Date().toISOString() : null,
+      completed,
+      completed_by: completed ? profile.id : null,
+      completed_at: completed ? new Date().toISOString() : null,
     }, { onConflict: 'job_id,step_id' })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(data)
 }

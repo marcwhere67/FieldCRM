@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText, zNullableText, zBoolish } from '@/lib/validation/common'
+
+const stepSchema = z.object({
+  title: zRequiredText(200),
+  area: z.string().trim().max(100).optional().default('general'),
+  description: zNullableText(2000),
+  is_required: zBoolish.optional().default(true),
+  order_index: z.number().int().nonnegative().optional(),
+})
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,13 +24,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { data: procedure } = await supabase.from('cleaning_procedures').select('org_id').eq('id', id).single()
   if (!procedure || procedure.org_id !== profile.org_id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const body = await req.json()
+  const parsed = await parseBody(req, stepSchema)
+  if (!parsed.ok) return parsed.response
+
   const { data, error } = await supabase
     .from('procedure_steps')
-    .insert({ ...body, procedure_id: id, org_id: profile.org_id })
+    .insert({ ...parsed.data, procedure_id: id, org_id: profile.org_id })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data, { status: 201 })
 }

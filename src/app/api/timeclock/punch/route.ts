@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zOptionalUuid } from '@/lib/validation/common'
+
+const punchSchema = z.object({
+  action: z.enum(['clock_in', 'clock_out'], { error: 'Invalid action' }),
+  lat: z.number().finite().optional().nullable(),
+  lng: z.number().finite().optional().nullable(),
+  jobId: zOptionalUuid,
+  timesheetId: zOptionalUuid,
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { action, lat, lng, jobId, timesheetId } = await req.json()
+    const parsed = await parseBody(req, punchSchema)
+    if (!parsed.ok) return parsed.response
+    const { action, lat, lng, jobId, timesheetId } = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -50,7 +63,7 @@ export async function POST(req: NextRequest) {
         .select('id')
         .single()
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error) return jsonError(friendlyDbError(error), 500)
       return NextResponse.json({ timesheetId: data.id })
     }
 
@@ -99,7 +112,7 @@ export async function POST(req: NextRequest) {
         .eq('user_id', profile.id)
         .select('id')
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error) return jsonError(friendlyDbError(error), 500)
       if (!updated || updated.length === 0) {
         return NextResponse.json({ error: 'Failed to save clock-out — try refreshing and clocking out again' }, { status: 500 })
       }

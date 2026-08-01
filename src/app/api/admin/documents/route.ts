@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zRequiredText, zNullableText } from '@/lib/validation/common'
+
+const documentSchema = z.object({
+  title: zRequiredText(200),
+  category: zRequiredText(100),
+  description: zNullableText(1000),
+  url: zRequiredText(2000),
+  file_type: zRequiredText(50),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -7,20 +18,23 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data, error } = await supabase.from('admin_documents').select('*, users!admin_documents_created_by_fkey(full_name)').order('category').order('title')
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase.from('users').select('id, org_id, role').eq('supabase_auth_id', user.id).single()
-  if (!profile || !['admin', 'manager'].includes(profile.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const parsed = await parseBody(req, documentSchema)
+  if (!parsed.ok) return parsed.response
 
-  const body = await req.json()
-  const { data, error } = await supabase.from('admin_documents').insert({ ...body, org_id: profile.org_id, created_by: profile.id }).select('*, users!admin_documents_created_by_fkey(full_name)').single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const { data, error } = await supabase
+    .from('admin_documents')
+    .insert({ ...parsed.data, org_id: profile.org_id, created_by: profile.id })
+    .select('*, users!admin_documents_created_by_fkey(full_name)')
+    .single()
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data, { status: 201 })
 }

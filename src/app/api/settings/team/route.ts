@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText, zNullableText, zEmail } from '@/lib/validation/common'
+
+const ROLES = ['admin', 'manager', 'field'] as const
+
+const inviteSchema = z.object({
+  email: zEmail,
+  full_name: zRequiredText(200),
+  role: z.enum(ROLES, { error: 'Choose a valid role' }),
+  phone: zNullableText(40),
+})
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -17,8 +29,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = await req.json()
-  const { email, full_name, role, phone } = body
+  const parsed = await parseBody(req, inviteSchema)
+  if (!parsed.ok) return parsed.response
+  const { email, full_name, role, phone } = parsed.data
 
   // Use service role to create the auth user and send invite
   const serviceClient = createServiceClient(
@@ -30,7 +43,7 @@ export async function POST(req: Request) {
     data: { full_name },
   })
 
-  if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
+  if (authError) return jsonError(friendlyDbError(authError), 500)
 
   const { data: newUser, error: userError } = await serviceClient
     .from('users')
@@ -45,6 +58,6 @@ export async function POST(req: Request) {
     .select()
     .single()
 
-  if (userError) return NextResponse.json({ error: userError.message }, { status: 500 })
+  if (userError) return jsonError(friendlyDbError(userError), 500)
   return NextResponse.json(newUser, { status: 201 })
 }

@@ -1,15 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { anthropic } from '@/lib/anthropic'
+import { parseBody } from '@/lib/http'
+import { zMoneyInput, zNullableText, zRequiredText, zUuid } from '@/lib/validation/common'
+
+const serviceInputSchema = z.object({
+  id: zUuid,
+  name: zRequiredText(200),
+  description: zNullableText(1000),
+  unit_price: zMoneyInput,
+  unit: zRequiredText(50),
+})
+
+const quoteSuggestSchema = z.object({
+  description: zRequiredText(5000),
+  services: z.array(serviceInputSchema).max(500),
+})
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { description, services } = await req.json()
+  const parsed = await parseBody(req, quoteSuggestSchema)
+  if (!parsed.ok) return parsed.response
+  const { description, services } = parsed.data
 
-  const serviceList = (services as { id: string; name: string; description: string | null; unit_price: number; unit: string }[])
+  const serviceList = services
     .map(s => `- ID:${s.id} | ${s.name} (${s.unit} @ $${s.unit_price})${s.description ? ': ' + s.description : ''}`)
     .join('\n')
 

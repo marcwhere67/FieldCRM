@@ -1,28 +1,31 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zNullableText } from '@/lib/validation/common'
+
+// Only these fields are editable; channel/category/key stay fixed after creation.
+const templateUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  subject: zNullableText(200).optional(),
+  body: z.string().max(20000).optional(),
+  is_active: z.boolean().optional(),
+})
 
 // PATCH — update a template (admin/manager only)
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('org_id, role')
-    .eq('supabase_auth_id', user.id)
-    .single()
-  if (!profile || !['admin', 'manager'].includes(profile.role))
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const parsed = await parseBody(req, templateUpdateSchema)
+  if (!parsed.ok) return parsed.response
 
-  const body = await req.json()
-  // Only these fields are editable; channel/category/key stay fixed after creation.
   const patch: Record<string, unknown> = {}
-  if (body.name !== undefined) patch.name = String(body.name).trim()
-  if (body.subject !== undefined) patch.subject = body.subject ? String(body.subject).trim() : null
-  if (body.body !== undefined) patch.body = String(body.body)
-  if (body.is_active !== undefined) patch.is_active = !!body.is_active
+  if (parsed.data.name !== undefined) patch.name = parsed.data.name
+  if (parsed.data.subject !== undefined) patch.subject = parsed.data.subject
+  if (parsed.data.body !== undefined) patch.body = parsed.data.body
+  if (parsed.data.is_active !== undefined) patch.is_active = parsed.data.is_active
 
   const { data, error } = await supabase
     .from('message_templates')
@@ -31,25 +34,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .eq('org_id', profile.org_id)
     .select()
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
 
 // DELETE — remove a template. System templates (with a template_key) can't be deleted,
 // only edited, so the app always has copy to fall back on.
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('org_id, role')
-    .eq('supabase_auth_id', user.id)
-    .single()
-  if (!profile || !['admin', 'manager'].includes(profile.role))
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
   const { data: existing } = await supabase
     .from('message_templates')
@@ -58,13 +53,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     .eq('org_id', profile.org_id)
     .single()
   if (existing?.template_key)
-    return NextResponse.json({ error: 'System templates can be edited but not deleted' }, { status: 400 })
+    return jsonError('System templates can be edited but not deleted', 400)
 
   const { error } = await supabase
     .from('message_templates')
     .delete()
     .eq('id', id)
     .eq('org_id', profile.org_id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json({ ok: true })
 }

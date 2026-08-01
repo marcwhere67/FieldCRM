@@ -1,40 +1,49 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireRole, parseBody, jsonError, friendlyDbError, MANAGER_ROLES } from '@/lib/http'
+import { zDateOnly, zNullableText, zRequiredText, zUuid } from '@/lib/validation/common'
+
+const contractUpdateSchema = z.object({
+  user_id: zUuid.optional(),
+  title: zRequiredText(200).optional(),
+  description: zNullableText(500).optional(),
+  url: zRequiredText(2000).optional(),
+  expires_at: z.union([zDateOnly, z.null()]).optional(),
+  signed: z.boolean().optional(),
+  signed_at: z.union([z.string(), z.null()]).optional(),
+})
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase.from('users').select('role').eq('supabase_auth_id', user.id).single()
-  if (!profile || !['admin', 'manager'].includes(profile.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const parsed = await parseBody(req, contractUpdateSchema)
+  if (!parsed.ok) return parsed.response
 
-  const body = await req.json()
-  const update = { ...body, updated_at: new Date().toISOString() }
-  if (body.signed && !body.signed_at) update.signed_at = new Date().toISOString()
+  const update: Record<string, unknown> = { ...parsed.data, updated_at: new Date().toISOString() }
+  if (parsed.data.signed && !parsed.data.signed_at) update.signed_at = new Date().toISOString()
 
   const { data, error } = await supabase
     .from('employee_contracts')
     .update(update)
     .eq('id', id)
+    .eq('org_id', profile.org_id)
     .select('*, users!employee_contracts_user_id_fkey(full_name, email, role)')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireRole(MANAGER_ROLES)
+  if (!auth.ok) return auth.response
+  const { profile, supabase } = auth.data
 
-  const { data: profile } = await supabase.from('users').select('role').eq('supabase_auth_id', user.id).single()
-  if (!profile || !['admin', 'manager'].includes(profile.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-  const { error } = await supabase.from('employee_contracts').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const { error } = await supabase.from('employee_contracts').delete().eq('id', id).eq('org_id', profile.org_id)
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json({ success: true })
 }

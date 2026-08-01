@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getCacheHeaders } from '@/lib/cache'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText } from '@/lib/validation/common'
+
+const noteSchema = z.object({
+  content: zRequiredText(5000),
+  note_type: z.enum(['text', 'photo', 'signature']),
+})
 
 export async function POST(req: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params
@@ -12,8 +20,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     .from('users').select('id, org_id, full_name').eq('supabase_auth_id', user.id).single()
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { content, note_type } = await req.json()
-  if (!content || !note_type) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  const parsed = await parseBody(req, noteSchema)
+  if (!parsed.ok) return parsed.response
+  const { content, note_type } = parsed.data
 
   const { data: job } = await supabase.from('jobs').select('org_id').eq('id', jobId).single()
   if (!job || job.org_id !== profile.org_id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -31,7 +40,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (error) return jsonError(friendlyDbError(error), 400)
   return NextResponse.json(note)
 }
 

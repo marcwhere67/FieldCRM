@@ -1,11 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitor'
 import { notifyNewLead } from '@/lib/notify'
 import { normaliseAuPhone } from '@/lib/validation/phone'
+import { parseBody } from '@/lib/http'
 
 const cap = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '')
+
+// Public intake form from the marketing site — every field is best-effort
+// free text (the site's field names vary/alias), so the schema is
+// deliberately permissive: it only guarantees "unknown JSON in, typed object
+// out" so `cap()` below never sees anything but strings. Actual required-field
+// enforcement (firstName + phone) stays as its own check, matching prior
+// behaviour exactly.
+const intakeSchema = z.looseObject({
+  firstName: z.unknown().optional(),
+  first_name: z.unknown().optional(),
+  lastName: z.unknown().optional(),
+  last_name: z.unknown().optional(),
+  phone: z.unknown().optional(),
+  email: z.unknown().optional(),
+  address: z.unknown().optional(),
+  serviceType: z.unknown().optional(),
+  service: z.unknown().optional(),
+  message: z.unknown().optional(),
+  notes: z.unknown().optional(),
+  frequency: z.unknown().optional(),
+  frequency_other: z.unknown().optional(),
+  property_type: z.unknown().optional(),
+  property_type_other: z.unknown().optional(),
+  preferred_contact: z.unknown().optional(),
+  preferred_days: z.unknown().optional(),
+  preferred_time: z.unknown().optional(),
+  marketing_consent: z.unknown().optional(),
+  bedrooms: z.unknown().optional(),
+  bathrooms: z.unknown().optional(),
+  kitchen: z.unknown().optional(),
+  powder_rooms: z.unknown().optional(),
+  laundry: z.unknown().optional(),
+  office: z.unknown().optional(),
+})
 
 // Origins allowed to POST cross-origin (the marketing site is a separate
 // static host, not part of this Next.js app).
@@ -37,7 +73,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
   }
 
   const { orgSlug } = await params
-  const raw = await req.json().catch(() => ({}))
+  const parsed = await parseBody(req, intakeSchema)
+  if (!parsed.ok) {
+    for (const [k, v] of Object.entries(headers)) parsed.response.headers.set(k, v)
+    return parsed.response
+  }
+  const raw = parsed.data as Record<string, unknown>
   const firstName = cap(raw.firstName ?? raw.first_name, 100)
   const lastName = cap(raw.lastName ?? raw.last_name, 100)
   const rawPhone = cap(raw.phone, 40)

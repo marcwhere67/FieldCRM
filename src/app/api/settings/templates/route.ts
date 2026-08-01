@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText, zNullableText } from '@/lib/validation/common'
 
 // GET — list all templates for the org
 export async function GET() {
@@ -20,9 +23,17 @@ export async function GET() {
     .eq('org_id', profile.org_id)
     .order('category')
     .order('name')
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
+
+const templateSchema = z.object({
+  channel: z.enum(['sms', 'email']).optional().default('sms'),
+  category: zRequiredText(100).optional().default('custom'),
+  name: zRequiredText(200),
+  subject: zNullableText(300),
+  body: zRequiredText(5000),
+})
 
 // POST — create a new custom template (admin/manager only)
 export async function POST(req: Request) {
@@ -38,25 +49,24 @@ export async function POST(req: Request) {
   if (!profile || !['admin', 'manager'].includes(profile.role))
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const body = await req.json()
-  const channel = body.channel === 'email' ? 'email' : 'sms'
-  if (!body.name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-  if (!body.body?.trim()) return NextResponse.json({ error: 'Message body is required' }, { status: 400 })
+  const parsed = await parseBody(req, templateSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from('message_templates')
     .insert({
       org_id: profile.org_id,
-      channel,
-      category: body.category || 'custom',
+      channel: body.channel,
+      category: body.category,
       template_key: null, // user-created templates are never system keys
-      name: body.name.trim(),
-      subject: channel === 'email' ? (body.subject?.trim() || null) : null,
+      name: body.name,
+      subject: body.channel === 'email' ? body.subject : null,
       body: body.body,
       created_by: profile.id,
     })
     .select()
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data, { status: 201 })
 }

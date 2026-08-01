@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
+
+const STATUSES = ['open', 'closed'] as const
+
+const statusSchema = z.object({
+  conversationId: zUuid,
+  status: z.enum(STATUSES, { error: 'Invalid status' }),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { conversationId, status } = await req.json()
-    if (!conversationId || !status) return NextResponse.json({ ok: false }, { status: 400 })
+    const parsed = await parseBody(req, statusSchema)
+    if (!parsed.ok) return parsed.response
+    const { conversationId, status } = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

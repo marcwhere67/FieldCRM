@@ -1,10 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { captureError } from '@/lib/monitor'
 import { generateRecurringJobs } from '@/lib/recurring'
+import { jsonError, friendlyDbError } from '@/lib/http'
+import { parseBody } from '@/lib/http'
+import { zRequiredText, zNullableText, zUuid, zOptionalUuid, zDateOnly, zLineItems } from '@/lib/validation/common'
 
-const FREQUENCIES = ['weekly', 'fortnightly', 'four_weekly', 'monthly']
+const FREQUENCIES = ['weekly', 'fortnightly', 'four_weekly', 'monthly'] as const
 const SOURCE = 'api/agreements'
+
+const agreementSchema = z.object({
+  title: zRequiredText(200),
+  contact_id: zUuid,
+  property_id: zOptionalUuid,
+  frequency: z.enum(FREQUENCIES, { error: 'Choose how often it repeats' }),
+  anchor_date: zDateOnly,
+  first_visit_date: z.union([zDateOnly, z.null()]).optional().transform((v) => v ?? null),
+  start_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}/, 'Enter a valid time')
+    .transform((s) => s.slice(0, 5))
+    .optional()
+    .default('09:00'),
+  duration_minutes: z
+    .number()
+    .finite()
+    .optional()
+    .transform((n) => Math.max(15, Number.isFinite(n) ? (n as number) : 120)),
+  end_date: z.union([zDateOnly, z.null()]).optional().transform((v) => v ?? null),
+  line_items: zLineItems.optional().default([]),
+  assigned_users: z.array(zUuid).optional().default([]),
+  instructions: zNullableText(2000),
+})
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -17,32 +45,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Only managers or admins can set up recurring services' }, { status: 403 })
   }
 
-  const body = await req.json().catch(() => ({}))
-
-  const title = String(body.title || '').trim()
-  const contact_id = body.contact_id ? String(body.contact_id) : null
-  const frequency = String(body.frequency || '')
-  const anchor_date = String(body.anchor_date || '')
-
-  if (!title) return NextResponse.json({ error: 'A title is required' }, { status: 400 })
-  if (!contact_id) return NextResponse.json({ error: 'Choose a customer' }, { status: 400 })
-  if (!FREQUENCIES.includes(frequency)) return NextResponse.json({ error: 'Choose how often it repeats' }, { status: 400 })
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(anchor_date)) return NextResponse.json({ error: 'Choose a valid first date' }, { status: 400 })
+  const parsed = await parseBody(req, agreementSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
 
   const payload = {
     org_id: profile.org_id,
-    contact_id,
-    property_id: body.property_id ? String(body.property_id) : null,
-    title,
-    frequency,
-    anchor_date,
-    first_visit_date: /^\d{4}-\d{2}-\d{2}$/.test(body.first_visit_date) ? String(body.first_visit_date) : null,
-    start_time: /^\d{2}:\d{2}/.test(body.start_time) ? String(body.start_time).slice(0, 5) : '09:00',
-    duration_minutes: Number.isFinite(Number(body.duration_minutes)) ? Math.max(15, Number(body.duration_minutes)) : 120,
-    end_date: /^\d{4}-\d{2}-\d{2}$/.test(body.end_date) ? String(body.end_date) : null,
-    line_items: Array.isArray(body.line_items) ? body.line_items : [],
-    assigned_users: Array.isArray(body.assigned_users) ? body.assigned_users.map(String) : [],
-    instructions: body.instructions ? String(body.instructions).slice(0, 2000) : null,
+    contact_id: body.contact_id,
+    property_id: body.property_id,
+    title: body.title,
+    frequency: body.frequency,
+    anchor_date: body.anchor_date,
+    first_visit_date: body.first_visit_date,
+    start_time: body.start_time,
+    duration_minutes: body.duration_minutes,
+    end_date: body.end_date,
+    line_items: body.line_items,
+    assigned_users: body.assigned_users,
+    instructions: body.instructions,
     active: true,
   }
 
@@ -51,9 +71,9 @@ export async function POST(req: NextRequest) {
 
   if (error || !data) {
     await captureError(error ?? new Error('Agreement insert returned no row'), {
-      source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id, context: { contact_id, frequency },
+      source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id, context: { contact_id: body.contact_id, frequency: body.frequency },
     })
-    return NextResponse.json({ error: error?.message ?? 'Failed to create agreement' }, { status: 400 })
+    return jsonError(friendlyDbError(error), 400)
   }
 
   // Generate the upcoming jobs now so they land on the schedule immediately,

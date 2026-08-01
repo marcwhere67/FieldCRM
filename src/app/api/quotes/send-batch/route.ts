@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import React from 'react'
+import { z } from 'zod'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
@@ -11,15 +12,26 @@ import { captureError } from '@/lib/monitor'
 import {
   buildBatchEmail, defaultBatchMessage, defaultBatchSubject, type EmailShell,
 } from '@/lib/emails/quote-email'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zUuid } from '@/lib/validation/common'
 
 const SOURCE = 'api/quotes/send-batch'
+
+const sendBatchSchema = z.object({
+  quoteIds: z.array(zUuid).default([]),
+  preview: z.boolean().optional(),
+  subject: z.string().trim().optional(),
+  message: z.string().trim().optional(),
+})
 
 // Sends 2+ quotes belonging to the SAME contact as one email, each quote's
 // PDF attached separately. Mirrors /api/quotes/[id]/send but batches the
 // attachments into a single sendEmailViaGmail call and marks every quote sent.
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null)
-  const quoteIds: string[] = Array.isArray(body?.quoteIds) ? body.quoteIds : []
+  const parsed = await parseBody(req, sendBatchSchema)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.data
+  const quoteIds = body.quoteIds
   if (quoteIds.length < 2) {
     return NextResponse.json({ error: 'Select at least 2 quotes to send together' }, { status: 400 })
   }
@@ -136,7 +148,7 @@ export async function POST(req: Request) {
       source: SOURCE, level: 'error', orgId: profile.org_id, userId: profile.id,
       context: { stage: 'status_update', quoteIds },
     })
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return jsonError(friendlyDbError(error), 500)
   }
 
   return NextResponse.json({ sent: true, count: sortedQuotes.length })

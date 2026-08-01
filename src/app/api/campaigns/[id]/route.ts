@@ -1,5 +1,17 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { parseBody, jsonError, friendlyDbError } from '@/lib/http'
+import { zRequiredText, zNullableText } from '@/lib/validation/common'
+
+const campaignUpdateSchema = z.object({
+  name: zRequiredText(200),
+  type: z.enum(['email', 'sms'], { error: 'Choose email or sms' }),
+  subject: zNullableText(300),
+  content: zRequiredText(20000),
+  audience_filters: z.record(z.string(), z.unknown()).default({}),
+  scheduled_at: z.union([z.string(), z.null()]).optional().transform((v) => v ?? null),
+})
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,7 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .eq('id', id)
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
 
@@ -33,16 +45,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const parsed = await parseBody(req, campaignUpdateSchema)
+  if (!parsed.ok) return parsed.response
 
   const { data, error } = await supabase
     .from('campaigns')
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json(data)
 }
 
@@ -63,6 +76,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
 
   const { error } = await supabase.from('campaigns').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return jsonError(friendlyDbError(error), 500)
   return NextResponse.json({ success: true })
 }

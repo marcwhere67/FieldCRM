@@ -1,8 +1,9 @@
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Briefcase, Receipt, TrendingUp, Clock, ArrowRight } from 'lucide-react'
+import { Users, Briefcase, Receipt, TrendingUp, Clock, ArrowRight, Zap } from 'lucide-react'
 import { formatCurrency, formatFullDate, getMelbourneHour, melbourneDateOnly, formatTime } from '@/lib/format'
 import { AiInsightsCard } from '@/components/ai/ai-insights-card'
+import { computeSpeedToLead, formatSpeedToLead } from '@/lib/speed-to-lead'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
@@ -17,6 +18,7 @@ export default async function DashboardPage() {
     { data: todayJobs },
     { data: outstandingInvoices },
     { data: recentInvoices },
+    speedToLead,
   ] = await Promise.all([
     supabase.from('contacts').select('*', { count: 'exact', head: true })
       .eq('org_id', orgId).eq('status', 'active'),
@@ -32,6 +34,7 @@ export default async function DashboardPage() {
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(5),
+    orgId ? computeSpeedToLead(supabase, orgId) : Promise.resolve({ medianMinutes: null, sampleSize: 0 }),
   ])
 
   const outstanding = outstandingInvoices?.reduce((sum, inv) => sum + (inv.total - inv.amount_paid), 0) ?? 0
@@ -73,7 +76,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <MetricCard
           icon={<Users className="w-4 h-4" style={{ color: '#76A58F' }} />}
           label="Active Clients"
@@ -101,6 +104,13 @@ export default async function DashboardPage() {
           value="$0"
           sub="this month"
           accent="#76A58F"
+        />
+        <MetricCard
+          icon={<Zap className="w-4 h-4" style={{ color: '#2563eb' }} />}
+          label="Speed to Lead"
+          value={formatSpeedToLead(speedToLead.medianMinutes)}
+          sub={speedToLead.sampleSize > 0 ? `median · last ${speedToLead.sampleSize} leads` : 'no leads responded to yet'}
+          accent="#2563eb"
         />
       </div>
 

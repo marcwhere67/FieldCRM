@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import React from 'react'
+import { z } from 'zod'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getGmailAccessToken, sendEmailViaGmail } from '@/lib/gmail'
@@ -9,11 +10,18 @@ import { resolveSenderSignatureHtml } from '@/lib/emails/signature'
 import { ReceiptPDF } from '@/lib/pdf/receipt-pdf'
 import { formatCurrency, melbourneDateOnly } from '@/lib/format'
 import { captureError } from '@/lib/monitor'
+import { formatZodError, jsonError } from '@/lib/http'
 import {
   buildReceiptEmail, defaultReceiptMessage, defaultReceiptSubject, type EmailShell,
 } from '@/lib/emails/invoice-email'
 
 const SOURCE = 'api/payments/[id]/send'
+
+// Callers hit this endpoint with no body at all (`fetch(url, { method: 'POST' })`),
+// so an empty/missing body must be tolerated rather than rejected as invalid JSON.
+const resendReceiptSchema = z.object({
+  message: z.string().trim().max(5000).optional(),
+})
 
 // Re-email the receipt for an already-recorded payment (same PDF + email the
 // customer got when the payment was first recorded). Managers/admins only, to
@@ -91,9 +99,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail, logoUrl: shell.logoUrl,
     })
 
-    const body = await req.json().catch(() => ({})) as { message?: string }
+    let rawBody: unknown = {}
+    try {
+      rawBody = await req.json()
+    } catch {
+      rawBody = {}
+    }
+    const parsedBody = resendReceiptSchema.safeParse(rawBody)
+    if (!parsedBody.success) {
+      const { message: errMessage } = formatZodError(parsedBody.error)
+      return jsonError(errMessage, 400)
+    }
     const paidLine = formatCurrency(Number(payment.amount))
-    const message = body.message?.trim() || defaultReceiptMessage({
+    const message = parsedBody.data.message?.trim() || defaultReceiptMessage({
       firstName: contact.first_name?.trim(), paidLine, invoiceNumber: invoice.invoice_number,
     })
     const subject = defaultReceiptSubject(org?.name ?? 'us', payment.receipt_number ?? '')
