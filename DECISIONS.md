@@ -4,6 +4,42 @@ Assumptions made under ambiguity, per SPEC.md §1. Newest first.
 
 ---
 
+## D-011 — Added End of Lease as a 4th clean type
+**Date:** 2026-08-02
+
+User's explicit choices: End of Lease / Bond Clean; priced identically to Deep
+Clean for now (may get its own pricing model later); I draft the Scope of
+Work wording for review; add a staff completion checklist now.
+
+**Decision:** found and updated all 8 hardcoded `'regular'|'deep'|'airbnb'`
+literal spots across the app (quote calculator, quote builder, job forms,
+admin procedures, scope-of-work.ts) plus the 3 database CHECK constraints
+(`quotes.clean_type`, `jobs.clean_type`, `cleaning_procedures.clean_type`),
+via migration `2026-08-02_end_of_lease_clean_type.sql`.
+
+**Pricing:** the calculator's `deep` timing flag now also matches
+`end_of_lease`, so both price identically off the same per-room minutes —
+verified live (1 bedroom + 1 kitchen + 1 bathroom = $540.00 under both). When
+a distinct pricing model is wanted later, this is a one-line split back into
+its own flag, not a rework.
+
+**Scope of Work wording — DRAFTED FOR REVIEW, not yet business-confirmed.**
+Built by extending the Deep Clean list with what AU end-of-lease/bond cleans
+typically add: full oven in/out, wardrobes, exhaust fans, blinds, interior
+window glass, garage sweep. **Deliberately excludes any "bond back guarantee"
+or free re-clean promise** — that's a contractual commitment for Marc to
+decide on, not a cleaning-scope detail; a test (`scope-of-work.test.ts`)
+asserts this text never sneaks in. Same content also seeds the staff
+completion checklist (`cleaning_procedures`/`procedure_steps`) so quote scope
+and job checklist stay in sync from day one.
+
+**Consequence:** verified live that a not-yet-migrated environment degrades
+correctly — Admin → Procedures shows "End of Lease Clean — No procedure set
+up yet [+ Create]" rather than erroring, and will auto-populate with the
+seeded 23-step checklist the moment the migration runs.
+
+---
+
 ## D-010 — Free-form per-user signature editor, reusing the existing template engine
 **Date:** 2026-08-01
 

@@ -20,6 +20,7 @@ const CLEAN_TYPES = [
   { value: 'regular', label: 'Regular Clean' },
   { value: 'deep', label: 'Deep Clean' },
   { value: 'airbnb', label: 'Airbnb / Turnover' },
+  { value: 'end_of_lease', label: 'End of Lease Clean' },
 ] as const
 
 const AREAS = ['kitchen', 'bathroom', 'bedroom', 'living', 'laundry', 'floors', 'turnover', 'general'] as const

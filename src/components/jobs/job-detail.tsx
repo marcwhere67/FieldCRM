@@ -18,6 +18,7 @@ const CLEAN_TYPE_OPTIONS = [
   { value: 'regular', label: 'Regular Clean' },
   { value: 'deep', label: 'Deep Clean' },
   { value: 'airbnb', label: 'Airbnb / Turnover' },
+  { value: 'end_of_lease', label: 'End of Lease Clean' },
 ]
 const AREA_LABELS: Record<string, string> = {
   kitchen: 'Kitchen', bathroom: 'Bathroom', bedroom: 'Bedroom', living: 'Living',

@@ -64,8 +64,8 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
   const [serviceSearch, setServiceSearch] = useState('')
   const [depositType, setDepositType] = useState<'none' | 'percentage' | 'fixed'>((existingQuote?.deposit_type as 'none' | 'percentage' | 'fixed') ?? 'none')
   const [depositValue, setDepositValue] = useState(existingQuote?.deposit_value ?? 0)
-  const [cleanType, setCleanType] = useState<'none' | 'regular' | 'deep' | 'airbnb'>(
-    (existingQuote?.clean_type as 'regular' | 'deep' | 'airbnb') ?? (initialCleanType as 'regular' | 'deep' | 'airbnb') ?? 'none',
+  const [cleanType, setCleanType] = useState<'none' | 'regular' | 'deep' | 'airbnb' | 'end_of_lease'>(
+    (existingQuote?.clean_type as 'regular' | 'deep' | 'airbnb' | 'end_of_lease') ?? (initialCleanType as 'regular' | 'deep' | 'airbnb' | 'end_of_lease') ?? 'none',
   )
 
   const { subtotal, tax, total } = computeTotals(lineItems)
@@ -340,12 +340,13 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
             </div>
             <div>
               <label style={labelSt}>Scope of work (clean type)</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                 {([
                   ['none', 'None'],
                   ['regular', 'Regular'],
                   ['deep', 'Deep'],
                   ['airbnb', 'Airbnb'],
+                  ['end_of_lease', 'End of Lease'],
                 ] as const).map(([val, label]) => (
                   <button key={val} type="button" onClick={() => setCleanType(val)}
                     style={{

@@ -3,12 +3,13 @@
 // SINGLE combined "Includes" list (the Regular scope merged with their extras) so the
 // client sees one clean list rather than "regular + plus" sections.
 
-export type CleanType = 'regular' | 'deep' | 'airbnb'
+export type CleanType = 'regular' | 'deep' | 'airbnb' | 'end_of_lease'
 
 export const CLEAN_TYPE_LABELS: Record<CleanType, string> = {
   regular: 'Regular Clean',
   deep: 'Deep Clean',
   airbnb: 'Airbnb / Short-Stay Turnover Clean',
+  end_of_lease: 'End of Lease Clean',
 }
 
 // Base Regular Clean scope — included in every clean type.
@@ -79,6 +80,47 @@ const AIRBNB_BULLETS = [
   'Reporting of visible guest damages or issues to the client',
 ]
 
+// End of Lease / Bond Clean — DRAFTED FOR REVIEW. Priced the same as Deep
+// Clean for now (per business decision), but scoped more thoroughly than
+// Deep since it targets what real estate/property managers check during an
+// exit inspection: full oven, wardrobes, exhaust fans, blinds, interior
+// window glass, garage. Deliberately does NOT include any "bond back
+// guarantee" or free re-clean promise — that's a contractual commitment for
+// the business to decide on, not a cleaning-scope line item.
+const END_OF_LEASE_BULLETS = [
+  // Kitchen
+  'Kitchen bench tops, splashbacks and surfaces cleaned',
+  'Sink and cooktop cleaned',
+  'Exterior of appliances wiped',
+  'Kitchen and bathroom cupboard exteriors and kickboards wiped',
+  'Kitchen cupboards and drawers cleaned inside and out (excluding food storage cupboards, where contents can be easily and safely removed and put back)',
+  'Interior and exterior oven cleaning',
+  'Interior microwave cleaning',
+  'Range hood and filter cleaned using standard cleaning products (results may vary depending on level of grease build-up)',
+  'Interior and exterior of kitchen and bathroom bins cleaned',
+  // Bathrooms
+  'Bathrooms: toilet (inside and outside), shower screen/walls and base, sinks and vanity surfaces wiped and cleaned, mirrors cleaned',
+  'Bathrooms given additional detailed cleaning, including grout scrubbing, tap fittings and exhaust fans',
+  'Bathroom cabinets and drawers cleaned inside and out',
+  // Bedrooms & living
+  'Bedrooms and living areas dusted and surfaces cleaned',
+  'Built-in wardrobes cleaned inside and out (contents removed by client prior to service)',
+  'Ceiling fans and light fittings cleaned',
+  // Floors & finishing
+  'Floors vacuumed and mopped throughout accessible areas',
+  'Carpets vacuumed throughout (steam/carpet shampooing quoted separately where required)',
+  'Skirting boards thoroughly cleaned',
+  'Window tracks and sills cleaned where accessible',
+  'Interior window glass cleaned',
+  'Light switches, door handles and door frames wiped down',
+  'Spot-cleaning of visible marks on walls, where marks can be removed without excessive scrubbing (does not include full wall washing, textured/heavily soiled walls, or marks requiring repainting)',
+  'Accessible air conditioning filters removed, cleaned and put back (does not include filters requiring tools to access, servicing, or units showing signs of fault)',
+  'Blinds dusted/wiped where accessible',
+  'Exhaust fans cleaned throughout',
+  // Outdoor
+  'Garage/carport floor swept where accessible (does not include removal of stored items or oil/grease stains)',
+]
+
 // Add-ons — informational only (no pricing shown), the SAME list appears under
 // every clean type. Clients see what's available and can ask about adding them.
 export const ADD_ONS: string[] = [
@@ -115,6 +157,11 @@ export const SCOPE: Record<CleanType, ScopeDefinition> = {
     title: CLEAN_TYPE_LABELS.airbnb,
     intro: 'A presentation-focused service designed specifically for short-term rental properties between guest stays.',
     includes: AIRBNB_BULLETS,
+  },
+  end_of_lease: {
+    title: CLEAN_TYPE_LABELS.end_of_lease,
+    intro: 'A comprehensive clean designed to help meet real estate and landlord expectations at the end of a tenancy, covering the areas most commonly checked during a bond/exit inspection.',
+    includes: END_OF_LEASE_BULLETS,
   },
 }
 
@@ -208,7 +255,7 @@ export const QUOTE_TERMS: TermsSection[] = [
 ]
 
 export function isCleanType(v: unknown): v is CleanType {
-  return v === 'regular' || v === 'deep' || v === 'airbnb'
+  return v === 'regular' || v === 'deep' || v === 'airbnb' || v === 'end_of_lease'
 }
 
 export function getScope(cleanType: unknown): ScopeDefinition | null {

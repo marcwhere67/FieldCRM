@@ -133,6 +133,7 @@ export function NewJobForm({ orgId, contacts, teamMembers, initialContactId, ini
                 <option value="regular">Regular Clean</option>
                 <option value="deep">Deep Clean</option>
                 <option value="airbnb">Airbnb / Turnover</option>
+                <option value="end_of_lease">End of Lease Clean</option>
               </select>
             </div>
           </Section>

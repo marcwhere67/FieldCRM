@@ -42,7 +42,7 @@ export default async function NewQuotePage({
       orgId={profile!.org_id}
       mode="new"
       initialLineItems={initialLineItems}
-      initialCleanType={['regular', 'deep', 'airbnb'].includes(params.clean_type ?? '') ? params.clean_type : undefined}
+      initialCleanType={['regular', 'deep', 'airbnb', 'end_of_lease'].includes(params.clean_type ?? '') ? params.clean_type : undefined}
       initialContactId={params.contact_id}
     />
   )

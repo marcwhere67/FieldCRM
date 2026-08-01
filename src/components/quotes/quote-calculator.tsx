@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Calculator, Clock, AlertTriangle, CheckCircle, FileText, ChevronDown } from 'lucide-react'
 
-type CleanType = 'regular' | 'deep' | 'airbnb'
+type CleanType = 'regular' | 'deep' | 'airbnb' | 'end_of_lease'
 type Frequency = 'oneoff' | 'weekly' | 'fortnightly' | 'monthly'
 
 interface Inputs {
@@ -21,7 +21,7 @@ const DEFAULT: Inputs = {
   linenBeds: 0, ovenClean: false, interiorFridge: false, balcony: false, vanityCupboards: false, gstRegistered: false,
 }
 
-const CLEAN_LABELS: Record<CleanType, string> = { regular: 'Regular Clean', deep: 'Deep Clean', airbnb: 'Airbnb Turnover' }
+const CLEAN_LABELS: Record<CleanType, string> = { regular: 'Regular Clean', deep: 'Deep Clean', airbnb: 'Airbnb Turnover', end_of_lease: 'End of Lease Clean' }
 const FREQ_LABELS: Record<Frequency, string> = { oneoff: 'One-off', weekly: 'Weekly', fortnightly: 'Fortnightly', monthly: 'Monthly' }
 
 const C = {
@@ -40,7 +40,10 @@ const OVERHEAD_RATE = MONTHLY_OVERHEAD / BILLABLE_HOURS_PER_MONTH  // ≈ $23.55
 function roundTo5(n: number) { return Math.round(n / 5) * 5 }
 
 function calcResult(inp: Inputs) {
-  const deep = inp.cleanType === 'deep'
+  // End of Lease is priced identically to Deep for now (explicit business
+  // decision, 2026-08-02) — same per-room time multipliers. Likely to get its
+  // own pricing model later; when it does, split this back into its own flag.
+  const deep = inp.cleanType === 'deep' || inp.cleanType === 'end_of_lease'
   const totalBeds = inp.queenBeds + inp.twinBeds
   const tier = totalBeds <= 2 ? 'S' : totalBeds <= 4 ? 'M' : 'L'
   const roomBreakdown: { label: string; mins: number }[] = []
@@ -305,8 +308,8 @@ export function QuoteCalculator() {
             {/* Inputs */}
             <div className="space-y-3">
               <Card title="Service">
-                <Segmented cols={3} mobileCols={3} value={inp.cleanType} onChange={v => set('cleanType', v)}
-                  options={[['regular', 'Regular'], ['deep', 'Deep'], ['airbnb', 'Airbnb']]} />
+                <Segmented cols={4} value={inp.cleanType} onChange={v => set('cleanType', v)}
+                  options={[['regular', 'Regular'], ['deep', 'Deep'], ['airbnb', 'Airbnb'], ['end_of_lease', 'End of Lease']]} />
                 <SubLabel>Frequency</SubLabel>
                 <Segmented cols={4} mobileCols={2} value={inp.frequency} onChange={v => set('frequency', v)}
                   options={[['oneoff', 'One-off'], ['weekly', 'Weekly'], ['fortnightly', 'Fortnightly'], ['monthly', 'Monthly']]} />
