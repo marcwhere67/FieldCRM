@@ -87,7 +87,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Pre-existing gap: this resend path never set a signature at all (unlike
     // the receipt sent when the payment is first recorded). Fixed alongside
     // the per-sender signature work rather than left newly inconsistent.
-    shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, accessToken, {
+    shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
       name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
     })
 

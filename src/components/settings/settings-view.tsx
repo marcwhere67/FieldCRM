@@ -14,7 +14,7 @@ const C = {
   serif: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)",
 }
 
-interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string }
+interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string; website: string | null; instagram_url: string | null }
 interface TeamMember { id: string; full_name: string; email: string; role: string; phone: string | null; is_active: boolean; hourly_rate: number | null }
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
 interface Props { org: Org; team: TeamMember[]; profile: Profile; jobTitle: string | null; isAdmin: boolean; initialTab?: string }

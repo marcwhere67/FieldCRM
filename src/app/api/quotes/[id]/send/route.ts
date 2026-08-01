@@ -99,7 +99,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       React.createElement(QuotePDF, { quote, org, contact }) as React.ReactElement<DocumentProps>,
     )
 
-    shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, accessToken, {
+    shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
       name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
     })
     const { html, text } = buildQuoteEmail({ message, shell, total: Number(quote.total), approvalUrl })

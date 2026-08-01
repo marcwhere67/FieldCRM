@@ -13,7 +13,7 @@ const C = {
 
 const TIMEZONES = ['Australia/Sydney','Australia/Melbourne','Australia/Brisbane','Australia/Perth','Australia/Adelaide','Australia/Darwin','Australia/Hobart','Pacific/Auckland']
 
-interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string; bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null; bank_payid?: string | null; payment_instructions?: string | null }
+interface Org { id: string; name: string; abn: string | null; phone: string | null; email: string | null; address: string | null; default_payment_terms_days: number; timezone: string; subscription_plan: string; bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null; bank_payid?: string | null; payment_instructions?: string | null; website?: string | null; instagram_url?: string | null }
 
 export function BusinessSettings({ org }: { org: Org }) {
   const [saving, setSaving] = useState(false)
@@ -24,6 +24,7 @@ export function BusinessSettings({ org }: { org: Org }) {
     bank_account_name: org.bank_account_name ?? '', bank_bsb: org.bank_bsb ?? '',
     bank_account_number: org.bank_account_number ?? '', bank_payid: org.bank_payid ?? '',
     payment_instructions: org.payment_instructions ?? '',
+    website: org.website ?? '', instagram_url: org.instagram_url ?? '',
   })
 
   function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
@@ -72,6 +73,17 @@ export function BusinessSettings({ org }: { org: Org }) {
           <label style={labelStyle}>Address</label>
           <input value={form.address} onChange={e => set('address', e.target.value)} placeholder="123 Main St, Brisbane QLD 4000" style={inputStyle} className="focus:border-[#76A58F]" />
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label style={labelStyle}>Website</label>
+            <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://yourbusiness.com.au" style={inputStyle} className="focus:border-[#76A58F]" />
+          </div>
+          <div>
+            <label style={labelStyle}>Instagram</label>
+            <input value={form.instagram_url} onChange={e => set('instagram_url', e.target.value)} placeholder="https://instagram.com/yourbusiness" style={inputStyle} className="focus:border-[#76A58F]" />
+          </div>
+        </div>
+        <p style={{ color: C.muted, fontSize: 11 }}>Shown on quote and invoice email sign-offs, alongside your phone and email</p>
       </div>
 
       <div style={{ backgroundColor: '#fff', border: `1px solid rgba(44,62,80,0.09)`, padding: 20 }}>

@@ -4,6 +4,28 @@ Assumptions made under ambiguity, per SPEC.md §1. Newest first.
 
 ---
 
+## D-008 — Website/Instagram fetched separately in the signature resolver
+**Date:** 2026-08-01
+
+Website and Instagram (`organisations.website`/`instagram_url`) ship via a
+migration (`user_email_signature.sql`) written in an earlier session, whose
+live-database status this session couldn't verify in advance.
+
+**Decision:** rather than adding these two columns to each of the 6 existing
+per-route `organisations` selects (any one missing column would 400 the whole
+query and break that send), `resolveSenderSignatureHtml` fetches them itself
+in an isolated, error-tolerant query. A missing column just omits those two
+signature lines — it can never break an actual quote/invoice send. Confirmed
+live (2026-08-01): the migration was already applied, both fields populated
+with real data, and the signature renders exactly as specified: labelled
+`Phone: / Email: / Website: / Instagram:` lines, website as a clean linked
+domain, Instagram as a linked `@handle` extracted from the profile URL.
+**Consequence:** Settings → Business gained editable Website/Instagram
+fields; the org fetch in `settings/page.tsx` has the same resilient fallback
+for the same reason.
+
+---
+
 ## D-007 — Per-sender email signature is CRM-built, not fetched from Gmail
 **Date:** 2026-08-01
 

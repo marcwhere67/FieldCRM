@@ -21,7 +21,7 @@ const AVATAR_COLORS = [
 ]
 
 interface Profile { id: string; full_name: string; email: string; phone: string | null; role: string; hourly_rate: number | null }
-interface Org { name: string; phone: string | null; email: string | null }
+interface Org { name: string; phone: string | null; email: string | null; website?: string | null; instagram_url?: string | null }
 
 export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; org: Org; jobTitle: string | null }) {
   const router = useRouter()
@@ -174,8 +174,8 @@ export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; 
         </div>
         <p style={{ color: C.muted, fontSize: 11, marginBottom: 14 }}>
           This is what appears on quotes, invoices and receipts you send — built from your name and
-          phone above, plus your job title. It shows correctly no matter who sends from the shared
-          {org.email ? ` ${org.email}` : ' business'} inbox.
+          phone above, your job title, and the website/Instagram set in Settings → Business. It shows
+          correctly no matter who sends from the shared{org.email ? ` ${org.email}` : ' business'} inbox.
         </p>
         {/* Mirrors the real email: navy logo header, then the signature block */}
         <div style={{ border: `1px solid ${C.border}` }}>
@@ -188,7 +188,7 @@ export function ProfileSettings({ profile, org, jobTitle }: { profile: Profile; 
             dangerouslySetInnerHTML={{
               __html: buildSenderSignatureHtml(
                 { fullName: form.full_name || profile.full_name, jobTitle, phone: form.phone },
-                { name: org.name, phone: org.phone, email: org.email ?? '' },
+                { name: org.name, phone: org.phone, email: org.email ?? '', website: org.website, instagramUrl: org.instagram_url },
               ),
             }}
           />

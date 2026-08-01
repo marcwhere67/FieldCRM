@@ -20,6 +20,8 @@ const orgSchema = z.object({
   bank_account_number: zNullableText(30),
   bank_payid: zNullableText(100),
   payment_instructions: zNullableText(1000),
+  website: zNullableText(300),
+  instagram_url: zNullableText(300),
 })
 
 export async function PATCH(req: Request) {

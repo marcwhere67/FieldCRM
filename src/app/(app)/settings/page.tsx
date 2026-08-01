@@ -1,6 +1,25 @@
 import { createClient, getAppProfile } from '@/lib/supabase/server'
 import { SettingsView } from '@/components/settings/settings-view'
+import { captureError } from '@/lib/monitor'
 import { redirect } from 'next/navigation'
+
+const ORG_FIELDS = 'id, name, abn, phone, email, address, default_payment_terms_days, timezone, subscription_plan, bank_account_name, bank_bsb, bank_account_number, bank_payid, payment_instructions'
+
+// website/instagram_url ship via a separate migration (user_email_signature.sql)
+// that may not be applied to every environment yet. Falls back to the base
+// field set — rather than breaking the whole Settings page — if it isn't.
+async function fetchOrg(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string) {
+  const withSocials = await supabase
+    .from('organisations').select(`${ORG_FIELDS}, website, instagram_url`).eq('id', orgId).single()
+  if (!withSocials.error) return withSocials.data
+
+  await captureError(withSocials.error, {
+    source: 'settings/page', level: 'warning', orgId,
+    context: { stage: 'org_fetch_with_socials', hint: 'has supabase/migrations/user_email_signature.sql been applied?' },
+  })
+  const base = await supabase.from('organisations').select(ORG_FIELDS).eq('id', orgId).single()
+  return base.data ? { ...base.data, website: null, instagram_url: null } : null
+}
 
 export default async function SettingsPage({
   searchParams,
@@ -16,12 +35,8 @@ export default async function SettingsPage({
 
   if (!profile) redirect('/login')
 
-  const [{ data: org }, { data: team }, { data: employeeProfile }] = await Promise.all([
-    supabase
-      .from('organisations')
-      .select('id, name, abn, phone, email, address, default_payment_terms_days, timezone, subscription_plan, bank_account_name, bank_bsb, bank_account_number, bank_payid, payment_instructions')
-      .eq('id', profile.org_id)
-      .single(),
+  const [org, { data: team }, { data: employeeProfile }] = await Promise.all([
+    fetchOrg(supabase, profile.org_id),
     supabase
       .from('users')
       .select('id, full_name, email, role, phone, is_active, hourly_rate')

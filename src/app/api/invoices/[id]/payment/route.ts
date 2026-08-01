@@ -199,7 +199,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const balanceText = balanceRemaining > 0
         ? `Remaining balance: ${formatCurrency(balanceRemaining)}.`
         : 'This invoice is now paid in full.'
-      shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, accessToken, {
+      shell.signatureHtml = await resolveSenderSignatureHtml(supabase, profile.id, profile.org_id, accessToken, {
         name: org?.name ?? null, phone: org?.phone ?? null, email: orgEmail,
       })
       const { html, text } = buildReceiptEmail({ message, shell, balanceHtml, balanceText })

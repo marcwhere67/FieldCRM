@@ -103,7 +103,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ jobId:
     const shell: EmailShell = { orgName: org.name ?? 'us', orgEmail: org.email, orgPhone: org.phone ?? null, senderName: profile.full_name, logoUrl: `${siteUrl}/salt-air-logo.png` }
     // Signature is keyed to `connected.user_id` — whoever's Gmail is actually
     // sending this — not `profile` (the field worker who completed the job).
-    shell.signatureHtml = await resolveSenderSignatureHtml(admin, connected.user_id, accessToken, {
+    shell.signatureHtml = await resolveSenderSignatureHtml(admin, connected.user_id, profile.org_id, accessToken, {
       name: org.name ?? null, phone: org.phone ?? null, email: org.email,
     })
 
