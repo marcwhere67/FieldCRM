@@ -174,7 +174,7 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
             <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300 }}>{quote.quote_number}</h1>
@@ -186,7 +186,7 @@ export function QuoteDetail({ quote, services, products = [], contacts, org, org
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {quote.status === 'draft' && contact && (
             <Link href={`/contacts/${contact.id}?tab=quotes&preselect=${quote.id}`}
               style={{ color: C.muted, fontSize: 11, letterSpacing: '0.05em' }}

@@ -170,7 +170,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300 }}>{invoice.invoice_number}</h1>

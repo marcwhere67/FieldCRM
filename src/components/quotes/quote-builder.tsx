@@ -185,12 +185,12 @@ export function QuoteBuilder({ contacts, services, products = [], org, orgId, mo
       </div>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
+      <div style={{ marginBottom: 24, gap: 16 }} className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300, marginBottom: 2 }}>{mode === 'new' ? 'New Quote' : 'Edit Quote'}</h1>
           <p style={{ color: C.muted, fontSize: 12 }}>{existingQuote?.quote_number ?? (mode === 'new' ? 'Number assigned on save' : '')}</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div style={{ gap: 8 }} className="flex flex-wrap sm:flex-nowrap sm:shrink-0">
           <button onClick={() => saveQuote('draft')} disabled={saving}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 11, letterSpacing: '0.08em', border: `1px solid ${C.border}`, color: C.muted, background: '#fff', cursor: 'pointer' }}
             className="uppercase hover:opacity-70 transition-opacity">
