@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { signoffHtml, signoffText, type EmailShell } from './shell'
+import { signoffHtml, signoffText, htmlSignatureToText, type EmailShell } from './shell'
 
 const base: EmailShell = {
   orgName: 'Salt Air Cleaning',
@@ -47,5 +47,19 @@ describe('signoffText', () => {
 
   it('uses the generic sign-off when no signature is set', () => {
     expect(signoffText(base)).toContain('Kind regards,')
+  })
+})
+
+describe('htmlSignatureToText', () => {
+  it('strips tags and normalises entities, trimmed', () => {
+    expect(htmlSignatureToText(GMAIL_SIG)).toBe('Kindest Regards,\nTegan Chalmers\nCo-Founder | Salt Air Cleaning')
+  })
+
+  it('collapses excess blank lines', () => {
+    expect(htmlSignatureToText('<p>A</p><p></p><p></p><p>B</p>')).not.toMatch(/\n{3,}/)
+  })
+
+  it('decodes common HTML entities', () => {
+    expect(htmlSignatureToText('<p>Smith &amp; Co&nbsp;Pty</p>')).toBe('Smith & Co Pty')
   })
 })

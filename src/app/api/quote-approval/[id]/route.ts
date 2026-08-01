@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
-import { sendAsOrg } from '@/lib/org-mailer'
+import { sendAsOrg, sendBrandedAsOrg } from '@/lib/org-mailer'
 import { captureError } from '@/lib/monitor'
 import { formatCurrency } from '@/lib/format'
 
@@ -46,8 +46,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   // Notifications are best-effort — the customer's decision is already saved,
   // so a mail failure must never surface as a failed approval.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin
   try {
-    await notify(admin, quote, action)
+    await notify(admin, quote, action, siteUrl)
   } catch (err) {
     await captureError(err, {
       source: SOURCE, level: 'warning', orgId: quote.org_id,
@@ -71,6 +72,7 @@ async function notify(
   admin: ReturnType<typeof createServiceClient>,
   quote: unknown,
   action: 'approve' | 'decline',
+  siteUrl: string,
 ) {
   const q = quote as QuoteRow
   const contact = Array.isArray(q.contacts) ? q.contacts[0] : q.contacts
@@ -81,7 +83,6 @@ async function notify(
     .from('organisations').select('name, email, phone').eq('id', q.org_id).single()
   if (!org) return
 
-  const bizName = org.name ?? 'us'
   const verb = action === 'approve' ? 'accepted' : 'declined'
 
   // 1. Internal notification — tell the business straight away.
@@ -107,31 +108,27 @@ async function notify(
     await sendAsOrg(admin, q.org_id, org.email, subject, html, text)
   }
 
-  // 2. Customer confirmation — only on acceptance.
+  // 2. Customer confirmation — only on acceptance. Branded like other customer
+  // emails (logo header + the connected Gmail account's own signature), via
+  // sendBrandedAsOrg — the sign-off is added there, not hardcoded here.
   if (action === 'approve' && contact?.email) {
     const firstName = contact.first_name?.trim()
     const subject = firstName
       ? `${firstName}, thank you for accepting your quote (${q.quote_number})`
       : `Thank you for accepting your quote (${q.quote_number})`
 
-    const html = `<html><body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-  <p>Hi ${firstName || 'there'},</p>
+    const messageHtml = `<p>Hi ${firstName || 'there'},</p>
   <p>Thank you for accepting quote <strong>${q.quote_number}</strong>. We’re delighted to be working with you.</p>
   <p><strong>What happens next:</strong> a member of our team will be in touch within <strong>2 business days</strong> to confirm a date and arrange the details of your service.</p>
-  <p>If anything changes in the meantime, or you have any questions, simply reply to this email${org.phone ? ` or call us on ${org.phone}` : ''}.</p>
-  <p>Kind regards,<br>${bizName}</p>
-</body></html>`
-    const text = `Hi ${firstName || 'there'},
+  <p>If anything changes in the meantime, or you have any questions, simply reply to this email${org.phone ? ` or call us on ${org.phone}` : ''}.</p>`
+    const messageText = `Hi ${firstName || 'there'},
 
 Thank you for accepting quote ${q.quote_number}. We're delighted to be working with you.
 
 What happens next: a member of our team will be in touch within 2 business days to confirm a date and arrange the details of your service.
 
-If anything changes in the meantime, or you have any questions, simply reply to this email${org.phone ? ` or call us on ${org.phone}` : ''}.
+If anything changes in the meantime, or you have any questions, simply reply to this email${org.phone ? ` or call us on ${org.phone}` : ''}.`
 
-Kind regards,
-${bizName}`
-
-    await sendAsOrg(admin, q.org_id, contact.email, subject, html, text)
+    await sendBrandedAsOrg(admin, q.org_id, contact.email, subject, messageHtml, messageText, `${siteUrl}/salt-air-logo.png`)
   }
 }

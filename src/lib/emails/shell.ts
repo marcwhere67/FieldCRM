@@ -32,6 +32,21 @@ function headerHtml(shell: EmailShell): string {
   </table>`
 }
 
+// A Gmail signature comes back as a fragment of HTML (its own <p>/<br> markup,
+// possibly a logo <img>, etc.) — this collapses it to readable plain text for
+// the text/plain half of an email. Shared by every sender that may embed a
+// fetched Gmail signature (see also src/lib/org-mailer.ts).
+export function htmlSignatureToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|table)>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 export function signoffHtml(shell: EmailShell): string {
   if (shell.signatureHtml) return shell.signatureHtml
   return `<p>Kind regards,</p>
@@ -40,14 +55,7 @@ export function signoffHtml(shell: EmailShell): string {
 
 export function signoffText(shell: EmailShell): string {
   if (shell.signatureHtml) {
-    return shell.signatureHtml
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/(p|div|tr|table)>/gi, '\n')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
+    return htmlSignatureToText(shell.signatureHtml)
   }
   return `Kind regards,\n\n${shell.senderName}\n${shell.orgName}\n${shell.orgPhone ? shell.orgPhone + '\n' : ''}${shell.orgEmail}\n${WEBSITE}`
 }
