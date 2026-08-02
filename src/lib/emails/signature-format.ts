@@ -16,13 +16,12 @@ export interface SignatureOrg {
   email: string
   website?: string | null
   instagramUrl?: string | null
-  /** When set, rendered at the BOTTOM of the signature block, after the
-   * contact details. Every email uses the same structure: logo lives IN the
-   * signature, not in a separate top-of-email header — so this is the only
-   * place a logo appears. Placed last (not first) on purpose: leads with the
-   * person's name for a personal tone, and degrades gracefully in email
-   * clients that block images by default (Outlook, etc.) — the reader still
-   * gets the name/phone/email even if the logo never loads. */
+  /** NOT rendered by buildSenderSignatureHtml (kept on the type since
+   * signature.ts still threads org.logoUrl through to the custom-template
+   * renderer, where a user can opt in via the {{logo}} merge field). The
+   * CRM-built default signature omits it — every email now has a header
+   * banner (see shell.ts) carrying the org logo once; repeating it here
+   * would just stack a second copy directly below the first. */
   logoUrl?: string | null
 }
 
@@ -77,15 +76,7 @@ export function buildSenderSignatureHtml(sender: SignatureSender, org: Signature
     contactLines.push(`Instagram: <a href="${escAttr(ensureHref(org.instagramUrl))}">${esc(instagramHandle(org.instagramUrl))}</a>`)
   }
 
-  // height must be in the inline style, not just the bare HTML attribute —
-  // a bare `height="32"` can be overridden by a page-level CSS reset (e.g.
-  // Tailwind preflight's `img { height: auto }`), rendering the logo at full
-  // natural size instead of a compact signature mark.
-  const logo = org.logoUrl?.trim()
-    ? `\n    <p><img src="${escAttr(org.logoUrl.trim())}" alt="${org.name ? esc(org.name) : 'logo'}" height="32" style="display:block;height:32px;width:auto;margin-top:8px;" /></p>`
-    : ''
-
-  return `<p>Kind regards,</p>\n    <p>${[...nameLines, ...contactLines].join('<br>')}</p>${logo}`
+  return `<p>Kind regards,</p>\n    <p>${[...nameLines, ...contactLines].join('<br>')}</p>`
 }
 
 export function buildSenderSignatureText(sender: SignatureSender, org: SignatureOrg): string {

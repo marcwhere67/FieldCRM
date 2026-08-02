@@ -116,8 +116,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     })
     const subject = defaultReceiptSubject(org?.name ?? 'us', payment.receipt_number ?? '')
     const balanceHtml = balanceRemaining > 0
-      ? `<p>Remaining balance: <strong>${formatCurrency(balanceRemaining)}</strong>.</p>`
-      : '<p>This invoice is now paid in full.</p>'
+      ? `<p style="margin:0 0 16px;">Remaining balance: <strong>${formatCurrency(balanceRemaining)}</strong>.</p>`
+      : '<p style="margin:0 0 16px;color:#76A58F;font-weight:700;">This invoice is now paid in full.</p>'
     const balanceText = balanceRemaining > 0
       ? `Remaining balance: ${formatCurrency(balanceRemaining)}.`
       : 'This invoice is now paid in full.'

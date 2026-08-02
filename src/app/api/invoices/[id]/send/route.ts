@@ -76,14 +76,16 @@ async function loadContext(req: Request, id: string, finalizeNumber: boolean) {
   // Bank transfer block (only if bank details are configured).
   const hasBank = org?.bank_bsb || org?.bank_account_number || org?.bank_payid
   const bankHtml = hasBank
-    ? `<p style="background:#F5F0EB;padding:12px 16px;border-radius:4px;">
-         <strong>Pay by bank transfer</strong><br>
-         ${org?.bank_account_name ? `${org.bank_account_name}<br>` : ''}
-         ${org?.bank_bsb ? `BSB: ${org.bank_bsb} &nbsp; ` : ''}${org?.bank_account_number ? `Acc: ${org.bank_account_number}` : ''}
-         ${org?.bank_payid ? `<br>PayID: ${org.bank_payid}` : ''}
-         <br>Reference: <strong>${invoice.invoice_number ?? ''}</strong>
-         ${org?.payment_instructions ? `<br>${org.payment_instructions}` : ''}
-       </p>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+         <tr><td style="background-color:#F5F0EB;border-left:3px solid #2C3E50;padding:14px 20px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1C2A35;line-height:1.7;">
+           <p style="margin:0 0 4px;color:#2C3E50;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Pay by bank transfer</p>
+           ${org?.bank_account_name ? `${org.bank_account_name}<br>` : ''}
+           ${org?.bank_bsb ? `BSB: ${org.bank_bsb} &nbsp; ` : ''}${org?.bank_account_number ? `Acc: ${org.bank_account_number}` : ''}
+           ${org?.bank_payid ? `<br>PayID: ${org.bank_payid}` : ''}
+           <br>Reference: <strong>${invoice.invoice_number ?? ''}</strong>
+           ${org?.payment_instructions ? `<br>${org.payment_instructions}` : ''}
+         </td></tr>
+       </table>`
     : ''
   const bankText = hasBank
     ? `\nPay by bank transfer:\n${org?.bank_account_name ? org.bank_account_name + '\n' : ''}${org?.bank_bsb ? 'BSB: ' + org.bank_bsb + '  ' : ''}${org?.bank_account_number ? 'Acc: ' + org.bank_account_number : ''}${org?.bank_payid ? '\nPayID: ' + org.bank_payid : ''}\nReference: ${invoice.invoice_number ?? ''}${org?.payment_instructions ? '\n' + org.payment_instructions : ''}\n`

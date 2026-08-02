@@ -1,5 +1,5 @@
 import { formatCurrency } from '@/lib/format'
-import { paragraphsHtml, shellHtml, signoffText, type EmailShell } from '@/lib/emails/shell'
+import { paragraphsHtml, shellHtml, signoffText, amountPanel, type EmailShell } from '@/lib/emails/shell'
 
 // Invoice + receipt emails. Same model as quote-email.ts: the editable part is
 // the plain-text `message`; the branded shell, amount-due line, bank-transfer
@@ -30,8 +30,8 @@ export function buildInvoiceEmail(opts: {
 }): { html: string; text: string } {
   const { message, shell, balanceDue, dueText, bankHtml, bankText } = opts
   const balanceFormatted = formatCurrency(balanceDue)
-  const amountLine = `<p><strong>Amount due: ${balanceFormatted}</strong>${dueText ? `<br><strong>Due: ${dueText}</strong>` : ''}</p>`
-  const closing = `<p>Please use your invoice number as the payment reference. If you have any questions, feel free to call or reply to this email.</p>`
+  const amountLine = amountPanel(dueText ? `Amount due · ${dueText}` : 'Amount due', balanceFormatted, { color: '#2C3E50' })
+  const closing = `<p style="margin:0 0 16px;">Please use your invoice number as the payment reference. If you have any questions, feel free to call or reply to this email.</p>`
 
   const html = shellHtml(shell, `${paragraphsHtml(message)}\n    ${amountLine}\n    ${bankHtml}\n    ${closing}`)
   const text = `${message.trim()}\n\nAmount due: ${balanceFormatted}${dueText ? `\nDue: ${dueText}` : ''}\n${bankText}\n\nPlease use your invoice number as the payment reference. If you have any questions, feel free to call or reply to this email.\n\n${signoffText(shell)}`

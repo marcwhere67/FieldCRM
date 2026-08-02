@@ -30,27 +30,31 @@ describe('signoffHtml', () => {
     expect(signoffHtml({ ...base, signatureHtml: null })).toContain('Kind regards,')
   })
 
-  it('includes the logo in the generic fallback too, so every email has the same structure', () => {
+  it('does NOT include a logo in the generic fallback — the header banner in shellHtml carries it', () => {
     const out = signoffHtml(base)
-    expect(out).toContain(`<img src="${base.logoUrl}"`)
-    // Below the contact details, not above "Kind regards" — see signature-format.ts.
-    expect(out.indexOf('Kind regards,')).toBeLessThan(out.indexOf('<img'))
+    expect(out).not.toContain('<img')
   })
 })
 
 describe('shellHtml', () => {
-  it('has no separate top-of-email header — the logo only appears via the signature', () => {
+  it('renders a header banner with the org logo at the top of every email', () => {
     const html = shellHtml(base, '<p>Hello</p>')
-    // One logo image total (from the fallback signature), not a duplicate header banner.
+    expect(html.indexOf(`<img src="${base.logoUrl}"`)).toBeGreaterThan(-1)
+    // Header comes before the message content.
+    expect(html.indexOf('<img')).toBeLessThan(html.indexOf('Hello'))
+  })
+
+  it('shows exactly one logo when the fallback sign-off is used (header only, no duplicate below)', () => {
+    const html = shellHtml(base, '<p>Hello</p>')
     expect((html.match(/<img/g) ?? []).length).toBe(1)
   })
 
-  it('does not duplicate the logo when a real signature (with its own logo) is supplied', () => {
+  it('allows a real signature with its own logo alongside the header banner (two different marks, not a duplicate of the same one)', () => {
     const html = shellHtml(
       { ...base, signatureHtml: '<p><img src="/logo.png" height="32"/></p>\n<p>Kind regards,</p><p>Marc</p>' },
       '<p>Hello</p>',
     )
-    expect((html.match(/<img/g) ?? []).length).toBe(1)
+    expect((html.match(/<img/g) ?? []).length).toBe(2)
   })
 })
 

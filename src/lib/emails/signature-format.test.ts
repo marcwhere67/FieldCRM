@@ -94,19 +94,9 @@ describe('buildSenderSignatureHtml', () => {
     expect(html).not.toContain('<img')
   })
 
-  it('renders the logo below the contact details, not above "Kind regards"', () => {
+  it('never renders a logo, even when logoUrl is set — the shell.ts header banner is the one place it appears now', () => {
     const html = buildSenderSignatureHtml({ fullName: 'Marc' }, { ...org, logoUrl: '/salt-air-logo.png' })
-    expect(html).toContain('<img src="/salt-air-logo.png"')
-    // Personal tone (name first) + graceful degradation if the client blocks
-    // images — the reader still sees name/phone/email even if the logo never loads.
-    expect(html.indexOf('Kind regards,')).toBeLessThan(html.indexOf('<img'))
-    expect(html.indexOf('Phone:')).toBeLessThan(html.indexOf('<img'))
-  })
-
-  it('escapes a hostile logoUrl so it cannot break out of the src attribute', () => {
-    const html = buildSenderSignatureHtml({ fullName: 'Marc' }, { ...org, logoUrl: '"><script>alert(1)</script>' })
-    expect(html).not.toContain('<script>')
-    expect(html).toContain('&quot;')
+    expect(html).not.toContain('<img')
   })
 })
 
