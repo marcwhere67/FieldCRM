@@ -9,10 +9,11 @@ export type { EmailShell }
 
 // ---------------- Invoice ----------------
 
-export function defaultInvoiceSubject(firstName: string | undefined, orgName: string, invoiceNumber: string): string {
+export function defaultInvoiceSubject(firstName: string | undefined, orgName: string, invoiceNumber: string | null): string {
+  const suffix = invoiceNumber ? ` (${invoiceNumber})` : ''
   return firstName
-    ? `${firstName}, your invoice from ${orgName} (${invoiceNumber})`
-    : `Your invoice from ${orgName} (${invoiceNumber})`
+    ? `${firstName}, your invoice from ${orgName}${suffix}`
+    : `Your invoice from ${orgName}${suffix}`
 }
 
 export function defaultInvoiceMessage(firstName: string | undefined, orgName: string): string {

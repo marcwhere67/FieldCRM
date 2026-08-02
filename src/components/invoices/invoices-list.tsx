@@ -20,7 +20,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
 
 interface Invoice {
   id: string
-  invoice_number: string
+  invoice_number: string | null
   invoice_type: string
   status: string
   subtotal: number
@@ -180,7 +180,7 @@ export function InvoicesList({ invoices, filters, total, contacts }: Props) {
               {/* Invoice info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span style={{ color: '#8A9BA6', fontFamily: 'monospace', fontSize: '11px' }}>{inv.invoice_number}</span>
+                  <span style={{ color: '#8A9BA6', fontFamily: 'monospace', fontSize: '11px' }}>{inv.invoice_number ?? 'Draft'}</span>
                   {inv.invoice_type !== 'standard' && (
                     <span style={{ color: '#76A58F', fontSize: '9px', letterSpacing: '0.1em', border: '1px solid rgba(118,165,143,0.3)', padding: '1px 6px' }} className="uppercase">{inv.invoice_type}</span>
                   )}

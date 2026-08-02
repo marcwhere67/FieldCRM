@@ -5,8 +5,9 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { Plus, FileText, ChevronRight, Send, Pencil } from 'lucide-react'
+import { Plus, FileText, ChevronRight, Send, Pencil, Trash2 } from 'lucide-react'
 import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
@@ -43,8 +44,10 @@ export function QuotesList({ quotes, filters, total }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
+  const supabase = createClient()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
   const [loadingDraft, setLoadingDraft] = useState(false)
 
@@ -113,6 +116,24 @@ export function QuotesList({ quotes, filters, total }: Props) {
       toast.error(err instanceof Error ? err.message : 'Could not load the email')
     } finally {
       setLoadingDraft(false)
+    }
+  }
+
+  async function deleteSelected() {
+    if (selectedIds.size === 0) return
+    const n = selectedIds.size
+    if (!confirm(`Delete ${n} quote${n > 1 ? 's' : ''}? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      const { error } = await supabase.from('quotes').delete().in('id', Array.from(selectedIds))
+      if (error) throw new Error(error.message)
+      toast.success(`${n} quote${n > 1 ? 's' : ''} deleted`)
+      setSelectedIds(new Set())
+      startTransition(() => router.refresh())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete quotes')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -192,6 +213,18 @@ export function QuotesList({ quotes, filters, total }: Props) {
             {mixedContacts && <span style={{ color: '#f5b942' }}> — must all belong to the same contact to send together</span>}
           </p>
           <div className="flex items-center gap-2">
+            <button
+              onClick={deleteSelected}
+              disabled={deleting || sending}
+              style={{
+                backgroundColor: 'rgba(220,38,38,0.15)', color: '#fca5a5', fontSize: 11,
+                letterSpacing: '0.05em', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6,
+                cursor: deleting || sending ? 'default' : 'pointer',
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleting ? 'Deleting…' : `Delete ${selectedIds.size}`}
+            </button>
             {selectedIds.size >= 2 && !mixedContacts && (
               <button
                 onClick={openBatchReview}

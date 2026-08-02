@@ -26,7 +26,10 @@ const sendSchema = z.object({
 })
 
 // Shared loader for both the send (POST) and the draft preview (GET).
-async function loadContext(req: Request, id: string) {
+// `finalizeNumber` assigns the invoice's number if it doesn't have one yet --
+// only the actual send (POST) should do this; previewing (GET) must never
+// burn a number, or a never-sent preview would leave a gap in the sequence.
+async function loadContext(req: Request, id: string, finalizeNumber: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
@@ -40,6 +43,14 @@ async function loadContext(req: Request, id: string) {
     .select('id, invoice_number, org_id, contact_id, status, line_items, subtotal, tax, total, notes, deposit_credit, due_date, created_at, stripe_payment_link, contacts!invoices_contact_id_fkey(first_name, last_name, email, address_line1, suburb, state, postcode), jobs!invoices_job_id_fkey(scheduled_start, actual_start)')
     .eq('id', id).eq('org_id', profile.org_id).single()
   if (!invoice) return { error: NextResponse.json({ error: 'Invoice not found' }, { status: 404 }) }
+
+  if (finalizeNumber && !invoice.invoice_number) {
+    const { data: number, error: numberError } = await supabase.rpc('finalize_invoice_number', { p_invoice_id: id })
+    if (numberError || !number) {
+      return { error: NextResponse.json({ error: 'Could not assign an invoice number' }, { status: 500 }) }
+    }
+    invoice.invoice_number = number
+  }
 
   const contact = Array.isArray(invoice.contacts) ? invoice.contacts[0] : invoice.contacts
   const contactEmail = contact?.email
@@ -70,12 +81,12 @@ async function loadContext(req: Request, id: string) {
          ${org?.bank_account_name ? `${org.bank_account_name}<br>` : ''}
          ${org?.bank_bsb ? `BSB: ${org.bank_bsb} &nbsp; ` : ''}${org?.bank_account_number ? `Acc: ${org.bank_account_number}` : ''}
          ${org?.bank_payid ? `<br>PayID: ${org.bank_payid}` : ''}
-         <br>Reference: <strong>${invoice.invoice_number}</strong>
+         <br>Reference: <strong>${invoice.invoice_number ?? ''}</strong>
          ${org?.payment_instructions ? `<br>${org.payment_instructions}` : ''}
        </p>`
     : ''
   const bankText = hasBank
-    ? `\nPay by bank transfer:\n${org?.bank_account_name ? org.bank_account_name + '\n' : ''}${org?.bank_bsb ? 'BSB: ' + org.bank_bsb + '  ' : ''}${org?.bank_account_number ? 'Acc: ' + org.bank_account_number : ''}${org?.bank_payid ? '\nPayID: ' + org.bank_payid : ''}\nReference: ${invoice.invoice_number}${org?.payment_instructions ? '\n' + org.payment_instructions : ''}\n`
+    ? `\nPay by bank transfer:\n${org?.bank_account_name ? org.bank_account_name + '\n' : ''}${org?.bank_bsb ? 'BSB: ' + org.bank_bsb + '  ' : ''}${org?.bank_account_number ? 'Acc: ' + org.bank_account_number : ''}${org?.bank_payid ? '\nPayID: ' + org.bank_payid : ''}\nReference: ${invoice.invoice_number ?? ''}${org?.payment_instructions ? '\n' + org.payment_instructions : ''}\n`
     : ''
 
   return {
@@ -88,7 +99,7 @@ async function loadContext(req: Request, id: string) {
 // GET → the default editable draft for the "Review & send" modal.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const ctx = await loadContext(req, id)
+  const ctx = await loadContext(req, id, false)
   if ('error' in ctx) return ctx.error
   return NextResponse.json({
     to: ctx.contactEmail,
@@ -99,7 +110,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const ctx = await loadContext(req, id)
+  const ctx = await loadContext(req, id, true)
   if ('error' in ctx) return ctx.error
   const { supabase, profile, invoice, org, contact, orgEmail, contactEmail, shell, balanceDue, dueText, bankHtml, bankText, firstName } = ctx
 

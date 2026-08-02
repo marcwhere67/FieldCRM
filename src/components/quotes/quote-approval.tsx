@@ -23,6 +23,21 @@ const C = {
   serif: "var(--font-cormorant,'Cormorant Garamond',Georgia,serif)",
 }
 
+// Explicit bullet rows that mirror the PDF (sage dot + text). Native <ul>
+// markers are stripped by Tailwind's Preflight reset, so we draw the • ourselves.
+function BulletList({ items }: { items: string[] }) {
+  return (
+    <div>
+      {items.map((item, i) => (
+        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+          <span style={{ color: C.sage, fontSize: 12, lineHeight: 1.6, flexShrink: 0 }}>•</span>
+          <span style={{ color: '#4A5A65', fontSize: 12, lineHeight: 1.6, flex: 1 }}>{item}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function QuoteApproval({ quote, org }: Props) {
   const [status, setStatus] = useState(quote.status)
   const [loading, setLoading] = useState<'approve' | 'decline' | null>(null)
@@ -185,16 +200,12 @@ export function QuoteApproval({ quote, org }: Props) {
                 <div style={{ padding: '0 24px 20px' }}>
                   <p style={{ color: '#4A5A65', fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}>{scope.intro}</p>
                   <p style={{ color: C.navy, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Includes:</p>
-                  <ul style={{ margin: 0, paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.7 }}>
-                    {scope.includes.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
+                  <BulletList items={scope.includes} />
                   {scope.footnote && (
                     <p style={{ color: '#4A5A65', fontSize: 11, lineHeight: 1.6, marginTop: 10, fontStyle: 'italic' }}>{scope.footnote}</p>
                   )}
                   <p style={{ color: C.navy, fontSize: 11, fontWeight: 600, marginTop: 16, marginBottom: 6 }}>Optional Add-ons (available on request):</p>
-                  <ul style={{ margin: 0, paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.7 }}>
-                    {ADD_ONS.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
+                  <BulletList items={ADD_ONS} />
                 </div>
               )}
             </div>
@@ -218,9 +229,9 @@ export function QuoteApproval({ quote, org }: Props) {
                       'text' in block ? (
                         <p key={bi} style={{ color: '#4A5A65', fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}>{block.text}</p>
                       ) : (
-                        <ul key={bi} style={{ margin: '0 0 6px', paddingLeft: 18, color: '#4A5A65', fontSize: 12, lineHeight: 1.6 }}>
-                          {block.bullets.map((b, li) => <li key={li}>{b}</li>)}
-                        </ul>
+                        <div key={bi} style={{ marginBottom: 6 }}>
+                          <BulletList items={block.bullets} />
+                        </div>
                       )
                     )}
                   </div>

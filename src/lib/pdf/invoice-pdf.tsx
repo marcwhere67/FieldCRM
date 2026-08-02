@@ -278,7 +278,7 @@ interface LineItem {
 
 interface Props {
   invoice: {
-    invoice_number: string
+    invoice_number: string | null
     status: string
     line_items: LineItem[]
     subtotal: number

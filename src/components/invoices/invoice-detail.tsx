@@ -31,7 +31,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }
 interface LineItem { description: string; quantity: number; unit_price: number; tax_rate: number; subtotal: number }
 interface Contact { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }
 interface Invoice {
-  id: string; invoice_number: string; invoice_type: string; status: string
+  id: string; invoice_number: string | null; invoice_type: string; status: string
   subtotal: number; tax: number; total: number; deposit_credit: number
   due_date: string | null; paid_at: string | null; sent_at: string | null; notes: string | null
   line_items: LineItem[]; stripe_payment_link: string | null; created_at: string
@@ -68,7 +68,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
     amount: balanceDue.toFixed(2),
     payment_date: now,
     method: 'bank_transfer',
-    reference: invoice.invoice_number,
+    reference: invoice.invoice_number ?? '',
     note: '',
     send_receipt: !!contact?.email,
   })
@@ -78,7 +78,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
   const defaultReceiptMsg = defaultReceiptMessage({
     firstName: contact?.first_name?.trim(),
     paidLine: formatCurrency(Number(payForm.amount) || 0),
-    invoiceNumber: invoice.invoice_number,
+    invoiceNumber: invoice.invoice_number ?? '',
   })
   const receiptValue = receiptMsg ?? defaultReceiptMsg
 
@@ -151,6 +151,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
   }
 
   async function deleteInvoice() {
+    if (!canDelete) { toast.error('Numbered invoices can’t be deleted — void it instead'); return }
     if (!confirm('Delete this invoice? This cannot be undone.')) return
     startTransition(async () => {
       const { error } = await supabase.from('invoices').delete().eq('id', invoice.id)
@@ -162,6 +163,10 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
   const canSend = invoice.status === 'draft'
   const canMarkPaid = ['sent', 'overdue', 'partial'].includes(displayStatus)
   const canVoid = !['void', 'paid'].includes(invoice.status)
+  // Only an unsent draft that never drew a number may be hard-deleted -- deleting
+  // a numbered invoice would leave a permanent gap in the sequence. Numbered
+  // invoices must be cancelled via Void, which keeps the number on the books.
+  const canDelete = invoice.status === 'draft' && !invoice.invoice_number
 
   return (
     <div style={{ maxWidth: 896 }} className="space-y-5">
@@ -173,7 +178,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300 }}>{invoice.invoice_number}</h1>
+            <h1 style={{ fontFamily: C.serif, color: C.navy, fontSize: 28, fontWeight: 300 }}>{invoice.invoice_number ?? 'Draft'}</h1>
             <span style={{ backgroundColor: st.bg, color: st.color, border: `1px solid ${st.border}`, fontSize: 9, letterSpacing: '0.1em', padding: '3px 10px' }} className="uppercase">{displayStatus}</span>
             {invoice.invoice_type !== 'standard' && (
               <span style={{ backgroundColor: 'rgba(180,83,9,0.08)', color: '#b45309', border: '1px solid rgba(180,83,9,0.18)', fontSize: 9, letterSpacing: '0.1em', padding: '3px 10px' }} className="uppercase">{invoice.invoice_type}</span>
@@ -236,10 +241,14 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
                   <FileText className="w-3.5 h-3.5 mr-2" />Void invoice
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator style={{ backgroundColor: C.border }} />
-              <DropdownMenuItem style={{ color: '#dc2626', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={deleteInvoice}>
-                <Trash2 className="w-3.5 h-3.5 mr-2" />Delete
-              </DropdownMenuItem>
+              {canDelete && (
+                <>
+                  <DropdownMenuSeparator style={{ backgroundColor: C.border }} />
+                  <DropdownMenuItem style={{ color: '#dc2626', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={deleteInvoice}>
+                    <Trash2 className="w-3.5 h-3.5 mr-2" />Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -284,7 +293,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
             <p style={{ color: C.muted, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 4 }}>
               {invoice.invoice_type === 'deposit' ? 'Deposit Invoice' : invoice.invoice_type === 'final' ? 'Final Invoice' : 'Invoice'}
             </p>
-            <p style={{ fontFamily: C.serif, color: C.navy, fontSize: 22 }}>{invoice.invoice_number}</p>
+            <p style={{ fontFamily: C.serif, color: C.navy, fontSize: 22 }}>{invoice.invoice_number ?? 'Draft'}</p>
           </div>
         </div>
 
@@ -406,7 +415,7 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
           style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(28,42,53,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#fff', border: `1px solid ${C.border}`, width: '100%', maxWidth: 420, padding: 24 }}>
             <h3 style={{ fontFamily: C.serif, color: C.navy, fontSize: 20, fontWeight: 300, marginBottom: 4 }}>Record Payment</h3>
-            <p style={{ color: C.muted, fontSize: 12, marginBottom: 18 }}>Invoice {invoice.invoice_number} · {formatCurrency(balanceDue)} owing</p>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 18 }}>Invoice {invoice.invoice_number ?? 'Draft'} · {formatCurrency(balanceDue)} owing</p>
 
             {(() => {
               const lbl = { color: C.muted, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase' as const, marginBottom: 6, display: 'block' as const }

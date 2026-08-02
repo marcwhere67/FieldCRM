@@ -178,7 +178,7 @@ export default async function DashboardPage() {
                   className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#EDE8E2]"
                 >
                   <div className="flex-1 min-w-0">
-                    <p style={{ color: '#1C2A35' }} className="text-sm font-medium">{inv.invoice_number}</p>
+                    <p style={{ color: '#1C2A35' }} className="text-sm font-medium">{inv.invoice_number ?? 'Draft'}</p>
                     <p style={{ color: '#8A9BA6' }} className="text-xs">
                       {contact ? `${contact.first_name} ${contact.last_name}` : 'Unknown'}
                     </p>

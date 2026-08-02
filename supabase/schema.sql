@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   org_id uuid NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
   contact_id uuid NOT NULL REFERENCES contacts(id),
   job_id uuid REFERENCES jobs(id),
-  invoice_number text UNIQUE NOT NULL,
+  invoice_number text UNIQUE,
   status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','sent','viewed','partial','paid','overdue','void')),
   line_items jsonb DEFAULT '[]',
   subtotal numeric(12,2) DEFAULT 0,

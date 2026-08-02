@@ -55,7 +55,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${invoice.invoice_number}.pdf"`,
+      'Content-Disposition': `attachment; filename="${invoice.invoice_number ?? 'draft'}.pdf"`,
       'Cache-Control': 'private, no-store',
     },
   })

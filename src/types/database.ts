@@ -182,7 +182,7 @@ export interface Invoice {
   org_id: string
   contact_id: string
   job_id: string | null
-  invoice_number: string
+  invoice_number: string | null
   status: InvoiceStatus
   line_items: LineItem[]
   subtotal: number
