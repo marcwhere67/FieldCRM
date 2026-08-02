@@ -110,15 +110,22 @@ export function shellHtml(shell: EmailShell, inner: string): string {
   const logo = shell.logoUrl
     ? `<img src="${esc(shell.logoUrl)}" alt="${esc(shell.orgName)}" height="40" style="display:block;height:40px;width:auto;margin:0 auto;" />`
     : `<span style="font-family:${SERIF};font-size:22px;color:${NAVY};">${esc(shell.orgName)}</span>`
-  const footerLine = [shell.orgPhone, shell.orgEmail].filter((v): v is string => Boolean(v)).map(esc).join(' &nbsp;·&nbsp; ')
 
+  // color-scheme meta tags ask supporting clients (Apple Mail, iOS) to render
+  // the email in light mode, so a dark-mode inbox doesn't repaint the page
+  // background black behind the white card.
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;padding:0;background-color:${CREAM};font-family:${SANS};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${CREAM};">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:${SANS};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
     <tr>
-      <td align="center" style="padding:32px 16px;">
+      <td align="center" style="padding:24px 16px 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border:1px solid ${BORDER};">
           <tr><td style="height:4px;line-height:4px;font-size:0;background-color:${SAGE};">&nbsp;</td></tr>
           <tr>
@@ -127,19 +134,11 @@ export function shellHtml(shell: EmailShell, inner: string): string {
             </td>
           </tr>
           <tr>
-            <td style="padding:36px 40px 8px;color:${INK};font-family:${SANS};font-size:15px;line-height:1.65;">
+            <td style="padding:36px 40px 32px;color:${INK};font-family:${SANS};font-size:15px;line-height:1.65;">
               ${inner}
               <div style="margin-top:12px;padding-top:20px;border-top:1px solid ${BORDER};color:${INK};font-family:${SANS};font-size:13px;line-height:1.6;">
                 ${signoffHtml(shell)}
               </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:20px 40px;background-color:${CREAM};border-top:1px solid ${BORDER};text-align:center;">
-              <p style="margin:0;color:${MUTED};font-family:${SANS};font-size:11px;letter-spacing:0.02em;">${esc(shell.orgName)}${footerLine ? ' &nbsp;·&nbsp; ' + footerLine : ''}</p>
-              <p style="margin:6px 0 0;">
-                <a href="${WEBSITE}" style="color:${MUTED};font-family:${SANS};font-size:11px;text-decoration:none;letter-spacing:0.02em;">${WEBSITE.replace(/^https?:\/\//, '')}</a>
-              </p>
             </td>
           </tr>
         </table>
