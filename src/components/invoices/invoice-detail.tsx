@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, melbourneDateOnly } from '@/lib/format'
 import { toast } from 'sonner'
 import { ArrowLeft, Send, CheckCircle, Trash2, MoreHorizontal, AlertCircle, FileText, Download, Pencil } from 'lucide-react'
 import { SendEmailModal, type EmailDraft } from '@/components/emails/send-email-modal'
+import { EditInvoiceModal } from '@/components/invoices/edit-invoice-modal'
 import { defaultReceiptMessage } from '@/lib/emails/invoice-email'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -32,6 +33,7 @@ interface LineItem { description: string; quantity: number; unit_price: number; 
 interface Contact { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }
 interface Invoice {
   id: string; invoice_number: string | null; invoice_type: string; status: string
+  amount_paid: number
   subtotal: number; tax: number; total: number; deposit_credit: number
   due_date: string | null; paid_at: string | null; sent_at: string | null; notes: string | null
   line_items: LineItem[]; stripe_payment_link: string | null; created_at: string
@@ -84,6 +86,15 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
 
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null)
   const [loadingDraft, setLoadingDraft] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+
+  // After amending an already-sent invoice, prompt to re-send the corrected PDF.
+  function onInvoiceEdited() {
+    const wasSent = ['sent', 'viewed', 'overdue'].includes(invoice.status)
+    setShowEdit(false)
+    router.refresh()
+    if (wasSent) openReview()
+  }
 
   function markSent(override?: { subject: string; message: string }) {
     if (!contact?.email) { toast.error('Contact has no email address'); return }
@@ -163,6 +174,9 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
   const canSend = invoice.status === 'draft'
   const canMarkPaid = ['sent', 'overdue', 'partial'].includes(displayStatus)
   const canVoid = !['void', 'paid'].includes(invoice.status)
+  // Amend line items (scope changes / add-ons) only while unpaid and not void.
+  // A paid/part-paid invoice stays as issued — extra work goes on a new invoice.
+  const canEdit = Number(invoice.amount_paid ?? 0) === 0 && invoice.status !== 'void'
   // Only an unsent draft that never drew a number may be hard-deleted -- deleting
   // a numbered invoice would leave a permanent gap in the sequence. Numbered
   // invoices must be cancelled via Void, which keeps the number on the books.
@@ -231,6 +245,11 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
               <MoreHorizontal className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" style={{ backgroundColor: '#fff', border: `1px solid ${C.border}` }} className="rounded-none w-44">
+              {canEdit && (
+                <DropdownMenuItem style={{ color: '#4A5A65', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={() => setShowEdit(true)}>
+                  <Pencil className="w-3.5 h-3.5 mr-2" />Edit invoice
+                </DropdownMenuItem>
+              )}
               {invoice.status !== 'draft' && invoice.status !== 'void' && contact?.email && (
                 <DropdownMenuItem style={{ color: '#4A5A65', fontSize: 12 }} className="cursor-pointer hover:bg-[#F5F0EB]" onClick={openReview}>
                   <Send className="w-3.5 h-3.5 mr-2" />Resend email
@@ -488,6 +507,16 @@ export function InvoiceDetail({ invoice, org, orgId, depositInvoice, payments = 
           sending={isPending}
           onSend={(subject, message) => markSent({ subject, message })}
           onClose={() => setEmailDraft(null)}
+        />
+      )}
+
+      {showEdit && (
+        <EditInvoiceModal
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoice_number}
+          initialLines={invoice.line_items}
+          onClose={() => setShowEdit(false)}
+          onSaved={onInvoiceEdited}
         />
       )}
     </div>
